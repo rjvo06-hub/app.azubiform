@@ -70,6 +70,7 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
+        const adresse = document.getElementById('regAdresse').value.trim();
         const password = document.getElementById('regPassword').value;
         const codigoIngresado = document.getElementById('regCodigo').value.trim();
         loginMensaje.classList.add('hidden');
@@ -91,7 +92,7 @@ export function inicializarAuth(onLoginExitoso) {
 
             await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ nombre: nombre, email: email, password: password })
+                body: JSON.stringify({ nombre: nombre, email: email, adresse: adresse, password: password })
             });
 
             localStorage.setItem('usuario_actual', nombre);
