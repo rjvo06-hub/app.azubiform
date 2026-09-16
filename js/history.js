@@ -21,18 +21,34 @@ export function inicializarHistorial() {
 
     async function cargarUsuariosEnSelect(elementoSelect, callbackDespues) {
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=nombre,email`, { headers });
-            const usuarios = await res.json();
-            elementoSelect.innerHTML = '<option value="">-- Auswählen --</option>';
-            usuarios.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.nombre;
-                opt.textContent = u.nombre;
-                elementoSelect.appendChild(opt);
-            });
             const usuarioActual = localStorage.getItem('usuario_actual');
-            if (usuarioActual) elementoSelect.value = usuarioActual;
-            else if (usuarios.length > 0) elementoSelect.value = usuarios[0].nombre;
+            const accesoActual = Number(localStorage.getItem('usuario_acceso'));
+
+            // Si el usuario NO es administrador (acceso diferente de 1), solo se permite ver a sí mismo
+            if (accesoActual !== 1) {
+                elementoSelect.innerHTML = '';
+                const opt = document.createElement('option');
+                opt.value = usuarioActual;
+                opt.textContent = usuarioActual;
+                elementoSelect.appendChild(opt);
+                elementoSelect.value = usuarioActual;
+                elementoSelect.disabled = true; // Bloquea el selector para que no pueda cambiarlo
+            } else {
+                // Si es administrador (acceso === 1), carga todos los usuarios con total libertad
+                elementoSelect.disabled = false;
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=nombre,email`, { headers });
+                const usuarios = await res.json();
+                elementoSelect.innerHTML = '<option value="">-- Auswählen --</option>';
+                usuarios.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.nombre;
+                    opt.textContent = u.nombre;
+                    elementoSelect.appendChild(opt);
+                });
+                if (usuarioActual) elementoSelect.value = usuarioActual;
+                else if (usuarios.length > 0) elementoSelect.value = usuarios[0].nombre;
+            }
+
             if (callbackDespues) callbackDespues();
         } catch (err) { console.error(err); }
     }

@@ -56,7 +56,10 @@ export function inicializarAuth(onLoginExitoso) {
             }
             const usuarioExistente = usuarios[0];
             if (usuarioExistente.password === password) {
+                // Guardamos el nombre y el nivel de acceso (convertido a número o 0 por defecto)
                 localStorage.setItem('usuario_actual', usuarioExistente.nombre);
+                localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
+                
                 onLoginExitoso(usuarioExistente.nombre);
             } else {
                 mostrarMensaje('❌ Falsches Passwort.');
@@ -90,12 +93,15 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
+            // Por defecto los nuevos registros se crean con acceso NULL / sin privilegios especiales
             await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ nombre: nombre, email: email, adresse: adresse, password: password })
+                body: JSON.stringify({ nombre: nombre, email: email, adresse: adresse, password: password, acceso: null })
             });
 
             localStorage.setItem('usuario_actual', nombre);
+            localStorage.setItem('usuario_acceso', 0);
+            
             onLoginExitoso(nombre);
         } catch (error) {
             mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
