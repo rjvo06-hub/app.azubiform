@@ -1,4 +1,4 @@
-import { SUPABASE_URL, headers, CODIGO_MAESTRO } from './config.js';
+import { SUPABASE_URL, headers } from './config.js';
 
 export function inicializarAuth(onLoginExitoso) {
     const loginSection = document.getElementById('loginSection');
@@ -17,12 +17,14 @@ export function inicializarAuth(onLoginExitoso) {
             formLogin.classList.remove('hidden');
             formRegistro.classList.add('hidden');
             tituloAuth.textContent = "Anmelden";
+            formLogin.reset(); // Limpia el formulario de login al cambiar
         } else {
             tabRegistro.className = "w-1/2 pb-2 text-sm font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none transition";
             tabLogin.className = "w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition";
             formRegistro.classList.remove('hidden');
             formLogin.classList.add('hidden');
             tituloAuth.textContent = "Neuen Benutzer registrieren";
+            formRegistro.reset(); // Limpia el formulario de registro al cambiar
         }
     };
 
@@ -56,7 +58,6 @@ export function inicializarAuth(onLoginExitoso) {
             }
             const usuarioExistente = usuarios[0];
             if (usuarioExistente.password === password) {
-                // Guardamos el nombre y el nivel de acceso (convertido a número o 0 por defecto)
                 localStorage.setItem('usuario_actual', usuarioExistente.nombre);
                 localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
                 
@@ -78,12 +79,21 @@ export function inicializarAuth(onLoginExitoso) {
         const codigoIngresado = document.getElementById('regCodigo').value.trim();
         loginMensaje.classList.add('hidden');
 
-        if (codigoIngresado !== CODIGO_MAESTRO) {
-            mostrarMensaje('❌ Ungültiger Sicherheitscode.');
-            return;
-        }
-
         try {
+            // 1. Verificar si el código introducido existe y está disponible (usado = false)
+            const resCodigo = await fetch(`${SUPABASE_URL}/rest/v1/codigos_invitacion?codigo=eq.${encodeURIComponent(codigoIngresado)}&usado=eq.false`, {
+                method: 'GET', headers: headers
+            });
+            const codigosDisponibles = await resCodigo.json();
+
+            if (!codigosDisponibles || codigosDisponibles.length === 0) {
+                mostrarMensaje('❌ Ungültiger Sicherheitscode oder wurde bereits verwendet.');
+                return;
+            }
+
+            const registroCodigo = codigosDisponibles[0];
+
+            // 2. Validar si el correo ya está registrado en el sistema
             const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, {
                 method: 'GET', headers: headers
             });
@@ -93,11 +103,28 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            // Por defecto los nuevos registros se crean con acceso NULL / sin privilegios especiales
-            await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
+            // 3. Marcar el código de invitación como usado para invalidarlo permanentemente
+            const resUpdate = await fetch(`${SUPABASE_URL}/rest/v1/codigos_invitacion?id=eq.${registroCodigo.id}`, {
+                method: 'PATCH',
+                headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ usado: true })
+            });
+
+            if (!resUpdate.ok) {
+                mostrarMensaje('❌ Fehler beim Entwerten des Sicherheitscodes.');
+                return;
+            }
+
+            // 4. Crear el nuevo usuario en la base de datos
+            const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ nombre: nombre, email: email, adresse: adresse, password: password, acceso: null })
             });
+
+            if (!resUser.ok) {
+                mostrarMensaje('❌ Fehler beim Erstellen des Benutzerkontos.');
+                return;
+            }
 
             localStorage.setItem('usuario_actual', nombre);
             localStorage.setItem('usuario_acceso', 0);
