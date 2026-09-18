@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
 
-    <!-- 🖼️ Iconos (Apuntando a tu archivo real icon_azubiform.png) -->
+    <!-- 🖼️ Iconos -->
     <link rel="apple-touch-icon" href="./icon_azubiform.png">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon_azubiform.png">
     <link rel="manifest" href="./manifest.json">
@@ -76,27 +76,27 @@
         <form id="formRegistro" class="space-y-4 hidden">
             <div>
                 <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
-                <input type="text" id="regNombre" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             </div>
             <div>
                 <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
-                <input type="email" id="regEmail" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             </div>
             <div>
                 <label for="regAdresse" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Adresse</label>
-                <input type="text" id="regAdresse" required placeholder="Straße, Hausnummer, PLZ, Ort" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="text" id="regAdresse" autocomplete="off" required placeholder="Straße, Hausnummer, PLZ, Ort" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             </div>
             <div>
                 <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                 <div class="relative">
-                    <input type="password" id="regPassword" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁️</span></button>
                 </div>
             </div>
             <div>
-                <label for="regCodigo" class="block text-xs font-semibold text-amber-600 uppercase mb-1">Sicherheitscode (Administrator)</label>
+                <label for="regCodigo" class="block text-xs font-semibold text-amber-600 uppercase mb-1">Sicherheitscode (Einmalig)</label>
                 <div class="relative">
-                    <input type="password" id="regCodigo" required placeholder="Vom Administrator bereitgestellter Code" class="w-full px-3 py-2 pr-10 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none bg-amber-50">
+                    <input type="text" id="regCodigo" autocomplete="off" required placeholder="z.B. AF.Santiago29" class="w-full px-3 py-2 pr-10 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none bg-amber-50">
                     <button type="button" onclick="togglePassword('regCodigo', 'iconRegCodigo')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegCodigo">👁️</span></button>
                 </div>
             </div>
@@ -110,14 +110,22 @@
         <div class="w-full bg-white p-3 rounded-xl shadow-sm mb-4 flex justify-between items-center text-xs text-gray-600">
             <span>Benutzer: <strong id="lblUsuario" class="text-indigo-600"></strong></span>
             <div class="space-x-1.5 flex items-center">
-                <!-- Todos pueden consultar (los estándar solo sus propios registros) -->
                 <button id="btnMenuConsulta" onclick="abrirModalConsulta()" class="text-indigo-600 font-semibold hover:underline">📊 Abfragen</button>
                 <span class="text-gray-300">|</span>
-                <!-- Solo el administrador (acceso === 1) ve el botón de impresión -->
                 <button id="btnMenuImpresion" onclick="abrirModalImpresionAusbildung()" class="text-emerald-600 font-semibold hover:underline hidden">🖨️ Drucken</button>
                 <span id="sepMenuImpresion" class="text-gray-300 hidden">|</span>
                 <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
             </div>
+        </div>
+
+        <!-- Panel opcional para que el administrador cree nuevos códigos únicos -->
+        <div id="panelGenerarCodigo" class="w-full bg-white p-4 rounded-xl shadow-lg mb-4 hidden">
+            <h3 class="text-xs font-semibold text-gray-700 uppercase mb-2">Neuen Einmalcode generieren</h3>
+            <div class="flex gap-2">
+                <input type="text" id="inputNuevoCodigo" placeholder="z.B. AF.NuevoCodigo" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button type="button" id="btnCrearCodigo" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition">Erstellen</button>
+            </div>
+            <p id="msgEstadoCodigo" class="text-xs mt-2 hidden"></p>
         </div>
 
         <div class="w-full bg-white p-6 rounded-xl shadow-lg mb-6 relative">
@@ -250,26 +258,28 @@
         import { iniciarAppPrincipal } from './js/app.js';
         import { inicializarHistorial } from './js/history.js';
         import { inicializarImpresion } from './js/print.js';
+        import { inicializarGeneradorCodigos } from './js/admin.js';
 
         function verificarPermisosAdmin() {
             const acceso = localStorage.getItem('usuario_acceso');
-            if (Number(acceso) === 1) {
+            const esAdmin = Number(acceso) === 1;
+            if (esAdmin) {
                 document.getElementById('btnMenuImpresion').classList.remove('hidden');
                 document.getElementById('sepMenuImpresion').classList.remove('hidden');
             } else {
                 document.getElementById('btnMenuImpresion').classList.add('hidden');
                 document.getElementById('sepMenuImpresion').classList.add('hidden');
             }
+            inicializarGeneradorCodigos(esAdmin);
         }
 
         window.cerrarSesion = function() {
             localStorage.removeItem('usuario_actual');
             localStorage.removeItem('usuario_acceso');
             
-            // Limpieza completa de los campos del formulario de login
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
+            // Limpiar formularios de autenticación al cerrar sesión
             document.getElementById('formLogin').reset();
+            document.getElementById('formRegistro').reset();
             document.getElementById('loginMensaje').classList.add('hidden');
 
             document.getElementById('appSection').classList.add('hidden');
