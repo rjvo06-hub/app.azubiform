@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, token } = req.method === 'POST' && req.body ? req.body : {};
+    const { email, token, nombre } = req.method === 'POST' && req.body ? req.body : {};
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.ionos.de',
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     });
 
     const urlVerificacion = `https://app.azubiform.de/verificar.html?token=${token}`;
+    const saludo = nombre ? `Hallo ${nombre}!` : `Hallo!`;
 
     const mailOptions = {
       from: `"Azubiform" <${process.env.SMTP_USER}>`,
@@ -45,14 +46,19 @@ export default async function handler(req, res) {
 
             <!-- Cuerpo del mensaje -->
             <div style="padding: 40px 30px; color: #374151; line-height: 1.6;">
-              <h2 style="color: #111827; font-size: 20px; margin-top: 0;">Hallo!</h2>
+              <h2 style="color: #111827; font-size: 20px; margin-top: 0;">${saludo}</h2>
               <p style="margin-bottom: 25px;">Vielen Dank für deine Registrierung bei Azubiform. Wir freuen uns sehr, dich bei der Verwaltung deiner Ausbildung zu begleiten.</p>
               
-              <p style="margin-bottom: 30px;">Um dein Konto zu aktivieren und deine E-Mail-Adresse zu bestätigen, klicke bitte einfach auf den folgenden Button:</p>
+              <p style="margin-bottom: 25px;">Um dein Konto zu aktivieren und deine E-Mail-Adresse zu bestätigen, klicke bitte einfach auf den folgenden Button:</p>
               
               <!-- Botón de acción en Azul -->
-              <div style="text-align: center; margin-bottom: 35px;">
+              <div style="text-align: center; margin: 30px 0;">
                 <a href="${urlVerificacion}" style="background-color: #2563eb; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);">Konto bestätigen</a>
+              </div>
+
+              <!-- Bloque informativo sutil sobre el beneficio -->
+              <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; border-radius: 4px; margin: 30px 0; font-size: 14px; color: #1e40af;">
+                💡 <b>Tipp:</b> Trage deine täglichen Aufgaben bequem in der App ein. So hast du am Ende der Woche alle Infos parat und das Ausfüllen deines Berichtshefts wird ganz einfach!
               </div>
 
               <p style="font-size: 14px; color: #6b7280; margin-bottom: 10px;">Falls der Button nicht funktioniert, kannst du auch den folgenden Link in deinen Browser kopieren:</p>
