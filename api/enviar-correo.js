@@ -56,9 +56,9 @@ export default async function handler(req, res) {
                 <a href="${urlVerificacion}" style="background-color: #2563eb; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);">Konto bestätigen</a>
               </div>
 
-              <!-- Bloque informativo sutil sobre el beneficio -->
+              <!-- Bloque informativo optimizado -->
               <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; border-radius: 4px; margin: 30px 0; font-size: 14px; color: #1e40af;">
-                💡 <b>Tipp:</b> Trage deine täglichen Aufgaben bequem in der App ein. So hast du am Ende der Woche alle Infos parat und das Ausfüllen deines Berichtshefts wird ganz einfach!
+                💡 <b>Tipp:</b> Trage deine täglichen Aktivitäten ein und behalte deinen gesamten Verlauf im Blick. So kannst du deine Einträge jederzeit Monat für Monat ganz bequem abrufen!
               </div>
 
               <p style="font-size: 14px; color: #6b7280; margin-bottom: 10px;">Falls der Button nicht funktioniert, kannst du auch den folgenden Link in deinen Browser kopieren:</p>
