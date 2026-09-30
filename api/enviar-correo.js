@@ -1,47 +1,46 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Método no permitido' });
-    }
+  if (req.method !== 'POST') {
+    return res.status(405.1).json({ error: 'Método no permitido' });
+  }
 
-    const { email, nombre, token } = req.body;
-
-    // Configuración ajustada para IONOS (Puerto 587 con TLS)
+  try {
+    // 1. Configurar el transportador con las variables de Vercel
     const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.ionos.de',
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: false, // false para el puerto 587 (TLS)
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        },
-        tls: {
-            ciphers: 'SSLv3'
-        }
+      host: process.env.SMTP_HOST, // smtp.ionos.de
+      port: Number(process.env.SMTP_PORT), // 587
+      secure: false, // false para puerto 587 con STARTTLS
+      auth: {
+        user: process.env.SMTP_USER, // info@azubiform.de
+        pass: process.env.SMTP_PASS, // Tu contraseña de IONOS
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
     });
 
-    const enlaceVerificacion = `https://app.azubiform.de/verificar.html?token=${token}`;
+    // 2. Verificar la conexión con el servidor SMTP antes de enviar
+    await transporter.verify();
+    console.log('Conexión SMTP exitosa con IONOS');
 
-    try {
-        await transporter.sendMail({
-            from: '"Azubiform" <info@azubiform.de>',
-            to: email,
-            subject: 'Bestätige deine E-Mail-Adresse für Azubiform',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                    <h2>Hallo ${nombre},</h2>
-                    <p>Vielen Dank für deine Registrierung bei Azubiform. Bitte klicke auf den folgenden Link, um deine E-Mail-Adresse zu bestätigen und dein Konto zu aktivieren:</p>
-                    <p style="margin: 20px 0;">
-                        <a href="${enlaceVerificacion}" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">E-Mail bestätigen</a>
-                    </p>
-                    <p>Wenn du das nicht warst, kannst du diese E-Mail einfach ignorieren.</p>
-                </div>
-            `
-        });
+    // 3. Intentar enviar un correo de prueba básico
+    const info = await transporter.sendMail({
+      from: `"Azubiform" <${process.env.SMTP_USER}>`,
+      to: process.env.SMTP_USER, // Te lo mandas a ti mismo para probar
+      subject: 'Prueba de conexión SMTP - Azubiform',
+      text: 'Si recibes este correo, la conexión con IONOS funciona perfectamente.',
+    });
 
-        return res.status(200).json({ success: true, message: 'Correo enviado correctamente' });
-    } catch (error) {
-        return res.status(500).json({ success: false, error: error.message });
-    }
+    return res.status(200).json({ success: true, messageId: info.messageId });
+
+  } catch (error) {
+    console.error('Error detallado de SMTP:', error);
+    return res.status(500).json({ 
+      error: 'Fallo en el servidor SMTP', 
+      detalle: error.message,
+      code: error.code,
+      command: error.command
+    });
+  }
 }
