@@ -58,6 +58,12 @@
             <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition">Registrieren</button>
         </div>
         
+        <!-- Alerta de éxito / reenvío de correo ubicada en la sección de inicio de sesión -->
+        <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-lg">
+            <p class="font-bold mb-1">Registrierung erfolgreich!</p>
+            <p>Wir haben dir eine Bestätigungs-E-Mail gesendet. Bitte prüfe dein Postfach (und Spam-Ordner) und bestätige deine E-Mail, bevor du dich anmeldest.</p>
+        </div>
+
         <form id="formLogin" class="space-y-4">
             <div>
                 <label for="loginEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
@@ -67,7 +73,7 @@
                 <label for="loginPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                 <div class="relative">
                     <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconLoginPass">👁️</span></button>
+                    <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconLoginPass">👁️️</span></button>
                 </div>
             </div>
             <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Anmelden</button>
@@ -276,6 +282,7 @@
             document.getElementById('formLogin').reset();
             document.getElementById('formRegistro').reset();
             document.getElementById('loginMensaje').classList.add('hidden');
+            document.getElementById('alertaRegistroExitoso').classList.add('hidden');
 
             document.getElementById('appSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
