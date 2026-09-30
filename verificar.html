@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>E-Mail Verifizierung - Azubiform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg text-center">
+        <h1 id="tituloEstado" class="text-xl font-bold text-gray-800 mb-2">E-Mail wird verifiziert...</h1>
+        <p id="mensajeEstado" class="text-sm text-gray-600 mb-6">Bitte einen Moment Geduld.</p>
+        <a href="index.html" class="inline-block bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition">Zur Anmeldung</a>
+    </div>
+
+    <script type="module">
+        import { SUPABASE_URL, headers } from './js/config.js';
+
+        async function validarToken() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            const titulo = document.getElementById('tituloEstado');
+            const mensaje = document.getElementById('mensajeEstado');
+
+            if (!token) {
+                titulo.textContent = "❌ Ungültiger Link";
+                mensaje.textContent = "Der Verifizierungslink ist unvollständig.";
+                return;
+            }
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?token_verificacion=eq.${encodeURIComponent(token)}`, {
+                    method: 'GET', headers: headers
+                });
+                const usuarios = await res.json();
+
+                if (usuarios.length === 0) {
+                    titulo.textContent = "❌ Ungültiger oder abgelaufener Link";
+                    mensaje.textContent = "Dieser Bestätigungslink ist ungültig oder wurde bereits verwendet.";
+                    return;
+                }
+
+                const usuario = usuarios[0];
+
+                const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuario.id}`, {
+                    method: 'PATCH',
+                    headers: { ...headers, 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({ verificado: true, token_verificacion: null })
+                });
+
+                if (updateRes.ok) {
+                    titulo.textContent = "✅ E-Mail erfolgreich bestätigt!";
+                    mensaje.textContent = `Vielen Dank, ${usuario.nombre}. Dein Konto wurde aktiviert. Du kannst dich jetzt anmelden.`;
+                } else {
+                    titulo.textContent = "❌ Fehler";
+                    mensaje.textContent = "Konto konnte nicht verifiziert werden. Bitte versuche es später erneut.";
+                }
+
+            } catch (error) {
+                titulo.textContent = "❌ Netzwerkfehler";
+                mensaje.textContent = error.message;
+            }
+        }
+
+        validarToken();
+    </script>
+</body>
+</html>

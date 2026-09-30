@@ -9,6 +9,10 @@ export function inicializarAuth(onLoginExitoso) {
     const formLogin = document.getElementById('formLogin');
     const formRegistro = document.getElementById('formRegistro');
 
+    function generarToken() {
+        return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    }
+
     window.cambiarTab = function(tipo) {
         loginMensaje.classList.add('hidden');
         if (tipo === 'login') {
@@ -17,14 +21,14 @@ export function inicializarAuth(onLoginExitoso) {
             formLogin.classList.remove('hidden');
             formRegistro.classList.add('hidden');
             tituloAuth.textContent = "Anmelden";
-            formLogin.reset(); // Limpia el formulario de login al cambiar
+            formLogin.reset();
         } else {
             tabRegistro.className = "w-1/2 pb-2 text-sm font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none transition";
             tabLogin.className = "w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition";
             formRegistro.classList.remove('hidden');
             formLogin.classList.add('hidden');
             tituloAuth.textContent = "Neuen Benutzer registrieren";
-            formRegistro.reset(); // Limpia el formulario de registro al cambiar
+            formRegistro.reset();
         }
     };
 
@@ -57,14 +61,21 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
             const usuarioExistente = usuarios[0];
-            if (usuarioExistente.password === password) {
-                localStorage.setItem('usuario_actual', usuarioExistente.nombre);
-                localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
-                
-                onLoginExitoso(usuarioExistente.nombre);
-            } else {
+            if (usuarioExistente.password !== password) {
                 mostrarMensaje('❌ Falsches Passwort.');
+                return;
             }
+
+            // Validar si confirmó su correo
+            if (!usuarioExistente.verificado) {
+                mostrarMensaje('⚠️ Bitte bestätige zuerst deine E-Mail-Adresse über den Link in deinem Postfach.');
+                return;
+            }
+
+            localStorage.setItem('usuario_actual', usuarioExistente.nombre);
+            localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
+            
+            onLoginExitoso(usuarioExistente.nombre);
         } catch (error) {
             mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
         }
@@ -74,26 +85,16 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        const adresse = document.getElementById('regAdresse').value.trim();
         const password = document.getElementById('regPassword').value;
-        const codigoIngresado = document.getElementById('regCodigo').value.trim();
+        const passwordConfirm = document.getElementById('regPasswordConfirm').value;
         loginMensaje.classList.add('hidden');
 
+        if (password !== passwordConfirm) {
+            mostrarMensaje('❌ Die Passwörter stimmen nicht überein.');
+            return;
+        }
+
         try {
-            // 1. Verificar si el código introducido existe y está disponible (usado = false)
-            const resCodigo = await fetch(`${SUPABASE_URL}/rest/v1/codigos_invitacion?codigo=eq.${encodeURIComponent(codigoIngresado)}&usado=eq.false`, {
-                method: 'GET', headers: headers
-            });
-            const codigosDisponibles = await resCodigo.json();
-
-            if (!codigosDisponibles || codigosDisponibles.length === 0) {
-                mostrarMensaje('❌ Ungültiger Sicherheitscode oder wurde bereits verwendet.');
-                return;
-            }
-
-            const registroCodigo = codigosDisponibles[0];
-
-            // 2. Validar si el correo ya está registrado en el sistema
             const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, {
                 method: 'GET', headers: headers
             });
@@ -103,22 +104,18 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            // 3. Marcar el código de invitación como usado para invalidarlo permanentemente
-            const resUpdate = await fetch(`${SUPABASE_URL}/rest/v1/codigos_invitacion?id=eq.${registroCodigo.id}`, {
-                method: 'PATCH',
-                headers: { ...headers, 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ usado: true })
-            });
+            const token = generarToken();
 
-            if (!resUpdate.ok) {
-                mostrarMensaje('❌ Fehler beim Entwerten des Sicherheitscodes.');
-                return;
-            }
-
-            // 4. Crear el nuevo usuario en la base de datos
             const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ nombre: nombre, email: email, adresse: adresse, password: password, acceso: null })
+                body: JSON.stringify({ 
+                    nombre: nombre, 
+                    email: email, 
+                    password: password, 
+                    verificado: false, 
+                    token_verificacion: token,
+                    acceso: null 
+                })
             });
 
             if (!resUser.ok) {
@@ -126,18 +123,31 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            localStorage.setItem('usuario_actual', nombre);
-            localStorage.setItem('usuario_acceso', 0);
-            
-            onLoginExitoso(nombre);
+            const emailRes = await fetch('/api/enviar-correo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, nombre, token })
+            });
+
+            if (!emailRes.ok) {
+                mostrarMensaje('⚠ Konto erstellt, aber Fehler beim Senden der Bestätigungs-E-Mail.');
+                return;
+            }
+
+            mostrarMensaje('✅ Registrierung erfolgreich! Bitte überprüfe deinen Posteingang, um dein Konto zu aktivieren.', 'exito');
+            formRegistro.reset();
         } catch (error) {
             mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
         }
     });
 
-    function mostrarMensaje(texto) {
+    function mostrarMensaje(texto, tipo = 'error') {
         loginMensaje.textContent = texto;
-        loginMensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
+        if (tipo === 'exito') {
+            loginMensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-emerald-100 text-emerald-700';
+        } else {
+            loginMensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
+        }
         loginMensaje.classList.remove('hidden');
     }
 }
