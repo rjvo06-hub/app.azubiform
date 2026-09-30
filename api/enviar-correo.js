@@ -13,8 +13,8 @@ export default async function handler(req, res) {
         port: Number(process.env.SMTP_PORT) || 587,
         secure: false, // false para el puerto 587 (TLS)
         auth: {
-            user: info@azubiform.de,
-            pass: F.Lissandra#1106
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
         },
         tls: {
             ciphers: 'SSLv3'
