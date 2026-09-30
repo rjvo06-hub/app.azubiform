@@ -134,8 +134,19 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
+            // MODIFICACIÓN APLICADA: 
+            // 1. Cambiar automáticamente a la pestaña de login ("Ich habe bereits ein Konto")
+            window.cambiarTab('login');
+
+            // 2. Mostrar el mensaje de éxito ya posicionados en la pestaña de inicio de sesión
             mostrarMensaje('✅ Registrierung erfolgreich! Bitte überprüfe deinen Posteingang, um dein Konto zu aktivieren.', 'exito');
-            formRegistro.reset();
+            
+            // 3. Autocompletar el correo en el formulario de inicio de sesión para comodidad
+            const loginEmailInput = document.getElementById('loginEmail');
+            if (loginEmailInput) {
+                loginEmailInput.value = email;
+            }
+
         } catch (error) {
             mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
         }
