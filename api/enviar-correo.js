@@ -1,46 +1,51 @@
 import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405.1).json({ error: 'Método no permitido' });
+  // Configurar CORS por si acaso
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
 
   try {
-    // 1. Configurar el transportador con las variables de Vercel
+    const { email, token } = req.method === 'POST' && req.body ? req.body : {};
+
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST, // smtp.ionos.de
-      port: Number(process.env.SMTP_PORT), // 587
-      secure: false, // false para puerto 587 con STARTTLS
+      host: process.env.SMTP_HOST || 'smtp.ionos.de',
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: false,
       auth: {
-        user: process.env.SMTP_USER, // info@azubiform.de
-        pass: process.env.SMTP_PASS, // Tu contraseña de IONOS
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
       tls: {
         rejectUnauthorized: false
       }
     });
 
-    // 2. Verificar la conexión con el servidor SMTP antes de enviar
-    await transporter.verify();
-    console.log('Conexión SMTP exitosa con IONOS');
-
-    // 3. Intentar enviar un correo de prueba básico
-    const info = await transporter.sendMail({
+    // Enviar correo de prueba o de verificación real
+    const mailOptions = {
       from: `"Azubiform" <${process.env.SMTP_USER}>`,
-      to: process.env.SMTP_USER, // Te lo mandas a ti mismo para probar
-      subject: 'Prueba de conexión SMTP - Azubiform',
-      text: 'Si recibes este correo, la conexión con IONOS funciona perfectamente.',
-    });
+      to: email || process.env.SMTP_USER,
+      subject: 'Confirma tu cuenta en Azubiform',
+      text: `Tu código de verificación es: ${token || 'Prueba de conexión exitosa'}`,
+      html: `<p>Bienvenido a Azubiform. Tu enlace o código de verificación es: <b>${token || 'Conexión exitosa'}</b></p>`
+    };
 
+    const info = await transporter.sendMail(mailOptions);
     return res.status(200).json({ success: true, messageId: info.messageId });
 
   } catch (error) {
-    console.error('Error detallado de SMTP:', error);
+    console.error('Error detallado en SMTP:', error);
     return res.status(500).json({ 
-      error: 'Fallo en el servidor SMTP', 
-      detalle: error.message,
-      code: error.code,
-      command: error.command
+      error: error.message, 
+      code: error.code, 
+      stack: error.stack 
     });
   }
 }
