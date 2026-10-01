@@ -78,7 +78,13 @@ export function inicializarImpresion() {
         prefijosDias.forEach(prefijo => {
             for (let i = 1; i <= 6; i++) {
                 const el = document.getElementById(`pr_${prefijo}${i}`);
-                if (el) el.textContent = '';
+                if (el) {
+                    el.textContent = '';
+                    // Asegurar propiedades de estilo inline para evitar desbordamientos de línea físicos
+                    el.style.whiteSpace = 'nowrap';
+                    el.style.overflow = 'hidden';
+                    el.style.textOverflow = 'ellipsis';
+                }
             }
         });
 
@@ -86,15 +92,13 @@ export function inicializarImpresion() {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(usuario)}&fecha=gte.${formatearISO(lunes)}&fecha=lte.${formatearISO(viernes)}&order=fecha.asc,hora.asc`, { headers });
             const registros = await res.json();
 
-            // Mapeo corregido usando directamente el día de la semana JS (1: Lunes, 2: Martes, 3: Miércoles, 4: Jueves, 5: Viernes)
-            const mapeoDias = { 1: 'm', 2: 'di', 3: 'mi', 4: 'do', 5: 'fr' };
+            const mapeoDias = { 0: 'm', 1: 'di', 2: 'mi', 3: 'do', 4: 'fr' };
             const lineasPorDia = { m: [], di: [], mi: [], do: [], fr: [] };
 
             registros.forEach(reg => {
                 const fechaReg = new Date(reg.fecha + 'T00:00:00');
-                const dIndex = fechaReg.getDay(); // 1 = Lunes, ..., 5 = Viernes
-                
-                if (mapeoDias[dIndex]) {
+                let dIndex = fechaReg.getDay() - 1; 
+                if (dIndex >= 0 && dIndex <= 4) {
                     const claveDia = mapeoDias[dIndex];
                     if (lineasPorDia[claveDia].length < 6) {
                         lineasPorDia[claveDia].push(reg.nombre_actividad);
