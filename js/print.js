@@ -40,21 +40,32 @@ export function inicializarImpresion() {
     }
 
     function obtenerRangoSemana(d) {
-        d = new Date(d);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        const lunes = new Date(d.setDate(diff));
+        const fecha = new Date(d);
+        const day = fecha.getDay();
+        const diff = fecha.getDate() - day + (day === 0 ? -6 : 1);
+        const lunes = new Date(fecha.setDate(diff));
+        lunes.setHours(0, 0, 0, 0);
+        
         const viernes = new Date(lunes);
         viernes.setDate(lunes.getDate() + 4);
+        viernes.setHours(23, 59, 59, 999);
+        
         return { lunes, viernes };
     }
 
-    function formatearISO(date) { return date.toISOString().split('T')[0]; }
+    function formatearISO(date) { 
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`; 
+    }
+
     function formatearDDMM(fecha) {
         const d = fecha.getDate().toString().padStart(2, '0');
         const m = (fecha.getMonth() + 1).toString().padStart(2, '0');
         return `${d}.${m}`;
     }
+    
     function formatearYY(fecha) { return fecha.getFullYear().toString().slice(-2); }
 
     async function cargarDatosHojaImpresion() {
@@ -80,7 +91,6 @@ export function inicializarImpresion() {
                 const el = document.getElementById(`pr_${prefijo}${i}`);
                 if (el) {
                     el.textContent = '';
-                    // Asegurar propiedades de estilo inline para evitar desbordamientos de línea físicos
                     el.style.whiteSpace = 'nowrap';
                     el.style.overflow = 'hidden';
                     el.style.textOverflow = 'ellipsis';
@@ -89,15 +99,19 @@ export function inicializarImpresion() {
         });
 
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(usuario)}&fecha=gte.${formatearISO(lunes)}&fecha=lte.${formatearISO(viernes)}&order=fecha.asc,hora.asc`, { headers });
+            const urlQuery = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(usuario)}&fecha=gte.${formatearISO(lunes)}&fecha=lte.${formatearISO(viernes)}&order=fecha.asc,hora.asc`;
+            const res = await fetch(urlQuery, { headers });
             const registros = await res.json();
 
             const mapeoDias = { 0: 'm', 1: 'di', 2: 'mi', 3: 'do', 4: 'fr' };
             const lineasPorDia = { m: [], di: [], mi: [], do: [], fr: [] };
 
             registros.forEach(reg => {
-                const fechaReg = new Date(reg.fecha + 'T00:00:00');
-                let dIndex = fechaReg.getDay() - 1; 
+                const [anio, mes, dia] = reg.fecha.split('-').map(Number);
+                const fechaReg = new Date(anio, mes - 1, dia);
+                
+                let dIndex = fechaReg.getDay() - 1; // Lunes=0 ... Viernes=4
+                
                 if (dIndex >= 0 && dIndex <= 4) {
                     const claveDia = mapeoDias[dIndex];
                     if (lineasPorDia[claveDia].length < 6) {
