@@ -1,502 +1,157 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azubiform.de</title>
-    
-    <!-- 📱 Configuración para dispositivos móviles y PWA -->
-    <meta name="apple-mobile-web-app-title" content="Azubiform">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
-
-    <!-- 🖼️️ Iconos -->
-    <link rel="apple-touch-icon" href="./icon_azubiform.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="./icon_azubiform.png">
-    <link rel="manifest" href="./manifest.json">
+    <title>Azubiform - Registro de Actividades de Formación</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Quitar el destello y sonido táctil predeterminado en móviles (estilo app nativa) */
-        button, input, select {
-            -webkit-tap-highlight-color: transparent;
+        /* Estilos específicos para las líneas de la hoja de impresión del Ausbildung */
+        .linea-impresion {
+            position: absolute; 
+            left: 30mm; 
+            width: 160mm; 
+            height: 5.5mm; 
+            line-height: 5.5mm; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+            font-family: Terminal, "Courier New", Courier, monospace; 
+            font-size: 10pt; 
+            box-sizing: border-box;
         }
 
         @media print {
-            body * { visibility: hidden; }
-            #modalImpresionAusbildung, #modalImpresionAusbildung * { visibility: visible; }
-            #modalImpresionAusbildung {
-                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white !important;
+            body * {
+                visibility: hidden;
             }
-            .no-print { display: none !important; }
-            @page { size: A4; margin: 0; }
+            #modalImpresionAusbildung, #modalImpresionAusbildung * {
+                visibility: visible;
+            }
+            #modalImpresionAusbildung {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background: white;
+            }
+            .no-imprimir {
+                display: none !important;
+            }
         }
-
-        .page-print {
-            position: relative; width: 210mm; height: 297mm; margin: 0 auto; background-color: #ffffff; box-sizing: border-box; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
-        }
-
-        #pr_nombre { position: absolute; left: 130mm; top: -0.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
-        #pr_semana_inicio { position: absolute; left: 120mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
-        #pr_semana_fin { position: absolute; left: 140mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
-        #pr_ano_fin { position: absolute; left: 159.5mm; top: 7.5mm; width: 4mm; height: 5mm; line-height: 5mm; white-space: nowrap; text-align: center; }
-
-        .linea-impresion {
-            position: absolute; left: 30mm; width: 160mm; height: 5.5mm; line-height: 5.5mm; white-space: nowrap; overflow: hidden; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
-        }
-
-        #pr_m1 { top: 32.5mm; } #pr_m2 { top: 38.0mm; } #pr_m3 { top: 43.5mm; } #pr_m4 { top: 49.0mm; } #pr_m5 { top: 54.5mm; } #pr_m6 { top: 60.0mm; }
-        #pr_di1 { top: 67.5mm; } #pr_di2 { top: 73.0mm; } #pr_di3 { top: 78.5mm; } #pr_di4 { top: 84.0mm; } #pr_di5 { top: 89.5mm; } #pr_di6 { top: 95.0mm; }
-        #pr_mi1 { top: 102.5mm; } #pr_mi2 { top: 107.5mm; } #pr_mi3 { top: 113.5mm; } #pr_mi4 { top: 119.0mm; } #pr_mi5 { top: 124.5mm; } #pr_mi6 { top: 130.0mm; }
-        #pr_do1 { top: 137.5mm; } #pr_do2 { top: 143.0mm; } #pr_do3 { top: 148.5mm; } #pr_do4 { top: 154.0mm; } #pr_do5 { top: 159.5mm; } #pr_do6 { top: 165.0mm; }
-        #pr_fr1 { top: 172.5mm; } #pr_fr2 { top: 178.0mm; } #pr_fr3 { top: 183.5mm; } #pr_fr4 { top: 189.0mm; } #pr_fr5 { top: 194.5mm; } #pr_fr6 { top: 200.0mm; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center justify-center">
+<body class="bg-gray-100 min-h-screen text-gray-800">
 
-    <!-- SECCIÓN 1: LOGIN -->
-    <div id="loginSection" class="w-full max-w-md">
-        <div class="w-full text-center mb-6">
-            <div class="flex items-center justify-center gap-3.5 mb-2">
-                <svg class="w-12 h-12 rounded-2xl shadow-lg flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                  <defs>
-                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#4f46e5" />
-                      <stop offset="100%" stop-color="#312e81" />
-                    </linearGradient>
-                    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-                      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
-                    </filter>
-                  </defs>
-                  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
-                  <path d="M120 155c40-15 90-25 136-25 46 0 96 10 136 25v222c-40-15-90-25-136-25-46 0-96 10-136 25V155z" fill="#ffffff" opacity="0.15" />
-                  <path d="M256 130c-46 0-96 10-136 25v222c40-15 90-25 136-25V130z" fill="#ffffff" filter="url(#shadow)" />
-                  <path d="M256 130c46 0 96 10 136 25v222c-40-15-90-25-136-25V130z" fill="#f8fafc" />
-                  <line x1="256" y1="130" x2="256" y2="377" stroke="#cbd5e1" stroke-width="4" />
-                  <polygon points="275,170 215,260 255,260 235,340 305,235 265,235" fill="#eab308" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" filter="url(#shadow)" />
-                </svg>
-                <h1 class="text-4xl font-extrabold text-indigo-700 tracking-tight">Azubiform</h1>
+    <!-- CONTENEDOR PRINCIPAL DE LA APLICACIÓN -->
+    <div id="app" class="container mx-auto px-4 py-8">
+        <header class="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
+            <h1 class="text-2xl font-bold text-blue-600">Azubiform</h1>
+            <div class="flex gap-3">
+                <button onclick="abrirModalImpresionAusbildung()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                    Imprimir Informe / Ausbildungsnachweis
+                </button>
             </div>
-            <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
-            <p class="text-xs text-gray-600 leading-relaxed px-1">
-                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Ausbildungsnachweis</strong>. Wir speichern deine Einträge sicher und chronologisch ab, damit dein Berichtsheft lückenlos und übersichtlich bleibt.
-            </p>
-        </div>
+        </header>
 
-        <div class="bg-white p-6 rounded-xl shadow-lg">
-            <h2 class="text-xl font-bold text-gray-800 mb-4" id="tituloAuth">Anmelden</h2>
-
-            <div class="flex border-b border-gray-200 mb-4">
-                <button type="button" id="tabLogin" onclick="cambiarTab('login')" class="w-1/2 pb-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none transition">Ich habe bereits ein Konto</button>
-                <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition">Registrieren</button>
+        <!-- Panel de Registro Diario (Contenido Principal) -->
+        <main class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">Registro Diario de Actividades</h2>
+            <div id="contenedorRegistros" class="space-y-4">
+                <!-- Aquí se cargan dinámicamente tus formularios y registros diarios -->
+                <p class="text-gray-500">Cargando datos de la jornada...</p>
             </div>
+        </main>
+    </div>
+
+    <!-- MODAL DE IMPRESIÓN / AUSBILDUNGSNACHWEIS -->
+    <div id="modalImpresionAusbildung" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
             
-            <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-lg">
-                <p class="font-bold mb-1">Registrierung erfolgreich!</p>
-                <p>Wir haben dir eine Bestätigungs-E-Mail gesendet. Bitte prüfe dein Postfach (und Spam-Ordner) und bestätige deine E-Mail, bevor du dich anmeldest.</p>
-            </div>
-
-            <form id="formLogin" class="space-y-4">
-                <div>
-                    <label for="loginEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="loginEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                </div>
-                <div>
-                    <label for="loginPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
-                    <div class="relative">
-                        <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconLoginPass">👁</span></button>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Anmelden</button>
-            </form>
-
-            <form id="formRegistro" class="space-y-4 hidden">
-                <div>
-                    <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
-                    <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                </div>
-                <div>
-                    <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                </div>
-                <div>
-                    <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
-                    <div class="relative">
-                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁️</span></button>
-                    </div>
-                </div>
-                <div>
-                    <label for="regPasswordConfirm" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort wiederholen</label>
-                    <div class="relative">
-                        <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPassConfirm">👁️</span></button>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-amber-600 text-white font-medium py-2 rounded-lg hover:bg-amber-700 transition">Registrierung abschließen</button>
-            </form>
-            <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
-        </div>
-
-        <div class="text-center mt-4 px-4">
-            <p class="text-xs text-gray-500">
-                Hast du Fragen oder benötigst du weitere Informationen? Sende uns eine E-Mail an 
-                <a href="mailto:info@azubiform.de" class="text-indigo-600 font-semibold hover:underline">info@azubiform.de</a>.
-            </p>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 2: APP PRINCIPAL -->
-    <div id="appSection" class="w-full max-w-md hidden flex flex-col items-center">
-        <div class="w-full bg-white p-3 rounded-xl shadow-sm mb-4 flex justify-between items-center text-xs text-gray-600">
-            <span>Benutzer: <strong id="lblUsuario" class="text-indigo-600"></strong></span>
-            <div class="space-x-1.5 flex items-center">
-                <button id="btnMenuConsulta" onclick="abrirModalConsulta()" class="text-indigo-600 font-semibold hover:underline">📊 Abfragen</button>
-                <span class="text-gray-300">|</span>
-                <button id="btnMenuImpresion" onclick="abrirModalImpresionAusbildung()" class="text-emerald-600 font-semibold hover:underline hidden">🖨 Drucken</button>
-                <span id="sepMenuImpresion" class="text-gray-300 hidden">|</span>
-                <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
-            </div>
-        </div>
-
-        <div id="panelGenerarCodigo" class="w-full bg-white p-4 rounded-xl shadow-lg mb-4 hidden">
-            <h3 class="text-xs font-semibold text-gray-700 uppercase mb-2">Neuen Einmalcode generieren</h3>
-            <div class="flex gap-2">
-                <input type="text" id="inputNuevoCodigo" placeholder="z.B. AF.NuevoCodigo" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <button type="button" id="btnCrearCodigo" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition">Erstellen</button>
-            </div>
-            <p id="msgEstadoCodigo" class="text-xs mt-2 hidden"></p>
-        </div>
-
-        <div class="w-full bg-white p-6 rounded-xl shadow-lg mb-6 relative">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="block text-xs font-semibold text-gray-700 uppercase mb-1">Aktivitätsprotokoll</h2>
-                <button type="button" onclick="abrirModalPasado()" class="text-xs bg-amber-100 text-amber-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-amber-200 transition">📅 Tag nachtragen</button>
-            </div>
-            <div id="fechaActual" class="text-sm font-medium text-gray-600 bg-gray-50 p-2 rounded-lg text-center mb-4 border border-gray-200">Datum wird geladen...</div>
-
-            <form id="registroForm" class="space-y-4 relative">
-                <div class="relative">
-                    <label for="actividad" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
-                    <div class="relative flex items-center">
-                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        
-                        <!-- 🎙️ BOTÓN MINIMALISTA CAMBIANTE (MIC / STOP) -->
-                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-indigo-600 rounded-full transition focus:outline-none">
-                            <svg id="icon-btnVozActividad" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
-                </div>
-                <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Zur Liste hinzufügen</button>
-            </form>
-            <div id="mensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
-        </div>
-
-        <div class="w-full bg-white p-6 rounded-xl shadow-lg">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-gray-800 text-sm">Meine heutigen Aktivitäten</h3>
-                <span id="contador" class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-1 rounded-full">0 erfasst</span>
-            </div>
-            <div id="listaActividades" class="space-y-2 max-h-64 overflow-y-auto pr-1">
-                <p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL IMPRESIÓN AUSBILDUNGSNACHWEIS -->
-    <div id="modalImpresionAusbildung" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-2 overflow-y-auto">
-        <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[95vh]">
-            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex flex-wrap justify-between items-center gap-3 no-print">
-                <div class="flex items-center space-x-3">
-                    <h2 class="font-bold text-sm">A4-Druckgenerator</h2>
-                    <select id="selectUsuarioImpresion" lang="de" class="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded text-xs focus:outline-none"><option value="">Benutzer werden geladen...</option></select>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="cambiarSemanaImpresion(-1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">◀ Vorherige Woche</button>
-                    <span id="lblSemanaImpresion" class="text-xs font-semibold text-emerald-400">Wird berechnet...</span>
-                    <button onclick="cambiarSemanaImpresion(1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">Nächste Woche ▶</button>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-1.5 rounded shadow">🖨 Blatt drucken</button>
-                    <button onclick="cerrarModalImpresionAusbildung()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
-                </div>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 bg-gray-200 flex justify-center">
-                <div class="page-print shadow-2xl bg-white">
-                    <div id="pr_nombre"></div>
-                    <div id="pr_semana_inicio"></div>
-                    <div id="pr_semana_fin"></div>
-                    <div id="pr_ano_fin"></div>
-                    <div id="pr_m1" class="linea-impresion"></div><div id="pr_m2" class="linea-impresion"></div><div id="pr_m3" class="linea-impresion"></div><div id="pr_m4" class="linea-impresion"></div><div id="pr_m5" class="linea-impresion"></div><div id="pr_m6" class="linea-impresion"></div>
-                    <div id="pr_di1" class="linea-impresion"></div><div id="pr_di2" class="linea-impresion"></div><div id="pr_di3" class="linea-impresion"></div><div id="pr_di4" class="linea-impresion"></div><div id="pr_di5" class="linea-impresion"></div><div id="pr_di6" class="linea-impresion"></div>
-                    <div id="pr_mi1" class="linea-impresion"></div><div id="pr_mi2" class="linea-impresion"></div><div id="pr_mi3" class="linea-impresion"></div><div id="pr_mi4" class="linea-impresion"></div><div id="pr_mi5" class="linea-impresion"></div><div id="pr_mi6" class="linea-impresion"></div>
-                    <div id="pr_do1" class="linea-impresion"></div><div id="pr_do2" class="linea-impresion"></div><div id="pr_do3" class="linea-impresion"></div><div id="pr_do4" class="linea-impresion"></div><div id="pr_do5" class="linea-impresion"></div><div id="pr_do6" class="linea-impresion"></div>
-                    <div id="pr_fr1" class="linea-impresion"></div><div id="pr_fr2" class="linea-impresion"></div><div id="pr_fr3" class="linea-impresion"></div><div id="pr_fr4" class="linea-impresion"></div><div id="pr_fr5" class="linea-impresion"></div><div id="pr_fr6" class="linea-impresion"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DÍA ANTERIOR -->
-    <div id="modalPasado" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-        <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-xl relative max-h-[90vh] flex flex-col">
-            <button type="button" onclick="cerrarModalPasado()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
-            <h2 class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Nachträglicher Eintrag</h2>
-            <h1 class="text-xl font-bold text-gray-800 mb-4">Vergangene Aktivität hinzufügen</h1>
-            <form id="formPasado" class="space-y-3 mb-4">
-                <div>
-                    <label for="fechaPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Datum auswählen</label>
-                    <input type="date" id="fechaPasada" lang="de" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div class="relative">
-                    <label for="actividadPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
-                    <div class="relative flex items-center">
-                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        
-                        <!-- 🎙️ MICRÓFONO CAMBIANTE PARA MODAL PASADO -->
-                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-amber-600 rounded-full transition focus:outline-none">
-                            <svg id="icon-btnVozPasada" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
-                </div>
-                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2 rounded-lg hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen</button>
-            </form>
-            <div id="mensajePasado" class="text-xs text-center hidden py-1.5 mb-3 rounded-lg font-medium"></div>
-            <div class="border-t border-gray-100 pt-3 flex-1 overflow-y-auto">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-bold text-gray-800 text-xs">Aktivitäten an diesem Datum</h3>
-                    <span id="contadorPasado" class="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">0 erfasst</span>
-                </div>
-                <div id="listaActividadesPasadas" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    <p class="text-xs text-gray-400 text-center py-2">Wähle ein Datum aus, um Einträge anzuzeigen.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL CONSULTA -->
-    <div id="modalConsulta" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-        <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-xl relative max-h-[90vh] flex flex-col">
-            <button type="button" onclick="cerrarModalConsulta()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
-            <h2 class="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-1">Steuerungs-Panel</h2>
-            <h1 class="text-xl font-bold text-gray-800 mb-4">Aktivitätsabfrage</h1>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <div>
-                    <label for="selectUsuarioConsulta" class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Benutzer</label>
-                    <select id="selectUsuarioConsulta" lang="de" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs"><option value="">Wird geladen...</option></select>
-                </div>
-                <div>
-                    <label for="selectVistaConsulta" class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Ansichtstyp</label>
-                    <select id="selectVistaConsulta" lang="de" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
-                        <option value="semanal" selected>Wöchentlich (Standard)</option>
-                        <option value="mensual">Monatlich</option>
+            <!-- Cabecera del Modal (Controles) -->
+            <div class="p-4 bg-gray-800 text-white flex justify-between items-center no-imprimir">
+                <div class="flex items-center gap-4">
+                    <h3 class="font-bold text-lg">Vista Previa de Impresión</h3>
+                    <select id="selectUsuarioImpresion" class="bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm">
+                        <option value="">Cargando usuarios...</option>
                     </select>
                 </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="cambiarSemanaImpresion(-1)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded text-sm transition">← Semana Anterior</button>
+                    <span id="lblSemanaImpresion" class="text-sm font-medium px-2">-- / --</span>
+                    <button onclick="cambiarSemanaImpresion(1)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded text-sm transition">Semana Siguiente →</button>
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded text-sm font-medium transition">Imprimir</button>
+                    <button onclick="cerrarModalImpresionAusbildung()" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded text-sm font-medium transition">✕ Cerrar</button>
+                </div>
             </div>
-            <div class="flex justify-between items-center mb-4 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100">
-                <button id="btnAnteriorConsulta" class="bg-white text-indigo-600 font-semibold px-2.5 py-1 rounded-md border border-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs">← Zurück</button>
-                <span id="lblRangoPeriodoConsulta" class="text-xs font-bold text-indigo-900 text-center">Zeitraum wird geladen...</span>
-                <button id="btnSiguienteConsulta" class="bg-white text-indigo-600 font-semibold px-2.5 py-1 rounded-md border border-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs">Weiter →</button>
+
+            <!-- Cuerpo de la Hoja de Impresión (Simulación A4 / Formulario Oficial) -->
+            <div class="p-6 overflow-y-auto flex-grow bg-gray-50 flex justify-center">
+                <!-- Contenedor de la hoja simulada A4 -->
+                <div id="hojaAusbildung" class="relative bg-white shadow-lg w-[210mm] h-[297mm] p-[10mm] text-black text-sm">
+                    
+                    <!-- Datos de Encabezado en la Hoja -->
+                    <div class="absolute top-[25mm] left-[30mm] font-bold" id="pr_nombre">Nombre del Usuario</div>
+                    <div class="absolute top-[25mm] left-[150mm]" id="pr_semana_inicio">00.00</div>
+                    <div class="absolute top-[25mm] left-[170mm]" id="pr_semana_fin">00.00</div>
+                    <div class="absolute top-[25mm] left-[195mm]" id="pr_ano_fin">26</div>
+
+                    <!-- LUNES (m) -->
+                    <div style="top: 45mm;" class="linea-impresion" id="pr_m1"></div>
+                    <div style="top: 51mm;" class="linea-impresion" id="pr_m2"></div>
+                    <div style="top: 57mm;" class="linea-impresion" id="pr_m3"></div>
+                    <div style="top: 63mm;" class="linea-impresion" id="pr_m4"></div>
+                    <div style="top: 69mm;" class="linea-impresion" id="pr_m5"></div>
+                    <div style="top: 75mm;" class="linea-impresion" id="pr_m6"></div>
+
+                    <!-- MARTES (di) -->
+                    <div style="top: 89mm;" class="linea-impresion" id="pr_di1"></div>
+                    <div style="top: 95mm;" class="linea-impresion" id="pr_di2"></div>
+                    <div style="top: 101mm;" class="linea-impresion" id="pr_di3"></div>
+                    <div style="top: 107mm;" class="linea-impresion" id="pr_di4"></div>
+                    <div style="top: 113mm;" class="linea-impresion" id="pr_di5"></div>
+                    <div style="top: 119mm;" class="linea-impresion" id="pr_di6"></div>
+
+                    <!-- MIÉRCOLES (mi) -->
+                    <div style="top: 133mm;" class="linea-impresion" id="pr_mi1"></div>
+                    <div style="top: 139mm;" class="linea-impresion" id="pr_mi2"></div>
+                    <div style="top: 145mm;" class="linea-impresion" id="pr_mi3"></div>
+                    <div style="top: 151mm;" class="linea-impresion" id="pr_mi4"></div>
+                    <div style="top: 157mm;" class="linea-impresion" id="pr_mi5"></div>
+                    <div style="top: 163mm;" class="linea-impresion" id="pr_mi6"></div>
+
+                    <!-- JUEVES (do) -->
+                    <div style="top: 177mm;" class="linea-impresion" id="pr_do1"></div>
+                    <div style="top: 183mm;" class="linea-impresion" id="pr_do2"></div>
+                    <div style="top: 189mm;" class="linea-impresion" id="pr_do3"></div>
+                    <div style="top: 195mm;" class="linea-impresion" id="pr_do4"></div>
+                    <div style="top: 201mm;" class="linea-impresion" id="pr_do5"></div>
+                    <div style="top: 207mm;" class="linea-impresion" id="pr_do6"></div>
+
+                    <!-- VIERNES (fr) - Totalmente corregido -->
+                    <div style="top: 221mm;" class="linea-impresion" id="pr_fr1"></div>
+                    <div style="top: 227mm;" class="linea-impresion" id="pr_fr2"></div>
+                    <div style="top: 233mm;" class="linea-impresion" id="pr_fr3"></div>
+                    <div style="top: 239mm;" class="linea-impresion" id="pr_fr4"></div>
+                    <div style="top: 245mm;" class="linea-impresion" id="pr_fr5"></div>
+                    <div style="top: 251mm;" class="linea-impresion" id="pr_fr6"></div>
+
+                </div>
             </div>
-            <div id="contenedorResultadosConsulta" class="space-y-3 flex-1 overflow-y-auto pr-1">
-                <p class="text-xs text-gray-400 text-center py-8">Wähle einen Benutzer aus, um dessen Einträge anzuzeigen.</p>
-            </div>
+
         </div>
     </div>
 
-    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ EN TIEMPO REAL CON BOTÓN STOP Y RECONEXIÓN -->
-    <script>
-        const micIconSVG = `
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
-        `;
-
-        const stopIconSVG = `
-            <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>
-        `;
-
-        function toggleSpeechRecognition(inputId, btnId) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert("Dein Browser unterstützt keine Spracherkennung.");
-                return;
-            }
-
-            const input = document.getElementById(inputId);
-            const btn = document.getElementById(btnId);
-            const svgIcon = document.getElementById('icon-' + btnId);
-
-            if (window.currentRecognition && window.currentActiveInput === inputId) {
-                window.currentRecognition.stop();
-                window.currentRecognition = null;
-                resetBtnRec(btn, svgIcon);
-                return;
-            }
-
-            if (window.currentRecognition) {
-                window.currentRecognition.stop();
-            }
-
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'de-DE';
-            recognition.interimResults = true; // Permite escritura fluida en tiempo real
-            recognition.maxAlternatives = 1;
-
-            window.currentRecognition = recognition;
-            window.currentActiveInput = inputId;
-
-            let textoBase = input.value;
-            if (textoBase.length > 0 && !textoBase.endsWith(' ')) {
-                textoBase += ' ';
-            }
-
-            // Cambiar a icono de STOP cuadrado rojo con animación de parpadeo
-            btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
-            btn.classList.add('text-red-600', 'animate-pulse');
-            svgIcon.innerHTML = stopIconSVG;
-
-            recognition.onresult = function(event) {
-                let textoIntermedio = '';
-                let textoFinal = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        textoFinal += event.results[i][0].transcript;
-                    } else {
-                        textoIntermedio += event.results[i][0].transcript;
-                    }
-                }
-
-                if (textoFinal) {
-                    textoBase += textoFinal + ' ';
-                }
-
-                input.value = textoBase + textoIntermedio;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-            };
-
-            recognition.onerror = function(event) {
-                console.error("Speech recognition error:", event.error);
-                if (event.error === 'not-allowed') {
-                    alert("Zugriff auf das Mikrofon verweigert. Bitte erlaube den Mikrofonzugriff in deinem Browser.");
-                }
-                resetBtnRec(btn, svgIcon);
-            };
-
-            recognition.onend = function() {
-                resetBtnRec(btn, svgIcon);
-                window.currentRecognition = null;
-                window.currentActiveInput = null;
-            };
-
-            try {
-                recognition.start();
-            } catch (e) {
-                console.error("Could not start recognition:", e);
-                resetBtnRec(btn, svgIcon);
-            }
-        }
-
-        function resetBtnRec(btn, svgIcon) {
-            btn.classList.remove('text-red-600', 'animate-pulse');
-            btn.classList.add('text-gray-400');
-            svgIcon.innerHTML = micIconSVG;
-
-            if(btn.id.includes('Pasada')) {
-                btn.classList.add('hover:text-amber-600');
-            } else {
-                btn.classList.add('hover:text-indigo-600');
-            }
-        }
-
-        // 🔄 DETECTOR DE CAMBIO DE PANTALLA (Para reconectar el micrófono al volver de WhatsApp)
-        document.addEventListener("visibilitychange", function() {
-            if (!document.hidden && window.currentRecognition) {
-                try {
-                    window.currentRecognition.stop();
-                } catch (e) {}
-                window.currentRecognition = null;
-                window.currentActiveInput = null;
-                
-                const btn1 = document.getElementById('btnVozActividad');
-                const svg1 = document.getElementById('icon-btnVozActividad');
-                if (btn1 && svg1) resetBtnRec(btn1, svg1);
-
-                const btn2 = document.getElementById('btnVozPasada');
-                const svg2 = document.getElementById('icon-btnVozPasada');
-                if (btn2 && svg2) resetBtnRec(btn2, svg2);
-            }
-        });
-    </script>
-
-    <!-- DIRECTOR DE ORQUESTA -->
+    <!-- Script principal de la aplicación que inicializa las funciones de impresión -->
     <script type="module">
-        import { inicializarAuth } from './js/auth.js';
-        import { iniciarAppPrincipal } from './js/app.js';
-        import { inicializarHistorial } from './js/history.js';
         import { inicializarImpresion } from './js/print.js';
-        import { inicializarGeneradorCodigos } from './js/admin.js';
-
-        function verificarPermisosAdmin() {
-            const acceso = localStorage.getItem('usuario_acceso');
-            const esAdmin = Number(acceso) === 1;
-            if (esAdmin) {
-                document.getElementById('btnMenuImpresion').classList.remove('hidden');
-                document.getElementById('sepMenuImpresion').classList.remove('hidden');
-            } else {
-                document.getElementById('btnMenuImpresion').classList.add('hidden');
-                document.getElementById('sepMenuImpresion').classList.add('hidden');
-            }
-            inicializarGeneradorCodigos(esAdmin);
-        }
-
-        window.cerrarSesion = function() {
-            localStorage.removeItem('usuario_actual');
-            localStorage.removeItem('usuario_acceso');
-            
-            document.getElementById('formLogin').reset();
-            document.getElementById('formRegistro').reset();
-            document.getElementById('loginMensaje').classList.add('hidden');
-            document.getElementById('alertaRegistroExitoso').classList.add('hidden');
-
-            document.getElementById('appSection').classList.add('hidden');
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.body.classList.add('justify-center');
-            
-            inicializarAuth((nombre) => {
-                verificarPermisosAdmin();
-                iniciarAppPrincipal(nombre);
-                inicializarHistorial();
-                inicializarImpresion();
-            });
-        };
-
-        const usuarioGuardado = localStorage.getItem('usuario_actual');
         
-        if (usuarioGuardado) {
-            verificarPermisosAdmin();
-            iniciarAppPrincipal(usuarioGuardado);
-            inicializarHistorial();
+        document.addEventListener('DOMContentLoaded', () => {
             inicializarImpresion();
-        } else {
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.body.classList.remove('justify-center');
-            inicializarAuth((nombre) => {
-                verificarPermisosAdmin();
-                iniciarAppPrincipal(nombre);
-                inicializarHistorial();
-                inicializarImpresion();
-            });
-        }
+            // Aquí puedes inicializar el resto de módulos de tu app (ej. registros, autenticación, etc.)
+        });
     </script>
 </body>
 </html>
