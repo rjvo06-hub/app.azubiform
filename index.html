@@ -162,7 +162,10 @@
             <form id="registroForm" class="space-y-4 relative">
                 <div class="relative">
                     <label for="actividad" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
-                    <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <div class="relative flex items-center">
+                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2 p-1.5 text-gray-400 hover:text-indigo-600 focus:outline-none">🎙️</button>
+                    </div>
                     <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
                 </div>
                 <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Zur Liste hinzufügen</button>
@@ -195,7 +198,7 @@
                     <button onclick="cambiarSemanaImpresion(1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">Nächste Woche ▶</button>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-1.5 rounded shadow">🖨️ Blatt drucken</button>
+                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-1.5 rounded shadow">🖨 Blatt drucken</button>
                     <button onclick="cerrarModalImpresionAusbildung()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
                 </div>
             </div>
@@ -228,7 +231,10 @@
                 </div>
                 <div class="relative">
                     <label for="actividadPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
-                    <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <div class="relative flex items-center">
+                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2 p-1.5 text-gray-400 hover:text-amber-600 focus:outline-none">🎙️</button>
+                    </div>
                     <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
                 </div>
                 <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2 rounded-lg hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen</button>
@@ -276,6 +282,76 @@
         </div>
     </div>
 
+    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ -->
+    <script>
+        function toggleSpeechRecognition(inputId, btnId) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Dein Browser unterstützt keine Spracherkennung.");
+                return;
+            }
+
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+
+            if (window.currentRecognition && window.currentActiveInput === inputId) {
+                window.currentRecognition.stop();
+                window.currentRecognition = null;
+                btn.classList.remove('text-red-600', 'animate-pulse');
+                btn.classList.add('text-gray-400');
+                return;
+            }
+
+            if (window.currentRecognition) {
+                window.currentRecognition.stop();
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            window.currentRecognition = recognition;
+            window.currentActiveInput = inputId;
+
+            btn.classList.remove('text-gray-400');
+            btn.classList.add('text-red-600', 'animate-pulse');
+
+            recognition.onresult = function(event) {
+                const speechResult = event.results[0][0].transcript;
+                input.value = speechResult;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error:", event.error);
+                if (event.error === 'not-allowed') {
+                    alert("Zugriff auf das Mikrofon verweigert. Bitte erlaube den Mikrofonzugriff in deinem Browser.");
+                } else if (event.error === 'service-not-allowed') {
+                    alert("Der Spracherkennungsdienst ist nicht erlaubt (möglicherweise wegen HTTP statt HTTPS).");
+                }
+                btn.classList.remove('text-red-600', 'animate-pulse');
+                btn.classList.add('text-gray-400');
+            };
+
+            recognition.onend = function() {
+                btn.classList.remove('text-red-600', 'animate-pulse');
+                btn.classList.add('text-gray-400');
+                window.currentRecognition = null;
+                window.currentActiveInput = null;
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("Could not start recognition:", e);
+                btn.classList.remove('text-red-600', 'animate-pulse');
+                btn.classList.add('text-gray-400');
+            }
+        }
+    </script>
+
     <!-- DIRECTOR DE ORQUESTA -->
     <script type="module">
         import { inicializarAuth } from './js/auth.js';
@@ -289,6 +365,7 @@
             const esAdmin = Number(acceso) === 1;
             if (esAdmin) {
                 document.getElementById('btnMenuImpresion').classList.remove('hidden');
+                document.getElementById('sepMenuImpresion').classList.add('hidden'); // wait, keep it correct
                 document.getElementById('sepMenuImpresion').classList.remove('hidden');
             } else {
                 document.getElementById('btnMenuImpresion').classList.add('hidden');
