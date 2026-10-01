@@ -313,7 +313,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ EN TIEMPO REAL CON BOTÓN STOP -->
+    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ EN TIEMPO REAL CON BOTÓN STOP Y RECONEXIÓN -->
     <script>
         const micIconSVG = `
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
@@ -417,6 +417,25 @@
                 btn.classList.add('hover:text-indigo-600');
             }
         }
+
+        // 🔄 DETECTOR DE CAMBIO DE PANTALLA (Para reconectar el micrófono al volver de WhatsApp)
+        document.addEventListener("visibilitychange", function() {
+            if (!document.hidden && window.currentRecognition) {
+                try {
+                    window.currentRecognition.stop();
+                } catch (e) {}
+                window.currentRecognition = null;
+                window.currentActiveInput = null;
+                
+                const btn1 = document.getElementById('btnVozActividad');
+                const svg1 = document.getElementById('icon-btnVozActividad');
+                if (btn1 && svg1) resetBtnRec(btn1, svg1);
+
+                const btn2 = document.getElementById('btnVozPasada');
+                const svg2 = document.getElementById('icon-btnVozPasada');
+                if (btn2 && svg2) resetBtnRec(btn2, svg2);
+            }
+        });
     </script>
 
     <!-- DIRECTOR DE ORQUESTA -->
