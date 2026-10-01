@@ -51,10 +51,25 @@
 
     <!-- SECCIÓN 1: LOGIN -->
     <div id="loginSection" class="w-full max-w-md">
-        <!-- Encabezado con mayor presencia, adaptado al ancho total y más llamativo -->
         <div class="w-full text-center mb-6">
             <div class="flex items-center justify-center gap-3.5 mb-2">
-                <img src="./icon_azubiform.png" alt="Azubiform Logo" class="w-12 h-12 rounded-2xl shadow-lg object-cover">
+                <svg class="w-12 h-12 rounded-2xl shadow-lg flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                  <defs>
+                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#4f46e5" />
+                      <stop offset="100%" stop-color="#312e81" />
+                    </linearGradient>
+                    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
+                    </filter>
+                  </defs>
+                  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
+                  <path d="M120 155c40-15 90-25 136-25 46 0 96 10 136 25v222c-40-15-90-25-136-25-46 0-96 10-136 25V155z" fill="#ffffff" opacity="0.15" />
+                  <path d="M256 130c-46 0-96 10-136 25v222c40-15 90-25 136-25V130z" fill="#ffffff" filter="url(#shadow)" />
+                  <path d="M256 130c46 0 96 10 136 25v222c-40-15-90-25-136-25V130z" fill="#f8fafc" />
+                  <line x1="256" y1="130" x2="256" y2="377" stroke="#cbd5e1" stroke-width="4" />
+                  <polygon points="275,170 215,260 255,260 235,340 305,235 265,235" fill="#eab308" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" filter="url(#shadow)" />
+                </svg>
                 <h1 class="text-4xl font-extrabold text-indigo-700 tracking-tight">Azubiform</h1>
             </div>
             <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
@@ -71,7 +86,6 @@
                 <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition">Registrieren</button>
             </div>
             
-            <!-- Alerta de éxito / reenvío de correo ubicada en la sección de inicio de sesión -->
             <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-lg">
                 <p class="font-bold mb-1">Registrierung erfolgreich!</p>
                 <p>Wir haben dir eine Bestätigungs-E-Mail gesendet. Bitte prüfe dein Postfach (und Spam-Ordner) und bestätige deine E-Mail, bevor du dich anmeldest.</p>
@@ -120,7 +134,6 @@
             <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
         </div>
 
-        <!-- Pie de página con información de contacto -->
         <div class="text-center mt-4 px-4">
             <p class="text-xs text-gray-500">
                 Hast du Fragen oder benötigst du weitere Informationen? Sende uns eine E-Mail an 
@@ -142,7 +155,6 @@
             </div>
         </div>
 
-        <!-- Panel opcional para que el administrador cree nuevos códigos únicos -->
         <div id="panelGenerarCodigo" class="w-full bg-white p-4 rounded-xl shadow-lg mb-4 hidden">
             <h3 class="text-xs font-semibold text-gray-700 uppercase mb-2">Neuen Einmalcode generieren</h3>
             <div class="flex gap-2">
@@ -163,8 +175,15 @@
                 <div class="relative">
                     <label for="actividad" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
                     <div class="relative flex items-center">
-                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2 p-1.5 text-gray-400 hover:text-indigo-600 focus:outline-none">🎙️</button>
+                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        
+                        <!-- 🎙️ BOTÓN MINIMALISTA TIPO GEMINI -->
+                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-indigo-600 rounded-full transition focus:outline-none">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
+                            </svg>
+                        </button>
                     </div>
                     <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
                 </div>
@@ -232,8 +251,15 @@
                 <div class="relative">
                     <label for="actividadPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
                     <div class="relative flex items-center">
-                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2 p-1.5 text-gray-400 hover:text-amber-600 focus:outline-none">🎙️</button>
+                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        
+                        <!-- 🎙️ MICRÓFONO MINIMALISTA PARA MODAL PASADO -->
+                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-amber-600 rounded-full transition focus:outline-none">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
+                            </svg>
+                        </button>
                     </div>
                     <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
                 </div>
@@ -282,7 +308,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ -->
+    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ MINIMALISTA -->
     <script>
         function toggleSpeechRecognition(inputId, btnId) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -297,8 +323,7 @@
             if (window.currentRecognition && window.currentActiveInput === inputId) {
                 window.currentRecognition.stop();
                 window.currentRecognition = null;
-                btn.classList.remove('text-red-600', 'animate-pulse');
-                btn.classList.add('text-gray-400');
+                resetBtnRec(btn);
                 return;
             }
 
@@ -314,7 +339,8 @@
             window.currentRecognition = recognition;
             window.currentActiveInput = inputId;
 
-            btn.classList.remove('text-gray-400');
+            // Cambiar color a rojo vivo y aplicar parpadeo (efecto grabando)
+            btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
             btn.classList.add('text-red-600', 'animate-pulse');
 
             recognition.onresult = function(event) {
@@ -331,13 +357,11 @@
                 } else if (event.error === 'service-not-allowed') {
                     alert("Der Spracherkennungsdienst ist nicht erlaubt (möglicherweise wegen HTTP statt HTTPS).");
                 }
-                btn.classList.remove('text-red-600', 'animate-pulse');
-                btn.classList.add('text-gray-400');
+                resetBtnRec(btn);
             };
 
             recognition.onend = function() {
-                btn.classList.remove('text-red-600', 'animate-pulse');
-                btn.classList.add('text-gray-400');
+                resetBtnRec(btn);
                 window.currentRecognition = null;
                 window.currentActiveInput = null;
             };
@@ -346,8 +370,18 @@
                 recognition.start();
             } catch (e) {
                 console.error("Could not start recognition:", e);
-                btn.classList.remove('text-red-600', 'animate-pulse');
-                btn.classList.add('text-gray-400');
+                resetBtnRec(btn);
+            }
+        }
+
+        function resetBtnRec(btn) {
+            btn.classList.remove('text-red-600', 'animate-pulse');
+            btn.classList.add('text-gray-400');
+            // Devolver el hover adecuado según si es el formulario principal o el modal pasado
+            if(btn.id.includes('Pasada')) {
+                btn.classList.add('hover:text-amber-600');
+            } else {
+                btn.classList.add('hover:text-indigo-600');
             }
         }
     </script>
@@ -365,7 +399,6 @@
             const esAdmin = Number(acceso) === 1;
             if (esAdmin) {
                 document.getElementById('btnMenuImpresion').classList.remove('hidden');
-                document.getElementById('sepMenuImpresion').classList.add('hidden'); // wait, keep it correct
                 document.getElementById('sepMenuImpresion').classList.remove('hidden');
             } else {
                 document.getElementById('btnMenuImpresion').classList.add('hidden');
