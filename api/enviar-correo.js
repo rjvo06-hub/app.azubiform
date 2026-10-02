@@ -1,4 +1,6 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -14,25 +16,13 @@ export default async function handler(req, res) {
   try {
     const { email, token, nombre } = req.method === 'POST' && req.body ? req.body : {};
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.ionos.de',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-
     const urlVerificacion = `https://app.azubiform.de/verificar.html?token=${token}`;
     const saludo = nombre ? `Hallo ${nombre}!` : `Hallo!`;
+    const destinatario = email || 'info@azubiform.de';
 
-    const mailOptions = {
-      from: `"Azubiform" <${process.env.SMTP_USER}>`,
-      to: email || process.env.SMTP_USER,
+    const data = await resend.emails.send({
+      from: 'Azubiform <info@azubiform.de>',
+      to: [destinatario],
       subject: 'Willkommen bei Azubiform! Bitte bestätige dein Konto',
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; padding: 40px 0; margin: 0;">
@@ -73,17 +63,15 @@ export default async function handler(req, res) {
           </div>
         </div>
       `
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    return res.status(200).json({ success: true, messageId: info.messageId });
+    return res.status(200).json({ success: true, data });
 
   } catch (error) {
-    console.error('Error detallado en SMTP:', error);
+    console.error('Error detallado con Resend:', error);
     return res.status(500).json({ 
       error: error.message, 
-      code: error.code, 
-      stack: error.stack 
+      name: error.name 
     });
   }
 }
