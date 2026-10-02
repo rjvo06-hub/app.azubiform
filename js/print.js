@@ -80,10 +80,12 @@ export function inicializarImpresion() {
                 const el = document.getElementById(`pr_${prefijo}${i}`);
                 if (el) {
                     el.textContent = '';
-                    // Asegurar propiedades de estilo inline para evitar desbordamientos de línea físicos
+                    // Asegurar propiedades de estilo inline para evitar desbordamientos de línea físicos y bordes fantasma
                     el.style.whiteSpace = 'nowrap';
                     el.style.overflow = 'hidden';
                     el.style.textOverflow = 'ellipsis';
+                    el.style.border = 'none';
+                    el.style.outline = 'none';
                 }
             }
         });
