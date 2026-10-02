@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Azubiform.de</title>
+    <title>Azubiform.de</title>
     
     <!-- 📱 Configuración para dispositivos móviles y PWA -->
-        <meta name="apple-mobile-web-app-title" content="hola Azubiform">
+    <meta name="apple-mobile-web-app-title" content="Azubiform">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
@@ -23,53 +23,11 @@
         }
 
         @media print {
-            body * { 
-                visibility: hidden !important; 
-                border: none !important;
-                box-shadow: none !important;
-            }
-            
-            #modalImpresionAusbildung, 
-            #modalImpresionAusbildung *,
-            .page-print,
-            #pr_nombre, 
-            #pr_semana_inicio, 
-            #pr_semana_fin, 
-            #pr_ano_fin,
-            .linea-impresion { 
-                visibility: visible !important; 
-            }
-
-            .page-print {
-                background: transparent !important;
-                box-shadow: none !important;
-                border: none !important;
-                outline: none !important;
-            }
-
-            /* Anular cualquier borde, línea o sombra en las líneas de impresión y contenedores */
-            .linea-impresion, div, span {
-                border: none !important;
-                border-bottom: none !important;
-                border-top: none !important;
-                border-left: none !important;
-                border-right: none !important;
-                background: transparent !important;
-                box-shadow: none !important;
-                outline: none !important;
-            }
-
+            body * { visibility: hidden; }
+            #modalImpresionAusbildung, #modalImpresionAusbildung * { visibility: visible; }
             #modalImpresionAusbildung {
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-                margin: 0; 
-                padding: 0; 
-                background: transparent !important;
-                border: none !important;
+                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white !important;
             }
-
             .no-print { display: none !important; }
             @page { size: A4; margin: 0; }
         }
@@ -85,11 +43,6 @@
 
         .linea-impresion {
             position: absolute; left: 30mm; width: 160mm; height: 5.5mm; line-height: 5.5mm; white-space: nowrap; overflow: hidden; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
-            border: none !important;
-            border-bottom: none !important;
-            outline: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
         }
 
         #pr_m1 { top: 32.5mm; } #pr_m2 { top: 38.0mm; } #pr_m3 { top: 43.5mm; } #pr_m4 { top: 49.0mm; } #pr_m5 { top: 54.5mm; } #pr_m6 { top: 60.0mm; }
@@ -395,7 +348,7 @@
 
             const recognition = new SpeechRecognition();
             recognition.lang = 'de-DE';
-            recognition.interimResults = true;
+            recognition.interimResults = true; // Permite escritura fluida en tiempo real
             recognition.maxAlternatives = 1;
 
             window.currentRecognition = recognition;
@@ -406,6 +359,7 @@
                 textoBase += ' ';
             }
 
+            // Cambiar a icono de STOP cuadrado rojo con animación de parpadeo
             btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
             btn.classList.add('text-red-600', 'animate-pulse');
             svgIcon.innerHTML = stopIconSVG;
@@ -464,6 +418,7 @@
             }
         }
 
+        // 🔄 DETECTOR DE CAMBIO DE PANTALLA (Para reconectar el micrófono al volver de WhatsApp)
         document.addEventListener("visibilitychange", function() {
             if (!document.hidden && window.currentRecognition) {
                 try {
