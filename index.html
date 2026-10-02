@@ -101,9 +101,9 @@
                     <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 
-                <!-- 🛠️ CAMPO AUSBILDUNG: Desplegable de oficios protegidos y regulados en Alemania -->
+                <!-- 🛠️ CAMPO AUSBILDUNG: Desplegable actualizado con oficios protegidos y GaLaBau -->
                 <div>
-                    <label for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Ausbildungsberuf (Handwerksberuf)</label>
+                    <label for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Ausbildungsberuf (Handwerks- & Grüne Berufe)</label>
                     <select id="regAusbildung" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
                         <option value="" disabled selected>Bitte wähle deinen Ausbildungsberuf...</option>
                         
@@ -126,6 +126,11 @@
                             <option value="dachdecker">Dachdecker</option>
                             <option value="fliesenleger">Fliesen-, Platten- und Mosaikleger</option>
                             <option value="strassenbauer">Straßenbauer</option>
+                        </optgroup>
+
+                        <optgroup label="Garten- und Landschaftsbau / Grüne Berufe">
+                            <option value="gaertner_galabau">Gärtner - Garten- und Landschaftsbau</option>
+                            <option value="gaertner_zierpflanzen">Gärtner - Zierpflanzenbau</option>
                         </optgroup>
 
                         <optgroup label="Metallbauer & Oberflächentechnik">
