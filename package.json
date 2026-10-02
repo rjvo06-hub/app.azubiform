@@ -4,6 +4,6 @@
   "version": "1.0.0",
   "description": "Sistema de autenticación y correos para Azubiform",
   "dependencies": {
-    "nodemailer": "^6.9.13"
+    "resend": "^4.0.0"
   }
 }
