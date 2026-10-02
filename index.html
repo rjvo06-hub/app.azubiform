@@ -402,23 +402,23 @@
             }
         }
 
-        // 🔄 DETECTOR DE CAMBIO DE PANTALLA (Para reconectar el micrófono al volver de WhatsApp)
+        // 🔄 DETECTOR DE CAMBIO DE PANTALLA (Reinicio limpio absoluto al salir o volver)
         document.addEventListener("visibilitychange", function() {
-            if (!document.hidden && window.currentRecognition) {
+            if (window.currentRecognition) {
                 try {
                     window.currentRecognition.stop();
                 } catch (e) {}
                 window.currentRecognition = null;
                 window.currentActiveInput = null;
-                
-                const btn1 = document.getElementById('btnVozActividad');
-                const svg1 = document.getElementById('icon-btnVozActividad');
-                if (btn1 && svg1) resetBtnRec(btn1, svg1);
-
-                const btn2 = document.getElementById('btnVozPasada');
-                const svg2 = document.getElementById('icon-btnVozPasada');
-                if (btn2 && svg2) resetBtnRec(btn2, svg2);
             }
+            
+            const btn1 = document.getElementById('btnVozActividad');
+            const svg1 = document.getElementById('icon-btnVozActividad');
+            if (btn1 && svg1) resetBtnRec(btn1, svg1);
+
+            const btn2 = document.getElementById('btnVozPasada');
+            const svg2 = document.getElementById('icon-btnVozPasada');
+            if (btn2 && svg2) resetBtnRec(btn2, svg2);
         });
     </script>
 
