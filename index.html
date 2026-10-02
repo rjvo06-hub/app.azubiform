@@ -100,6 +100,54 @@
                     <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
                     <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
+                
+                <!-- 🛠️ CAMPO AUSBILDUNG: Desplegable de oficios protegidos y regulados en Alemania -->
+                <div>
+                    <label for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Ausbildungsberuf (Handwerksberuf)</label>
+                    <select id="regAusbildung" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>Bitte wähle deinen Ausbildungsberuf...</option>
+                        
+                        <optgroup label="Elektro- und Informationstechnik">
+                            <option value="elektroniker">Elektroniker (Energie- und Gebäudetechnik / Betriebstechnik)</option>
+                            <option value="elektroniker_maschinen">Elektroniker für Maschinen und Antriebstechnik</option>
+                            <option value="informationstechniker">Informationstechniker</option>
+                        </optgroup>
+
+                        <optgroup label="Sanitär-, Heizungs- und Klimatechnik">
+                            <option value="anlagenmechaniker">Anlagenmechaniker SHK (Sanitär-, Heizungs- und Klimatechnik)</option>
+                            <option value="klempner">Klempner (Spengler)</option>
+                            <option value="kaelteanlagenbauer">Kälteanlagenbauer</option>
+                        </optgroup>
+
+                        <optgroup label="Bau- und Ausbaugewerbe (Holz/Stein)">
+                            <option value="tischler">Tischler / Schreiner</option>
+                            <option value="zimmerer">Zimmerer (Zimmermann)</option>
+                            <option value="maurer">Maurer und Betonbauer</option>
+                            <option value="dachdecker">Dachdecker</option>
+                            <option value="fliesenleger">Fliesen-, Platten- und Mosaikleger</option>
+                            <option value="strassenbauer">Straßenbauer</option>
+                        </optgroup>
+
+                        <optgroup label="Metallbauer & Oberflächentechnik">
+                            <option value="metallbauer">Metallbauer (Konstruktionstechnik / Metallgestaltung)</option>
+                            <option value="feinwerkmechaniker">Feinwerkmechaniker</option>
+                            <option value="maler">Maler und Lackierer (Gestaltung und Instandhaltung)</option>
+                        </optgroup>
+
+                        <optgroup label="Kraftfahrzeugtechnik">
+                            <option value="kfz">Kfz-Mechatroniker (Personenwagen-/ Nutzfahrzeugtechnik)</option>
+                            <option value="landmaschinenmechaniker">Land- und Baumaschinenmechatroniker</option>
+                            <option value="fahrradmechaniker">Zweiradmechatroniker (Fahrrad-/Motorradtechnik)</option>
+                        </optgroup>
+
+                        <optgroup label="Lebensmittelhandwerk">
+                            <option value="baecker">Bäcker</option>
+                            <option value="konditor">Konditor (Feinbäcker)</option>
+                            <option value="fleischer">Fleischer (Metzger)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
                 <div>
                     <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
                     <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -332,7 +380,7 @@
 
             const recognition = new SpeechRecognition();
             recognition.lang = 'de-DE';
-            recognition.interimResults = true; // Permite escritura fluida en tiempo real
+            recognition.interimResults = true; 
             recognition.maxAlternatives = 1;
 
             window.currentRecognition = recognition;
@@ -343,7 +391,6 @@
                 textoBase += ' ';
             }
 
-            // Cambiar a icono de STOP cuadrado rojo con animación de parpadeo
             btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
             btn.classList.add('text-red-600', 'animate-pulse');
             svgIcon.innerHTML = stopIconSVG;
@@ -402,23 +449,22 @@
             }
         }
 
-        // 🔄 DETECTOR DE CAMBIO DE PANTALLA (Reinicio limpio absoluto al salir o volver)
         document.addEventListener("visibilitychange", function() {
-            if (window.currentRecognition) {
+            if (!document.hidden && window.currentRecognition) {
                 try {
                     window.currentRecognition.stop();
                 } catch (e) {}
                 window.currentRecognition = null;
                 window.currentActiveInput = null;
-            }
-            
-            const btn1 = document.getElementById('btnVozActividad');
-            const svg1 = document.getElementById('icon-btnVozActividad');
-            if (btn1 && svg1) resetBtnRec(btn1, svg1);
+                
+                const btn1 = document.getElementById('btnVozActividad');
+                const svg1 = document.getElementById('icon-btnVozActividad');
+                if (btn1 && svg1) resetBtnRec(btn1, svg1);
 
-            const btn2 = document.getElementById('btnVozPasada');
-            const svg2 = document.getElementById('icon-btnVozPasada');
-            if (btn2 && svg2) resetBtnRec(btn2, svg2);
+                const btn2 = document.getElementById('btnVozPasada');
+                const svg2 = document.getElementById('icon-btnVozPasada');
+                if (btn2 && svg2) resetBtnRec(btn2, svg2);
+            }
         });
     </script>
 
