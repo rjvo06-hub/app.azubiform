@@ -14,6 +14,7 @@ export function inicializarAuth(onLoginExitoso) {
     }
 
     window.cambiarTab = function(tipo) {
+        if (!loginMensaje) return;
         loginMensaje.classList.add('hidden');
         if (tipo === 'login') {
             tabLogin.className = "w-1/2 pb-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none transition";
@@ -35,6 +36,7 @@ export function inicializarAuth(onLoginExitoso) {
     window.togglePassword = function(idInput, idIcono) {
         const input = document.getElementById(idInput);
         const icono = document.getElementById(idIcono);
+        if (!input || !icono) return;
         if (input.type === 'password') {
             input.type = 'text';
             icono.textContent = '🔒';
@@ -52,7 +54,8 @@ export function inicializarAuth(onLoginExitoso) {
 
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, {
-                method: 'GET', headers: headers
+                method: 'GET', 
+                headers: headers
             });
             if (!response.ok) throw new Error('Fehler beim Verbinden mit der Datenbank');
             const usuarios = await response.json();
@@ -66,7 +69,6 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            // Validar si confirmó su correo
             if (!usuarioExistente.verificado) {
                 mostrarMensaje('⚠️ Bitte bestätige zuerst deine E-Mail-Adresse über den Link in deinem Postfach.');
                 return;
@@ -77,7 +79,7 @@ export function inicializarAuth(onLoginExitoso) {
             
             onLoginExitoso(usuarioExistente.nombre);
         } catch (error) {
-            mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
+            mostrarMensaje('❌ Netzwerkfehler (Prüfe deine mobile Verbindung): ' + error.message);
         }
     });
 
@@ -95,9 +97,13 @@ export function inicializarAuth(onLoginExitoso) {
         }
 
         try {
+            // Verificar si ya existe el usuario
             const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, {
-                method: 'GET', headers: headers
+                method: 'GET', 
+                headers: headers
             });
+            if (!checkRes.ok) throw new Error('Fehler bei der Überprüfung der E-Mail.');
+            
             const existingUsers = await checkRes.json();
             if (existingUsers.length > 0) {
                 mostrarMensaje('❌ Diese E-Mail-Adresse ist bereits registriert.');
@@ -106,8 +112,10 @@ export function inicializarAuth(onLoginExitoso) {
 
             const token = generarToken();
 
+            // Insertar usuario
             const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
-                method: 'POST', headers: headers,
+                method: 'POST', 
+                headers: headers,
                 body: JSON.stringify({ 
                     nombre: nombre, 
                     email: email, 
@@ -123,6 +131,7 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
+            // Enviar correo de confirmación
             const emailRes = await fetch('/api/enviar-correo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -134,21 +143,17 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            // MODIFICACIÓN APLICADA: 
-            // 1. Cambiar automáticamente a la pestaña de login ("Ich habe bereits ein Konto")
+            // Cambio automático a login y autocompletado del correo
             window.cambiarTab('login');
-
-            // 2. Mostrar el mensaje de éxito ya posicionados en la pestaña de inicio de sesión
             mostrarMensaje('✅ Registrierung erfolgreich! Bitte überprüfe deinen Posteingang, um dein Konto zu aktivieren.', 'exito');
             
-            // 3. Autocompletar el correo en el formulario de inicio de sesión para comodidad
             const loginEmailInput = document.getElementById('loginEmail');
             if (loginEmailInput) {
                 loginEmailInput.value = email;
             }
 
         } catch (error) {
-            mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
+            mostrarMensaje('❌ Netzwerkfehler auf Mobilfunknetz: ' + error.message);
         }
     });
 
