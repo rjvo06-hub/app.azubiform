@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { email, token, nombre } = req.method === 'POST' && req.body ? req.body : {};
 
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.ionos.de',
+      host: 'smtp.ionos.de',
       port: 465,
       secure: true,
       auth: {
@@ -23,7 +23,8 @@ export default async function handler(req, res) {
         pass: process.env.SMTP_PASS,
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        servername: 'smtp.ionos.de'
       }
     });
 
