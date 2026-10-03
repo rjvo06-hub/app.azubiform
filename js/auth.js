@@ -76,6 +76,7 @@ export function inicializarAuth(onLoginExitoso) {
 
             localStorage.setItem('usuario_actual', usuarioExistente.nombre);
             localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
+            localStorage.setItem('usuario_ausbildung', usuarioExistente.ausbildung || '');
             
             onLoginExitoso(usuarioExistente.nombre);
         } catch (error) {
@@ -87,6 +88,7 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
+        const ausbildung = document.getElementById('regAusbildung').value;
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
         loginMensaje.classList.add('hidden');
@@ -112,13 +114,14 @@ export function inicializarAuth(onLoginExitoso) {
 
             const token = generarToken();
 
-            // Insertar usuario
+            // Insertar usuario incluyendo su Ausbildung
             const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', 
                 headers: headers,
                 body: JSON.stringify({ 
                     nombre: nombre, 
                     email: email, 
+                    ausbildung: ausbildung,
                     password: password, 
                     verificado: false, 
                     token_verificacion: token,
