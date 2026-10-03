@@ -10,6 +10,9 @@ export function iniciarAppPrincipal(nombreUsuario) {
     document.body.classList.remove('justify-center');
     lblUsuario.textContent = nombreUsuario;
 
+    // Recuperamos o determinamos el Ausbildung del usuario actual guardado en localStorage o sesión
+    const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
+
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
     document.getElementById('fechaActual').textContent = fechaHoyStr.charAt(0).toUpperCase() + fechaHoyStr.slice(1);
@@ -33,7 +36,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
     const listaActividadesPasadas = document.getElementById('listaActividadesPasadas');
     const contadorPasado = document.getElementById('contadorPasado');
 
-    // Control global de la instancia activa de voz para matarla si se cambia de sesión/app
     let currentSpeechRecognition = null;
 
     window.registrarInstanciaVoz = function(recognition) {
@@ -44,10 +46,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
         currentSpeechRecognition = null;
     };
 
-    // Detectar si el usuario cambia de app, minimiza o cambia de pestaña
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
-            // Si la app se oculta, cerramos cualquier micrófono abierto por la fuerza
             if (currentSpeechRecognition) {
                 try {
                     currentSpeechRecognition.abort();
@@ -83,6 +83,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
     async function cargarActividadesPasadas(fecha) {
         if (!fecha) return;
         try {
+            // Filtramos también por el Ausbildung o carrera si es necesario en el registro diario
             const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${fecha}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, {
                 method: 'GET', headers: headers
             });
@@ -103,11 +104,19 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
+    // AUTOCOMPLETADO FILTRADO POR AUSBILDUNG EN EL CATÁLOGO DE ACTIVIDADES
     inputActividad.addEventListener('input', async (e) => {
         const textoBusqueda = e.target.value.trim();
         if (textoBusqueda.length < 2) { contenedorSugerencias.classList.add('hidden'); return; }
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`, { headers });
+            // Añadimos la condición de que la actividad pertenezca al Ausbildung del usuario (ausbildung=eq.X o similar según tu esquema)
+            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
+            if (ausbildungUsuario) {
+                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
+            }
+            url += `&limit=5`;
+
+            const res = await fetch(url, { headers });
             const data = await res.json();
             if (!data || data.length === 0) { contenedorSugerencias.classList.add('hidden'); return; }
             contenedorSugerencias.innerHTML = '';
@@ -126,7 +135,13 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const textoBusqueda = e.target.value.trim();
         if (textoBusqueda.length < 2) { sugerenciasPasadas.classList.add('hidden'); return; }
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`, { headers });
+            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
+            if (ausbildungUsuario) {
+                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
+            }
+            url += `&limit=5`;
+
+            const res = await fetch(url, { headers });
             const data = await res.json();
             if (!data || data.length === 0) { sugerenciasPasadas.classList.add('hidden'); return; }
             sugerenciasPasadas.innerHTML = '';
@@ -170,16 +185,27 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         try {
+            // Guardamos el registro diario incluyendo opcionalmente el ausbildung si tu tabla lo requiere
             await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: hoyISO, hora: horaActual, usuario: nombreUsuario })
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad, 
+                    fecha: hoyISO, 
+                    hora: horaActual, 
+                    usuario: nombreUsuario,
+                    ausbildung: ausbildungUsuario 
+                })
             });
+            
+            // Aseguramos que al registrar en el catálogo se guarde asociado a su Ausbildung correspondiente
             await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ nombre_actividad: nombreActividad })
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad,
+                    ausbildung: ausbildungUsuario 
+                })
             });
 
-            // Limpieza del input al enviar
             inputActividad.value = '';
             contenedorSugerencias.classList.add('hidden');
 
@@ -211,14 +237,22 @@ export function iniciarAppPrincipal(nombreUsuario) {
         try {
             await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: fechaElegida, hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), usuario: nombreUsuario })
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad, 
+                    fecha: fechaElegida, 
+                    hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+                    usuario: nombreUsuario,
+                    ausbildung: ausbildungUsuario 
+                })
             });
             await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ nombre_actividad: nombreActividad })
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad,
+                    ausbildung: ausbildungUsuario 
+                })
             });
 
-            // Limpieza del input pasado al enviar
             inputActividadPasada.value = '';
             sugerenciasPasadas.classList.add('hidden');
 
@@ -226,7 +260,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
             mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-green-100 text-green-700';
-            mensajePasado.classList.remove('hidden');
+            mensajePasado.classList.add('hidden');
             inputActividadPasada.focus();
             setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
             cargarActividadesPasadas(fechaElegida);
