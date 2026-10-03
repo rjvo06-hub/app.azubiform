@@ -74,7 +74,9 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
+            // Guardamos datos y el ausbildung en localStorage
             localStorage.setItem('usuario_actual', usuarioExistente.nombre);
+            localStorage.setItem('usuario_ausbildung', usuarioExistente.ausbildung || '');
             localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
             
             onLoginExitoso(usuarioExistente.nombre);
@@ -87,6 +89,7 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
+        const ausbildung = document.getElementById('regAusbildung').value.trim(); // Capturamos la carrera
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
         loginMensaje.classList.add('hidden');
@@ -97,7 +100,6 @@ export function inicializarAuth(onLoginExitoso) {
         }
 
         try {
-            // Verificar si ya existe el usuario
             const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, {
                 method: 'GET', 
                 headers: headers
@@ -112,13 +114,14 @@ export function inicializarAuth(onLoginExitoso) {
 
             const token = generarToken();
 
-            // Insertar usuario
+            // Insertar usuario incluyendo el ausbildung
             const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', 
                 headers: headers,
                 body: JSON.stringify({ 
                     nombre: nombre, 
                     email: email, 
+                    ausbildung: ausbildung, 
                     password: password, 
                     verificado: false, 
                     token_verificacion: token,
@@ -131,7 +134,6 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            // Enviar correo de confirmación
             const emailRes = await fetch('/api/enviar-correo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -143,7 +145,6 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            // Cambio automático a login y autocompletado del correo
             window.cambiarTab('login');
             mostrarMensaje('✅ Registrierung erfolgreich! Bitte überprüfe deinen Posteingang, um dein Konto zu aktivieren.', 'exito');
             
