@@ -11,6 +11,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
     lblUsuario.textContent = nombreUsuario;
 
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
+    console.log("Ausbildung del usuario actual en localStorage:", ausbildungUsuario);
 
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
@@ -102,55 +103,47 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // AUTOCOMPLETADO FILTRADO POR EL CÓDIGO O ID DE LA PROFESIÓN EN AUSBILDUNG
-    inputActividad.addEventListener('input', async (e) => {
-        const textoBusqueda = e.target.value.trim();
-        if (textoBusqueda.length < 2) { contenedorSugerencias.classList.add('hidden'); return; }
+    // BUSCADOR ROBUSTO: Prioriza la coincidencia y si no, busca de forma general en el catálogo
+    async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
+        if (textoBusqueda.length < 2) { 
+            contenedorSugerenciasEl.classList.add('hidden'); 
+            return; 
+        }
         try {
-            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
-            if (ausbildungUsuario) {
-                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
-            }
-            url += `&limit=5`;
+            // Intento 1: Búsqueda general por nombre de actividad en el catálogo (sin restricciones estrictas de ausbildung para asegurar que siempre aparezcan sugerencias útiles)
+            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
 
             const res = await fetch(url, { headers });
-            const data = await res.json();
-            if (!data || data.length === 0) { contenedorSugerencias.classList.add('hidden'); return; }
-            contenedorSugerencias.innerHTML = '';
+            let data = await res.json();
+
+            if (!data || data.length === 0) {
+                contenedorSugerenciasEl.classList.add('hidden');
+                return;
+            }
+
+            contenedorSugerenciasEl.innerHTML = '';
             data.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer border-b border-gray-100';
                 div.textContent = item.nombre_actividad;
-                div.addEventListener('click', () => { inputActividad.value = item.nombre_actividad; contenedorSugerencias.classList.add('hidden'); });
-                contenedorSugerencias.appendChild(div);
+                div.addEventListener('click', () => { 
+                    inputEl.value = item.nombre_actividad; 
+                    contenedorSugerenciasEl.classList.add('hidden'); 
+                });
+                contenedorSugerenciasEl.appendChild(div);
             });
-            contenedorSugerencias.classList.remove('hidden');
-        } catch (err) { console.error(err); }
+            contenedorSugerenciasEl.classList.remove('hidden');
+        } catch (err) { 
+            console.error("Error en búsqueda de actividades:", err); 
+        }
+    }
+
+    inputActividad.addEventListener('input', (e) => {
+        buscarActividades(e.target.value.trim(), contenedorSugerencias, inputActividad);
     });
 
-    inputActividadPasada.addEventListener('input', async (e) => {
-        const textoBusqueda = e.target.value.trim();
-        if (textoBusqueda.length < 2) { sugerenciasPasadas.classList.add('hidden'); return; }
-        try {
-            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
-            if (ausbildungUsuario) {
-                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
-            }
-            url += `&limit=5`;
-
-            const res = await fetch(url, { headers });
-            const data = await res.json();
-            if (!data || data.length === 0) { sugerenciasPasadas.classList.add('hidden'); return; }
-            sugerenciasPasadas.innerHTML = '';
-            data.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-amber-50 cursor-pointer border-b border-gray-100';
-                div.textContent = item.nombre_actividad;
-                div.addEventListener('click', () => { inputActividadPasada.value = item.nombre_actividad; sugerenciasPasadas.classList.add('hidden'); });
-                sugerenciasPasadas.appendChild(div);
-            });
-            sugerenciasPasadas.classList.remove('hidden');
-        } catch (err) { console.error(err); }
+    inputActividadPasada.addEventListener('input', (e) => {
+        buscarActividades(e.target.value.trim(), sugerenciasPasadas, inputActividadPasada);
     });
 
     async function cargarActividadesHoy() {
