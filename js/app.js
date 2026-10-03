@@ -33,23 +33,28 @@ export function iniciarAppPrincipal(nombreUsuario) {
     const listaActividadesPasadas = document.getElementById('listaActividadesPasadas');
     const contadorPasado = document.getElementById('contadorPasado');
 
-    // Manejo de recuperación ante cambios de pestaña o app para evitar bloqueos de voz
-    let reconocimientoVozActivo = null;
+    // Control global de la instancia activa de voz para matarla si se cambia de sesión/app
+    let currentSpeechRecognition = null;
 
-    function registrarReconocimientoVoz(recognitionInstance) {
-        reconocimientoVozActivo = recognitionInstance;
-    }
+    window.registrarInstanciaVoz = function(recognition) {
+        currentSpeechRecognition = recognition;
+    };
 
+    window.limpiarInstanciaVoz = function() {
+        currentSpeechRecognition = null;
+    };
+
+    // Detectar si el usuario cambia de app, minimiza o cambia de pestaña
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            // Si el usuario regresa a la app, forzamos reinicio técnico si el motor se quedó colgado
-            if (reconocimientoVozActivo) {
+        if (document.visibilityState === 'hidden') {
+            // Si la app se oculta, cerramos cualquier micrófono abierto por la fuerza
+            if (currentSpeechRecognition) {
                 try {
-                    reconocimientoVozActivo.abort();
+                    currentSpeechRecognition.abort();
                 } catch (e) {
-                    // Ignorar si ya estaba cerrado
+                    console.error("Error al abortar voz en segundo plano:", e);
                 }
-                reconocimientoVozActivo = null;
+                currentSpeechRecognition = null;
             }
         }
     });
@@ -173,8 +178,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ nombre_actividad: nombreActividad })
             });
-            
-            // Limpieza garantizada del campo tras enviar
+
+            // Limpieza del input al enviar
             inputActividad.value = '';
             contenedorSugerencias.classList.add('hidden');
 
@@ -213,7 +218,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 body: JSON.stringify({ nombre_actividad: nombreActividad })
             });
 
-            // Limpieza garantizada del input pasado
+            // Limpieza del input pasado al enviar
             inputActividadPasada.value = '';
             sugerenciasPasadas.classList.add('hidden');
 
