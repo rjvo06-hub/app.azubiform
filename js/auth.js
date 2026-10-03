@@ -27,18 +27,23 @@ export function inicializarAuth(onLoginExitoso) {
                 headers: headers
             });
 
-            if (!response.ok) throw new Error('Fehler beim Laden der Ausbildungen');
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error("Respuesta de error de Supabase:", errText);
+                throw new Error('Fehler beim Laden der Ausbildungen');
+            }
             
             const data = await response.json();
+            console.log("Datos recibidos de la tabla 'profesions':", data); // Revisa esto en la consola (F12)
             
             selectAusbildung.innerHTML = '<option value="">Wähle deine Ausbildung...</option>';
 
             if (data && data.length > 0) {
                 data.forEach((prof) => {
                     const option = document.createElement('option');
-                    // Ajusta según los nombres de columna reales de tu tabla 'profesions' (ej: id, codigo, nombre_largo)
-                    option.value = prof.id || prof.codigo || prof.nombre_largo; 
-                    option.textContent = prof.nombre_largo || prof.nombre || prof.titulo;
+                    // Compatible con varios nombres posibles para los campos de tu tabla
+                    option.value = prof.id || prof.codigo || prof.nombre || prof.name; 
+                    option.textContent = prof.nombre_largo || prof.nombre || prof.titulo || prof.descripcion || prof.name;
                     selectAusbildung.appendChild(option);
                 });
             } else {
@@ -202,6 +207,6 @@ export function inicializarAuth(onLoginExitoso) {
         } else {
             loginMensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
         }
-        loginMensaje.classList.remove('hidden');
+        loginMensaje.classList.add('hidden');
     }
 }
