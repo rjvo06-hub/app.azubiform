@@ -10,7 +10,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
     document.body.classList.remove('justify-center');
     lblUsuario.textContent = nombreUsuario;
 
-    // Recuperamos o determinamos el Ausbildung del usuario actual guardado en localStorage o sesión
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
 
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -83,7 +82,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
     async function cargarActividadesPasadas(fecha) {
         if (!fecha) return;
         try {
-            // Filtramos también por el Ausbildung o carrera si es necesario en el registro diario
             const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${fecha}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, {
                 method: 'GET', headers: headers
             });
@@ -104,12 +102,11 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // AUTOCOMPLETADO FILTRADO POR AUSBILDUNG EN EL CATÁLOGO DE ACTIVIDADES
+    // AUTOCOMPLETADO FILTRADO POR EL CÓDIGO O ID DE LA PROFESIÓN EN AUSBILDUNG
     inputActividad.addEventListener('input', async (e) => {
         const textoBusqueda = e.target.value.trim();
         if (textoBusqueda.length < 2) { contenedorSugerencias.classList.add('hidden'); return; }
         try {
-            // Añadimos la condición de que la actividad pertenezca al Ausbildung del usuario (ausbildung=eq.X o similar según tu esquema)
             let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
             if (ausbildungUsuario) {
                 url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
@@ -185,7 +182,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         try {
-            // Guardamos el registro diario incluyendo opcionalmente el ausbildung si tu tabla lo requiere
             await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ 
@@ -197,7 +193,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 })
             });
             
-            // Aseguramos que al registrar en el catálogo se guarde asociado a su Ausbildung correspondiente
             await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ 
