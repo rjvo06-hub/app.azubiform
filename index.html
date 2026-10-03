@@ -105,6 +105,55 @@
                     <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
+                    <label for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Ausbildung / Fachrichtung</label>
+                    <select id="regAusbildung" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>-- Bitte wähle deinen Ausbildung --</option>
+                        
+                        <optgroup label="Elektro- und Informationstechnik">
+                            <option value="Elektroniker (Energie- und Gebäudetechnik / Betriebstechnik)">Elektroniker (Energie- und Gebäudetechnik / Betriebstechnik)</option>
+                            <option value="Elektroniker für Maschinen und Antriebstechnik">Elektroniker für Maschinen und Antriebstechnik</option>
+                            <option value="Informationstechniker">Informationstechniker</option>
+                        </optgroup>
+
+                        <optgroup label="Sanitär-, Heizungs- und Klimatechnik (SHK)">
+                            <option value="Anlagenmechaniker SHK">Anlagenmechaniker SHK (Sanitär-, Heizungs- und Klimatechnik)</option>
+                            <option value="Klempner (Spengler)">Klempner (Spengler)</option>
+                            <option value="Kälteanlagenbauer">Kälteanlagenbauer</option>
+                        </optgroup>
+
+                        <optgroup label="Bau- und Ausbaugewerbe">
+                            <option value="Tischler / Schreiner">Tischler / Schreiner</option>
+                            <option value="Zimmerer (Zimmermann)">Zimmerer (Zimmermann)</option>
+                            <option value="Maurer und Betonbauer">Maurer und Betonbauer</option>
+                            <option value="Dachdecker">Dachdecker</option>
+                            <option value="Fliesen-, Platten- und Mosaikleger">Fliesen-, Platten- und Mosaikleger</option>
+                            <option value="Straßenbauer">Straßenbauer</option>
+                        </optgroup>
+
+                        <optgroup label="Garten- und Landschaftsbau">
+                            <option value="Gärtner - GaLaBau">Gärtner - Garten- und Landschaftsbau (GaLaBau)</option>
+                        </optgroup>
+
+                        <optgroup label="Metallbauer & Oberflächentechnik">
+                            <option value="Metallbauer">Metallbauer (Konstruktionstechnik / Metallgestaltung)</option>
+                            <option value="Feinwerkmechaniker">Feinwerkmechaniker</option>
+                            <option value="Maler und Lackierer">Maler und Lackierer (Gestaltung und Instandhaltung)</option>
+                        </optgroup>
+
+                        <optgroup label="Kraftfahrzeugtechnik">
+                            <option value="Kfz-Mechatroniker">Kfz-Mechatroniker (Personenwagen- / Nutzfahrzeugtechnik)</option>
+                            <option value="Land- und Baumaschinenmechatroniker">Land- und Baumaschinenmechatroniker</option>
+                            <option value="Zweiradmechatroniker">Zweiradmechatroniker (Fahrrad- / Motorradtechnik)</option>
+                        </optgroup>
+
+                        <optgroup label="Lebensmittelhandwerk">
+                            <option value="Bäcker">Bäcker</option>
+                            <option value="Konditor">Konditor (Feinbäcker)</option>
+                            <option value="Fleischer (Metzger)">Fleischer (Metzger)</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div>
                     <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
                         <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
