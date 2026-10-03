@@ -10,9 +10,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
     document.body.classList.remove('justify-center');
     lblUsuario.textContent = nombreUsuario;
 
-    // Obtener la formación (Ausbildung) asociada al usuario actual
-    const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
-
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
     document.getElementById('fechaActual').textContent = fechaHoyStr.charAt(0).toUpperCase() + fechaHoyStr.slice(1);
@@ -80,16 +77,11 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // Autocompletado filtrado estrictamente por la Ausbildung del usuario
     inputActividad.addEventListener('input', async (e) => {
         const textoBusqueda = e.target.value.trim();
         if (textoBusqueda.length < 2) { contenedorSugerencias.classList.add('hidden'); return; }
         try {
-            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
-            if (ausbildungUsuario) {
-                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
-            }
-            const res = await fetch(url, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`, { headers });
             const data = await res.json();
             if (!data || data.length === 0) { contenedorSugerencias.classList.add('hidden'); return; }
             contenedorSugerencias.innerHTML = '';
@@ -104,16 +96,11 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     });
 
-    // Autocompletado de actividades pasadas filtrado por la Ausbildung
     inputActividadPasada.addEventListener('input', async (e) => {
         const textoBusqueda = e.target.value.trim();
         if (textoBusqueda.length < 2) { sugerenciasPasadas.classList.add('hidden'); return; }
         try {
-            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
-            if (ausbildungUsuario) {
-                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
-            }
-            const res = await fetch(url, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`, { headers });
             const data = await res.json();
             if (!data || data.length === 0) { sugerenciasPasadas.classList.add('hidden'); return; }
             sugerenciasPasadas.innerHTML = '';
@@ -157,27 +144,14 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         try {
-            // Guardar registro diario con la formación correspondiente
             await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ 
-                    nombre_actividad: nombreActividad, 
-                    fecha: hoyISO, 
-                    hora: horaActual, 
-                    usuario: nombreUsuario,
-                    ausbildung: ausbildungUsuario 
-                })
+                body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: hoyISO, hora: horaActual, usuario: nombreUsuario })
             });
-
-            // Guardar en el catálogo asociado a la formación profesional
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo`, {
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ 
-                    nombre_actividad: nombreActividad, 
-                    ausbildung: ausbildungUsuario 
-                })
+                body: JSON.stringify({ nombre_actividad: nombreActividad })
             });
-
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
             mensaje.textContent = '✓ Aktivität hinzugefügt!';
@@ -206,27 +180,14 @@ export function iniciarAppPrincipal(nombreUsuario) {
         btnSubmitPasado.textContent = 'Wird gespeichert...';
 
         try {
-            // Guardar registro pasado con la formación correspondiente
             await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ 
-                    nombre_actividad: nombreActividad, 
-                    fecha: fechaElegida, 
-                    hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
-                    usuario: nombreUsuario,
-                    ausbildung: ausbildungUsuario 
-                })
+                body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: fechaElegida, hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), usuario: nombreUsuario })
             });
-
-            // Guardar en el catálogo asociado a la formación profesional
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo`, {
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ 
-                    nombre_actividad: nombreActividad, 
-                    ausbildung: ausbildungUsuario 
-                })
+                body: JSON.stringify({ nombre_actividad: nombreActividad })
             });
-
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
