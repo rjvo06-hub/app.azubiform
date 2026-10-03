@@ -19,46 +19,44 @@ export function inicializarAuth(onLoginExitoso) {
         return Math.random().toString(36).substring(2) + Date.now().toString(36);
     }
 
-    // Carga directa y simplificada para depurar y mostrar el nombre corto
+    // Cargar profesiones mostrando el nombre oficial largo en pantalla y guardando el código corto
     async function cargarProfesiones() {
         try {
-            console.log("Iniciando carga de profesiones desde Supabase...");
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/profesions?select=*`, {
+            console.log("Cargando profesiones desde Supabase...");
+            const responseUrl = `${SUPABASE_URL}/rest/v1/profesions?select=*`;
+            const res = await fetch(responseUrl, {
                 method: 'GET',
                 headers: headers
             });
 
-            if (!response.ok) {
-                const errText = await response.text();
-                console.error("Error en la respuesta de Supabase:", errText);
-                selectAusbildung.innerHTML = '<option value="" disabled>Fehler: ' + response.status + '</option>';
+            if (!res.ok) {
+                console.error("Error al conectar con profesions:", await res.text());
+                selectAusbildung.innerHTML = '<option value="" disabled>Fehler beim Laden</option>';
                 return;
             }
             
-            const data = await response.json();
-            console.log("Datos crudos obtenidos de la tabla 'profesions':", data);
+            const data = await res.json();
+            console.log("Datos de profesiones obtenidos:", data);
             
             selectAusbildung.innerHTML = '<option value="" disabled selected>-- Wähle deine Ausbildung --</option>';
 
             if (data && data.length > 0) {
-                data.forEach((prof, index) => {
-                    // Buscamos dinámicamente cualquier propiedad de texto para usarla de valor y nombre corto
-                    const valorCorto = prof.nombre_corto || prof.codigo || prof.nombre || prof.name || prof.titulo || Object.values(prof)[0];
+                data.forEach((prof) => {
+                    const option = document.createElement('option');
                     
-                    if (valorCorto) {
-                        const option = document.createElement('option');
-                        option.value = valorCorto;
-                        option.textContent = valorCorto; // Muestra directamente el nombre corto en el selector
-                        selectAusbildung.appendChild(option);
-                        console.log(`Opción ${index + 1} agregada:`, valorCorto);
-                    }
+                    // El valor que se guarda en la base de datos de usuarios (el código corto: e.g. 'elec-energ')
+                    option.value = prof.codigo; 
+                    
+                    // Lo que ve el usuario en el desplegable (el nombre oficial largo de la columna 'nombre_oficial')
+                    option.textContent = prof.nombre_oficial || prof.codigo;
+                    
+                    selectAusbildung.appendChild(option);
                 });
             } else {
-                console.warn("La tabla 'profesions' devolvió 0 registros.");
-                selectAusbildung.innerHTML = '<option value="" disabled>Keine Ausbildungen in DB gefunden</option>';
+                selectAusbildung.innerHTML = '<option value="" disabled>Keine Ausbildungen gefunden</option>';
             }
         } catch (error) {
-            console.error('Excepción al cargar profesiones:', error);
+            console.error('Excepción:', error);
             selectAusbildung.innerHTML = '<option value="" disabled>Netzwerkfehler</option>';
         }
     }
@@ -139,7 +137,7 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        const ausbildung = document.getElementById('regAusbildung').value.trim(); // Captura el nombre corto seleccionado
+        const ausbildung = document.getElementById('regAusbildung').value.trim(); // Captura el código corto seleccionado
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
         loginMensaje.classList.add('hidden');
