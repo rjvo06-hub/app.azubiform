@@ -19,9 +19,10 @@ export function inicializarAuth(onLoginExitoso) {
         return Math.random().toString(36).substring(2) + Date.now().toString(36);
     }
 
-    // Cargar opciones dinámicamente desde la tabla 'profesions' de Supabase
+    // Carga directa y simplificada para depurar y mostrar el nombre corto
     async function cargarProfesiones() {
         try {
+            console.log("Iniciando carga de profesiones desde Supabase...");
             const response = await fetch(`${SUPABASE_URL}/rest/v1/profesions?select=*`, {
                 method: 'GET',
                 headers: headers
@@ -29,33 +30,36 @@ export function inicializarAuth(onLoginExitoso) {
 
             if (!response.ok) {
                 const errText = await response.text();
-                console.error("Respuesta de error de Supabase:", errText);
-                throw new Error('Fehler beim Laden der Ausbildungen');
+                console.error("Error en la respuesta de Supabase:", errText);
+                selectAusbildung.innerHTML = '<option value="" disabled>Fehler: ' + response.status + '</option>';
+                return;
             }
             
             const data = await response.json();
-            console.log("Datos recibidos de la tabla 'profesions':", data);
+            console.log("Datos crudos obtenidos de la tabla 'profesions':", data);
             
             selectAusbildung.innerHTML = '<option value="" disabled selected>-- Wähle deine Ausbildung --</option>';
 
             if (data && data.length > 0) {
-                data.forEach((prof) => {
-                    const option = document.createElement('option');
+                data.forEach((prof, index) => {
+                    // Buscamos dinámicamente cualquier propiedad de texto para usarla de valor y nombre corto
+                    const valorCorto = prof.nombre_corto || prof.codigo || prof.nombre || prof.name || prof.titulo || Object.values(prof)[0];
                     
-                    // option.value: Lo que se guarda en la base de datos (nombre corto, código o ID)
-                    option.value = prof.nombre_corto || prof.codigo || prof.id || prof.nombre; 
-                    
-                    // option.textContent: Lo que ve el usuario en pantalla (nombre largo o título descriptivo)
-                    option.textContent = prof.nombre_largo || prof.nombre || prof.titulo || prof.descripcion;
-                    
-                    selectAusbildung.appendChild(option);
+                    if (valorCorto) {
+                        const option = document.createElement('option');
+                        option.value = valorCorto;
+                        option.textContent = valorCorto; // Muestra directamente el nombre corto en el selector
+                        selectAusbildung.appendChild(option);
+                        console.log(`Opción ${index + 1} agregada:`, valorCorto);
+                    }
                 });
             } else {
-                selectAusbildung.innerHTML = '<option value="" disabled>Keine Ausbildungen gefunden</option>';
+                console.warn("La tabla 'profesions' devolvió 0 registros.");
+                selectAusbildung.innerHTML = '<option value="" disabled>Keine Ausbildungen in DB gefunden</option>';
             }
         } catch (error) {
-            console.error('Error al cargar profesiones:', error);
-            selectAusbildung.innerHTML = '<option value="" disabled>Fehler beim Laden</option>';
+            console.error('Excepción al cargar profesiones:', error);
+            selectAusbildung.innerHTML = '<option value="" disabled>Netzwerkfehler</option>';
         }
     }
 
