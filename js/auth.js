@@ -87,7 +87,6 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        const ausbildung = document.getElementById('regAusbildung').value;
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
         loginMensaje.classList.add('hidden');
@@ -113,7 +112,7 @@ export function inicializarAuth(onLoginExitoso) {
 
             const token = generarToken();
 
-            // Insertar usuario incluyendo el nuevo campo ausbildung
+            // Insertar usuario
             const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', 
                 headers: headers,
@@ -123,8 +122,7 @@ export function inicializarAuth(onLoginExitoso) {
                     password: password, 
                     verificado: false, 
                     token_verificacion: token,
-                    acceso: null,
-                    ausbildung: ausbildung 
+                    acceso: null 
                 })
             });
 

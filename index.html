@@ -105,14 +105,6 @@
                     <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Ausbildungsberuf (Fachrichtung)</label>
-                    <select id="regAusbildung" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
-                        <option value="" disabled selected>Bitte wählen...</option>
-                        <option value="Elektroniker für Betriebstechnik">Elektroniker für Betriebstechnik</option>
-                        <option value="Anteilige Fachrichtung (Allg.)">Anteilige Fachrichtung (Allg.)</option>
-                    </select>
-                </div>
-                <div>
                     <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
                         <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -454,7 +446,6 @@
         window.cerrarSesion = function() {
             localStorage.removeItem('usuario_actual');
             localStorage.removeItem('usuario_acceso');
-            localStorage.removeItem('usuario_ausbildung');
             
             document.getElementById('formLogin').reset();
             document.getElementById('formRegistro').reset();
