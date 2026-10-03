@@ -8,7 +8,7 @@ export function inicializarAuth(onLoginExitoso) {
     const tabRegistro = document.getElementById('tabRegistro');
     const formLogin = document.getElementById('formLogin');
     const formRegistro = document.getElementById('formRegistro');
-    const selectAusbildung = document.getElementById('regAusbildung'); // Select de profesiones
+    const selectAusbildung = document.getElementById('regAusbildung'); // Select dinámico del HTML
 
     // Cargar las profesiones de Supabase al iniciar el módulo de autenticación
     if (selectAusbildung) {
@@ -34,24 +34,28 @@ export function inicializarAuth(onLoginExitoso) {
             }
             
             const data = await response.json();
-            console.log("Datos recibidos de la tabla 'profesions':", data); // Revisa esto en la consola (F12)
+            console.log("Datos recibidos de la tabla 'profesions':", data);
             
-            selectAusbildung.innerHTML = '<option value="">Wähle deine Ausbildung...</option>';
+            selectAusbildung.innerHTML = '<option value="" disabled selected>-- Wähle deine Ausbildung --</option>';
 
             if (data && data.length > 0) {
                 data.forEach((prof) => {
                     const option = document.createElement('option');
-                    // Compatible con varios nombres posibles para los campos de tu tabla
-                    option.value = prof.id || prof.codigo || prof.nombre || prof.name; 
-                    option.textContent = prof.nombre_largo || prof.nombre || prof.titulo || prof.descripcion || prof.name;
+                    
+                    // option.value: Lo que se guarda en la base de datos (nombre corto, código o ID)
+                    option.value = prof.nombre_corto || prof.codigo || prof.id || prof.nombre; 
+                    
+                    // option.textContent: Lo que ve el usuario en pantalla (nombre largo o título descriptivo)
+                    option.textContent = prof.nombre_largo || prof.nombre || prof.titulo || prof.descripcion;
+                    
                     selectAusbildung.appendChild(option);
                 });
             } else {
-                selectAusbildung.innerHTML = '<option value="">Keine Ausbildungen gefunden</option>';
+                selectAusbildung.innerHTML = '<option value="" disabled>Keine Ausbildungen gefunden</option>';
             }
         } catch (error) {
             console.error('Error al cargar profesiones:', error);
-            selectAusbildung.innerHTML = '<option value="">Fehler beim Laden</option>';
+            selectAusbildung.innerHTML = '<option value="" disabled>Fehler beim Laden</option>';
         }
     }
 
@@ -131,7 +135,7 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        const ausbildung = document.getElementById('regAusbildung').value.trim(); // Capturamos la carrera seleccionada
+        const ausbildung = document.getElementById('regAusbildung').value.trim(); // Captura el nombre corto seleccionado
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
         loginMensaje.classList.add('hidden');
@@ -207,6 +211,6 @@ export function inicializarAuth(onLoginExitoso) {
         } else {
             loginMensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
         }
-        loginMensaje.classList.add('hidden');
+        loginMensaje.classList.remove('hidden');
     }
 }
