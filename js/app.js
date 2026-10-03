@@ -1,250 +1,127 @@
-import { SUPABASE_URL, headers } from './config.js';
+// ==========================================
+// MÓDULO DE RECONOCIMIENTO DE VOZ Y LÓGICA PRINCIPAL
+// ==========================================
 
-export function iniciarAppPrincipal(nombreUsuario) {
-    const loginSection = document.getElementById('loginSection');
-    const appSection = document.getElementById('appSection');
-    const lblUsuario = document.getElementById('lblUsuario');
+let recognition = null;
+let isListening = false;
+let shouldBeListening = false; // Bandera para rastrear la intención de grabación del usuario
 
-    loginSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    document.body.classList.remove('justify-center');
-    lblUsuario.textContent = nombreUsuario;
-
-    // Obtenemos el ausbildung del usuario actual guardado en localStorage
-    const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
-
-    const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
-    document.getElementById('fechaActual').textContent = fechaHoyStr.charAt(0).toUpperCase() + fechaHoyStr.slice(1);
-    const hoyISO = new Date().toISOString().split('T')[0];
-
-    const formulario = document.getElementById('registroForm');
-    const inputActividad = document.getElementById('actividad');
-    const btnSubmitActividad = document.getElementById('btnSubmitActividad');
-    const contenedorSugerencias = document.getElementById('sugerencias');
-    const listaActividades = document.getElementById('listaActividades');
-    const contador = document.getElementById('contador');
-    const mensaje = document.getElementById('mensaje');
-
-    const modalPasado = document.getElementById('modalPasado');
-    const inputFechaPasada = document.getElementById('fechaPasada');
-    const inputActividadPasada = document.getElementById('actividadPasada');
-    const sugerenciasPasadas = document.getElementById('sugerenciasPasadas');
-    const formPasado = document.getElementById('formPasado');
-    const btnSubmitPasado = document.getElementById('btnSubmitPasado');
-    const mensajePasado = document.getElementById('mensajePasado');
-    const listaActividadesPasadas = document.getElementById('listaActividadesPasadas');
-    const contadorPasado = document.getElementById('contadorPasado');
-
-    let currentSpeechRecognition = null;
-
-    window.registrarInstanciaVoz = function(recognition) {
-        currentSpeechRecognition = recognition;
-    };
-
-    window.limpiarInstanciaVoz = function() {
-        currentSpeechRecognition = null;
-    };
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            if (currentSpeechRecognition) {
-                try {
-                    currentSpeechRecognition.abort();
-                } catch (e) {
-                    console.error("Error al abortar voz en segundo plano:", e);
-                }
-                currentSpeechRecognition = null;
-            }
-        }
-    });
-
-    window.abrirModalPasado = function() {
-        modalPasado.classList.remove('hidden');
-        const ayer = new Date();
-        ayer.setDate(ayer.getDate() - 1);
-        const fechaAyerStr = ayer.toISOString().split('T')[0];
-        inputFechaPasada.value = fechaAyerStr;
-        inputActividadPasada.value = '';
-        cargarActividadesPasadas(fechaAyerStr);
-        inputActividadPasada.focus();
-    };
-
-    window.cerrarModalPasado = function() {
-        modalPasado.classList.add('hidden');
-        mensajePasado.classList.add('hidden');
-        cargarActividadesHoy();
-    };
-
-    inputFechaPasada.addEventListener('change', (e) => {
-        cargarActividadesPasadas(e.target.value);
-    });
-
-    async function cargarActividadesPasadas(fecha) {
-        if (!fecha) return;
-        try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${fecha}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, {
-                method: 'GET', headers: headers
-            });
-            const data = await res.json();
-            if (!data || data.length === 0) {
-                listaActividadesPasadas.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Keine Aktivitäten für dieses Datum erfasst.</p>';
-                contadorPasado.textContent = '0 erfasst';
-                return;
-            }
-            contadorPasado.textContent = `${data.length} erfasst`;
-            listaActividadesPasadas.innerHTML = '';
-            data.forEach((item) => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100 text-sm';
-                div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><span class="text-[10px] text-gray-400">${item.hora || ''}</span>`;
-                listaActividadesPasadas.appendChild(div);
-            });
-        } catch (err) { console.error(err); }
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        console.warn("El reconocimiento de voz no es compatible con este navegador.");
+        return null;
     }
 
-    // Autocompletado filtrado por Ausbildung en tiempo real
-    inputActividad.addEventListener('input', async (e) => {
-        const textoBusqueda = e.target.value.trim();
-        if (textoBusqueda.length < 2) { contenedorSugerencias.classList.add('hidden'); return; }
-        try {
-            const url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}&nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
-            const res = await fetch(url, { headers });
-            const data = await res.json();
-            if (!data || data.length === 0) { contenedorSugerencias.classList.add('hidden'); return; }
-            contenedorSugerencias.innerHTML = '';
-            data.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer border-b border-gray-100';
-                div.textContent = item.nombre_actividad;
-                div.addEventListener('click', () => { inputActividad.value = item.nombre_actividad; contenedorSugerencias.classList.add('hidden'); });
-                contenedorSugerencias.appendChild(div);
-            });
-            contenedorSugerencias.classList.remove('hidden');
-        } catch (err) { console.error(err); }
-    });
+    const rec = new SpeechRecognition();
+    rec.lang = 'de-DE';
+    rec.continuous = true;
+    rec.interimResults = true;
 
-    inputActividadPasada.addEventListener('input', async (e) => {
-        const textoBusqueda = e.target.value.trim();
-        if (textoBusqueda.length < 2) { sugerenciasPasadas.classList.add('hidden'); return; }
-        try {
-            const url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}&nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
-            const res = await fetch(url, { headers });
-            const data = await res.json();
-            if (!data || data.length === 0) { sugerenciasPasadas.classList.add('hidden'); return; }
-            sugerenciasPasadas.innerHTML = '';
-            data.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-amber-50 cursor-pointer border-b border-gray-100';
-                div.textContent = item.nombre_actividad;
-                div.addEventListener('click', () => { inputActividadPasada.value = item.nombre_actividad; sugerenciasPasadas.classList.add('hidden'); });
-                sugerenciasPasadas.appendChild(div);
-            });
-            sugerenciasPasadas.classList.remove('hidden');
-        } catch (err) { console.error(err); }
-    });
+    rec.onstart = () => {
+        isListening = true;
+        console.log("Reconocimiento de voz iniciado correctamente.");
+    };
 
-    async function cargarActividadesHoy() {
-        try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, { headers });
-            const data = await res.json();
-            if (!data || data.length === 0) {
-                listaActividades.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>';
-                contador.textContent = '0 erfasst';
-                return;
+    rec.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+        }
+        
+        // Asume que tienes un campo de entrada activo, por ejemplo, el textarea principal
+        const activeInput = document.getElementById('descripcionActividad') || document.getElementById('textoTranscripcion');
+        if (activeInput) {
+            activeInput.value = transcript;
+            // Disparar evento de cambio por si hay listeners escuchando
+            activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    };
+
+    rec.onerror = (event) => {
+        console.error("Error en el reconocimiento de voz:", event.error);
+        isListening = false;
+    };
+
+    rec.onend = () => {
+        isListening = false;
+        console.log("Reconocimiento de voz finalizado.");
+        
+        // Si la app sigue activa y el usuario no detuvo la grabación a propósito, reiniciamos automáticamente
+        if (shouldBeListening && document.visibilityState === 'visible') {
+            try {
+                rec.start();
+            } catch (e) {
+                console.error("No se pudo reiniciar automáticamente el reconocimiento:", e);
             }
-            contador.textContent = `${data.length} erfasst`;
-            listaActividades.innerHTML = '';
-            data.forEach((item) => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-sm';
-                div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><span class="text-[10px] text-gray-400">${item.hora || ''}</span>`;
-                listaActividades.appendChild(div);
-            });
-        } catch (err) { console.error(err); }
-    }
-
-    formulario.onsubmit = async (e) => {
-        e.preventDefault();
-        const nombreActividad = inputActividad.value.trim();
-        if (!nombreActividad) return;
-        btnSubmitActividad.disabled = true;
-        btnSubmitActividad.textContent = 'Wird gespeichert...';
-        const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        try {
-            // Guardar en el registro diario personal
-            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
-                method: 'POST', headers: headers,
-                body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: hoyISO, hora: horaActual, usuario: nombreUsuario })
-            });
-
-            // Guardar en el catálogo compartido por profesión (incluyendo ausbildung)
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo`, {
-                method: 'POST', 
-                headers: { ...headers, 'Prefer': 'resolution=ignore-duplicates' },
-                body: JSON.stringify({ nombre_actividad: nombreActividad, ausbildung: ausbildungUsuario })
-            });
-
-            inputActividad.value = '';
-            contenedorSugerencias.classList.add('hidden');
-
-            btnSubmitActividad.disabled = false;
-            btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
-            mensaje.textContent = '✓ Aktivität hinzugefügt!';
-            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-green-100 text-green-700';
-            mensaje.classList.remove('hidden');
-            inputActividad.focus();
-            setTimeout(() => mensaje.classList.add('hidden'), 2000);
-            cargarActividadesHoy();
-        } catch (err) {
-            btnSubmitActividad.disabled = false;
-            btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
-            mensaje.textContent = '❌ Fehler beim Speichern.';
-            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
-            mensaje.classList.remove('hidden');
         }
     };
 
-    formPasado.onsubmit = async (e) => {
-        e.preventDefault();
-        const fechaElegida = inputFechaPasada.value;
-        const nombreActividad = inputActividadPasada.value.trim();
-        if (!fechaElegida || !nombreActividad) return;
-        btnSubmitPasado.disabled = true;
-        btnSubmitPasado.textContent = 'Wird gespeichert...';
-
-        try {
-            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
-                method: 'POST', headers: headers,
-                body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: fechaElegida, hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), usuario: nombreUsuario })
-            });
-            
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo`, {
-                method: 'POST', 
-                headers: { ...headers, 'Prefer': 'resolution=ignore-duplicates' },
-                body: JSON.stringify({ nombre_actividad: nombreActividad, ausbildung: ausbildungUsuario })
-            });
-
-            inputActividadPasada.value = '';
-            sugerenciasPasadas.classList.add('hidden');
-
-            btnSubmitPasado.disabled = false;
-            btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
-            mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
-            mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-green-100 text-green-700';
-            mensajePasado.classList.remove('hidden');
-            inputActividadPasada.focus();
-            setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
-            cargarActividadesPasadas(fechaElegida);
-        } catch (err) {
-            btnSubmitPasado.disabled = false;
-            btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
-            mensajePasado.textContent = '❌ Fehler beim Speichern.';
-            mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-red-100 text-red-700';
-            mensajePasado.classList.remove('hidden');
-        }
-    };
-
-    cargarActividadesHoy();
+    return rec;
 }
+
+// Inicializar la instancia de voz al cargar el script
+recognition = initSpeechRecognition();
+
+/**
+ * Función para alternar la escucha desde el botón de la interfaz.
+ * Conéctala directamente al evento onclick de tu botón de micrófono.
+ */
+function toggleVoiceInput() {
+    if (!recognition) {
+        alert("El reconocimiento de voz no está disponible en este dispositivo.");
+        return;
+    }
+
+    const btnMicrofono = document.getElementById('btnMicrofono'); // Ajusta el ID según tu HTML
+
+    if (isListening) {
+        shouldBeListening = false;
+        recognition.stop();
+        if (btnMicrofono) btnMicrofono.classList.remove('activo', 'pulse-rojo');
+    } else {
+        shouldBeListening = true;
+        try {
+            recognition.start();
+            if (btnMicrofono) btnMicrofono.classList.add('activo', 'pulse-rojo');
+        } catch (e) {
+            console.error("Error al intentar iniciar la escucha:", e);
+            shouldBeListening = false;
+        }
+    }
+}
+
+// ==========================================
+// CONTROL DE VISIBILIDAD (Cambio de app / pestaña)
+// ==========================================
+document.addEventListener('visibilitychange', () => {
+    const btnMicrofono = document.getElementById('btnMicrofono');
+
+    if (document.visibilityState === 'hidden') {
+        // Cuando el usuario cambia de app o minimiza, detenemos la escucha limpiamente para liberar el recurso
+        if (isListening && recognition) {
+            try {
+                recognition.stop();
+            } catch (e) {
+                console.error("Error al detener por cambio de visibilidad:", e);
+            }
+        }
+    } else if (document.visibilityState === 'visible') {
+        // Al regresar a la app, si el usuario tenía la intención de grabar, reanudamos de forma segura
+        if (shouldBeListening && recognition && !isListening) {
+            setTimeout(() => {
+                try {
+                    recognition.start();
+                    if (btnMicrofono) btnMicrofono.classList.add('activo', 'pulse-rojo');
+                    console.log("Reanudada la escucha tras volver a la aplicación.");
+                } catch (e) {
+                    console.error("Error al reanudar tras volver a la app:", e);
+                    shouldBeListening = false;
+                    if (btnMicrofono) btnMicrofono.classList.remove('activo', 'pulse-rojo');
+                }
+            }, 400); // Pequeño margen para asegurar que el DOM y el foco recuperen estabilidad
+        }
+    }
+});
+
+// Puedes exportar o mantener tus otras funciones de Supabase, modales e inicialización aquí abajo...
