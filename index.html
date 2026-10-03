@@ -105,6 +105,10 @@
                     <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
+                    <label for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Ausbildung (Fachrichtung / Beruf)</label>
+                    <input type="text" id="regAusbildung" autocomplete="off" required placeholder="z.B. Elektroniker für Betriebstechnik" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
                     <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
                         <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -242,7 +246,7 @@
                     <div class="relative flex items-center">
                         <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         
-                        <!-- 🎙️ MICRÓFONO CAMBIANTE PARA MODAL PASADO -->
+                        <!-- 🎙️️ MICRÓFONO CAMBIANTE PARA MODAL PASADO -->
                         <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-amber-600 rounded-full transition focus:outline-none">
                             <svg id="icon-btnVozPasada" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
@@ -445,6 +449,7 @@
 
         window.cerrarSesion = function() {
             localStorage.removeItem('usuario_actual');
+            localStorage.removeItem('usuario_ausbildung');
             localStorage.removeItem('usuario_acceso');
             
             document.getElementById('formLogin').reset();
