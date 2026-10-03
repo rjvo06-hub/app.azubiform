@@ -11,7 +11,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
     lblUsuario.textContent = nombreUsuario;
 
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
-    console.log("Ausbildung del usuario actual en localStorage:", ausbildungUsuario);
+    console.log("Ausbildung del usuario actual:", ausbildungUsuario);
 
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
@@ -103,18 +103,28 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR ROBUSTO: Prioriza la coincidencia y si no, busca de forma general en el catálogo
+    // BUSCADOR INTELIGENTE CON DOBLE FILTRO Y RESPALDO GENERAL
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
             return; 
         }
         try {
-            // Intento 1: Búsqueda general por nombre de actividad en el catálogo (sin restricciones estrictas de ausbildung para asegurar que siempre aparezcan sugerencias útiles)
-            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
+            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
+            if (ausbildungUsuario) {
+                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
+            }
+            url += `&limit=5`;
 
-            const res = await fetch(url, { headers });
+            let res = await fetch(url, { headers });
             let data = await res.json();
+
+            // Si el filtro específico no arroja resultados, hacemos búsqueda general en el catálogo
+            if ((!data || data.length === 0) && ausbildungUsuario) {
+                let urlGeneral = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
+                const resGeneral = await fetch(urlGeneral, { headers });
+                data = await resGeneral.json();
+            }
 
             if (!data || data.length === 0) {
                 contenedorSugerenciasEl.classList.add('hidden');
