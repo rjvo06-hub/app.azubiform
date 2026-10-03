@@ -10,6 +10,9 @@ export function iniciarAppPrincipal(nombreUsuario) {
     document.body.classList.remove('justify-center');
     lblUsuario.textContent = nombreUsuario;
 
+    // Obtenemos el ausbildung del usuario actual guardado en localStorage
+    const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
+
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
     document.getElementById('fechaActual').textContent = fechaHoyStr.charAt(0).toUpperCase() + fechaHoyStr.slice(1);
@@ -33,7 +36,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
     const listaActividadesPasadas = document.getElementById('listaActividadesPasadas');
     const contadorPasado = document.getElementById('contadorPasado');
 
-    // Control global de la instancia activa de voz para matarla si se cambia de sesión/app
     let currentSpeechRecognition = null;
 
     window.registrarInstanciaVoz = function(recognition) {
@@ -44,10 +46,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
         currentSpeechRecognition = null;
     };
 
-    // Detectar si el usuario cambia de app, minimiza o cambia de pestaña
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
-            // Si la app se oculta, cerramos cualquier micrófono abierto por la fuerza
             if (currentSpeechRecognition) {
                 try {
                     currentSpeechRecognition.abort();
@@ -103,11 +103,13 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
+    // Autocompletado filtrado por Ausbildung en tiempo real
     inputActividad.addEventListener('input', async (e) => {
         const textoBusqueda = e.target.value.trim();
         if (textoBusqueda.length < 2) { contenedorSugerencias.classList.add('hidden'); return; }
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`, { headers });
+            const url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}&nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
+            const res = await fetch(url, { headers });
             const data = await res.json();
             if (!data || data.length === 0) { contenedorSugerencias.classList.add('hidden'); return; }
             contenedorSugerencias.innerHTML = '';
@@ -126,7 +128,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const textoBusqueda = e.target.value.trim();
         if (textoBusqueda.length < 2) { sugerenciasPasadas.classList.add('hidden'); return; }
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`, { headers });
+            const url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}&nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
+            const res = await fetch(url, { headers });
             const data = await res.json();
             if (!data || data.length === 0) { sugerenciasPasadas.classList.add('hidden'); return; }
             sugerenciasPasadas.innerHTML = '';
@@ -170,16 +173,19 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         try {
+            // Guardar en el registro diario personal
             await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: hoyISO, hora: horaActual, usuario: nombreUsuario })
             });
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
-                method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ nombre_actividad: nombreActividad })
+
+            // Guardar en el catálogo compartido por profesión (incluyendo ausbildung)
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo`, {
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=ignore-duplicates' },
+                body: JSON.stringify({ nombre_actividad: nombreActividad, ausbildung: ausbildungUsuario })
             });
 
-            // Limpieza del input al enviar
             inputActividad.value = '';
             contenedorSugerencias.classList.add('hidden');
 
@@ -213,12 +219,13 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ nombre_actividad: nombreActividad, fecha: fechaElegida, hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), usuario: nombreUsuario })
             });
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
-                method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ nombre_actividad: nombreActividad })
+            
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo`, {
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=ignore-duplicates' },
+                body: JSON.stringify({ nombre_actividad: nombreActividad, ausbildung: ausbildungUsuario })
             });
 
-            // Limpieza del input pasado al enviar
             inputActividadPasada.value = '';
             sugerenciasPasadas.classList.add('hidden');
 
