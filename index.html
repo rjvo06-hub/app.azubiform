@@ -157,7 +157,7 @@
                     <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
                         <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁️️</span></button>
+                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁</span></button>
                     </div>
                 </div>
                 <div>
@@ -381,7 +381,7 @@
 
             const recognition = new SpeechRecognition();
             recognition.lang = 'de-DE';
-            recognition.interimResults = true; // Permite escritura fluida en tiempo real
+            recognition.interimResults = true;
             recognition.maxAlternatives = 1;
 
             window.currentRecognition = recognition;
@@ -392,7 +392,6 @@
                 textoBase += ' ';
             }
 
-            // Cambiar a icono de STOP cuadrado rojo con animación de parpadeo
             btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
             btn.classList.add('text-red-600', 'animate-pulse');
             svgIcon.innerHTML = stopIconSVG;
@@ -451,7 +450,6 @@
             }
         }
 
-        // 🔄 DETECTOR DE CAMBIO DE PANTALLA (Para reconectar el micrófono al volver de WhatsApp)
         document.addEventListener("visibilitychange", function() {
             if (!document.hidden && window.currentRecognition) {
                 try {
