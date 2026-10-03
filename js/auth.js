@@ -8,6 +8,34 @@ export function inicializarAuth(onLoginExitoso) {
     const tabRegistro = document.getElementById('tabRegistro');
     const formLogin = document.getElementById('formLogin');
     const formRegistro = document.getElementById('formRegistro');
+    const selectAusbildung = document.getElementById('regAusbildung');
+
+    // CARGAR PROFESIONES DINÁMICAMENTE DESDE SUPABASE
+    async function cargarProfesiones() {
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/profesiones?order=nombre_largo.asc`, { headers });
+            const profesiones = await res.json();
+            
+            selectAusbildung.innerHTML = '<option value="" disabled selected>-- Bitte wähle deine Ausbildung --</option>';
+            
+            if (profesiones && profesiones.length > 0) {
+                profesiones.forEach(prof => {
+                    const option = document.createElement('option');
+                    option.value = prof.codigo; // El código corto que se guardará en la BD (ej. "Maler")
+                    option.textContent = prof.nombre_largo; // El nombre descriptivo largo que ve el usuario
+                    selectAusbildung.appendChild(option);
+                });
+            } else {
+                selectAusbildung.innerHTML = '<option value="" disabled>Keine Ausbildungen gefunden</option>';
+            }
+        } catch (err) {
+            console.error("Error al cargar profesiones:", err);
+            selectAusbildung.innerHTML = '<option value="" disabled>Fehler beim Laden</option>';
+        }
+    }
+
+    // Llamamos a la función al iniciar la vista de autenticación
+    cargarProfesiones();
 
     function generarToken() {
         return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -119,7 +147,7 @@ export function inicializarAuth(onLoginExitoso) {
                 body: JSON.stringify({ 
                     nombre: nombre, 
                     email: email, 
-                    ausbildung: ausbildung, 
+                    ausbildung: ausbildung, // Guarda directamente el código corto seleccionado (ej. "Maler")
                     password: password, 
                     verificado: false, 
                     token_verificacion: token,
