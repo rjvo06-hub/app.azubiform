@@ -74,7 +74,6 @@ export function inicializarAuth(onLoginExitoso) {
                 return;
             }
 
-            // Guardamos datos y el ausbildung en localStorage
             localStorage.setItem('usuario_actual', usuarioExistente.nombre);
             localStorage.setItem('usuario_ausbildung', usuarioExistente.ausbildung || '');
             localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
@@ -89,7 +88,7 @@ export function inicializarAuth(onLoginExitoso) {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        const ausbildung = document.getElementById('regAusbildung').value.trim(); // Capturamos la carrera
+        const ausbildung = document.getElementById('regAusbildung').value.trim();
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
         loginMensaje.classList.add('hidden');
@@ -114,7 +113,6 @@ export function inicializarAuth(onLoginExitoso) {
 
             const token = generarToken();
 
-            // Insertar usuario incluyendo el ausbildung
             const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
                 method: 'POST', 
                 headers: headers,
