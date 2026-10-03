@@ -2,7 +2,8 @@
 // MÓDULO DE AUTENTICACIÓN Y REGISTRO (auth.js)
 // ==========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+// Exportamos la función que tu index.html está exigiendo
+export function inicializarAuth() {
     const registroForm = document.getElementById('registro-form');
     const selectProfesion = document.getElementById('ausbildung-select');
 
@@ -53,14 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});
+}
 
 async function cargarProfesiones() {
     const selectProfesion = document.getElementById('ausbildung-select');
     if (!selectProfesion) return;
 
     try {
-        // Apuntando exactamente a tu tabla 'profesions' de Supabase
+        // Consultando la tabla 'profesions' de tu Supabase
         const { data, error } = await supabase
             .from('profesions')
             .select('*');
@@ -86,7 +87,7 @@ async function cargarProfesiones() {
     }
 }
 
-// Funciones globales por si tu HTML las llama mediante onclick="..."
+// Funciones globales para los eventos onclick del HTML
 window.cambiarTab = function(tabName) {
     const loginSec = document.getElementById('login-section');
     const regSec = document.getElementById('registro-section');
