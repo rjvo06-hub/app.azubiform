@@ -139,6 +139,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         e.preventDefault();
         const nombreActividad = inputActividad.value.trim();
         if (!nombreActividad) return;
+        
         btnSubmitActividad.disabled = true;
         btnSubmitActividad.textContent = 'Wird gespeichert...';
         const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -152,17 +153,23 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ nombre_actividad: nombreActividad })
             });
+
+            // Limpieza inmediata del input y ocultar sugerencias
+            inputActividad.value = '';
+            contenedorSugerencias.classList.add('hidden');
+
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
+            
             mensaje.textContent = '✓ Aktivität hinzugefügt!';
             mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-green-100 text-green-700';
             mensaje.classList.remove('hidden');
-            inputActividad.value = '';
-            contenedorSugerencias.classList.add('hidden');
+            
             inputActividad.focus();
             setTimeout(() => mensaje.classList.add('hidden'), 2000);
             cargarActividadesHoy();
         } catch (err) {
+            console.error(err);
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
             mensaje.textContent = '❌ Fehler beim Speichern.';
@@ -176,6 +183,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const fechaElegida = inputFechaPasada.value;
         const nombreActividad = inputActividadPasada.value.trim();
         if (!fechaElegida || !nombreActividad) return;
+        
         btnSubmitPasado.disabled = true;
         btnSubmitPasado.textContent = 'Wird gespeichert...';
 
@@ -188,17 +196,23 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ nombre_actividad: nombreActividad })
             });
+
+            // Limpieza inmediata del input pasado y ocultar sugerencias
+            inputActividadPasada.value = '';
+            sugerenciasPasadas.classList.add('hidden');
+
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
+            
             mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
             mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-green-100 text-green-700';
             mensajePasado.classList.remove('hidden');
-            inputActividadPasada.value = '';
-            sugerenciasPasadas.classList.add('hidden');
+            
             inputActividadPasada.focus();
             setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
             cargarActividadesPasadas(fechaElegida);
         } catch (err) {
+            console.error(err);
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = '❌ Fehler beim Speichern.';
