@@ -11,7 +11,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
     lblUsuario.textContent = nombreUsuario;
 
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
-    console.log("Ausbildung del usuario actual:", ausbildungUsuario);
+    console.log("Ausbildung del usuario actual en localStorage:", ausbildungUsuario);
 
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
@@ -103,7 +103,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR ESTRICTO RESTRINGIDO AL CÁTALOGO DE CADA AUSBILDUNG
+    // BUSCADOR INTELIGENTE CON FILTRO POR AUSBILDUNG Y RESPALDO GENERAL
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
@@ -113,13 +113,18 @@ export function iniciarAppPrincipal(nombreUsuario) {
             let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
             if (ausbildungUsuario) {
                 url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
-            } else {
-                url += `&ausbildung=is.null`;
             }
             url += `&limit=5`;
 
             let res = await fetch(url, { headers });
             let data = await res.json();
+
+            // Si no encuentra con su ausbildung exacto, busca de forma general para que nunca quede vacío si hay datos
+            if ((!data || data.length === 0)) {
+                let urlGeneral = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
+                const resGeneral = await fetch(urlGeneral, { headers });
+                data = await resGeneral.json();
+            }
 
             if (!data || data.length === 0) {
                 contenedorSugerenciasEl.classList.add('hidden');
@@ -139,7 +144,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             });
             contenedorSugerenciasEl.classList.remove('hidden');
         } catch (err) { 
-            console.error("Error en búsqueda estricta de actividades:", err); 
+            console.error("Error en búsqueda de actividades:", err); 
         }
     }
 
