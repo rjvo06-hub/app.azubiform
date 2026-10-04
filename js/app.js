@@ -13,10 +13,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
     console.log("Ausbildung del usuario actual en localStorage:", ausbildungUsuario);
 
-    // Inicializamos con el ausbildung del usuario para garantizar que nunca esté vacío
     let ausbildungsPermitidos = [ausbildungUsuario];
 
-    // Cargar automáticamente profesiones de la misma categoría de forma segura
     async function inicializarFiltrosCategoria() {
         if (!ausbildungUsuario) return;
         try {
@@ -128,7 +126,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR ESTRICTO: Filtra exclusivamente por los códigos permitidos de la categoría del usuario
+    // BUSCADOR OPTIMIZADO: Consulta inmediata y fluida por cada letra escrita
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
@@ -167,12 +165,23 @@ export function iniciarAppPrincipal(nombreUsuario) {
         }
     }
 
+    // Control de tiempo para evitar solapamiento de peticiones al escribir rápido
+    let temporizadorBusqueda;
     inputActividad.addEventListener('input', (e) => {
-        buscarActividades(e.target.value.trim(), contenedorSugerencias, inputActividad);
+        clearTimeout(temporizadorBusqueda);
+        const texto = e.target.value.trim();
+        temporizadorBusqueda = setTimeout(() => {
+            buscarActividades(texto, contenedorSugerencias, inputActividad);
+        }, 150);
     });
 
+    let temporizadorBusquedaPasada;
     inputActividadPasada.addEventListener('input', (e) => {
-        buscarActividades(e.target.value.trim(), sugerenciasPasadas, inputActividadPasada);
+        clearTimeout(temporizadorBusquedaPasada);
+        const texto = e.target.value.trim();
+        temporizadorBusquedaPasada = setTimeout(() => {
+            buscarActividades(texto, sugerenciasPasadas, inputActividadPasada);
+        }, 150);
     });
 
     async function cargarActividadesHoy() {
