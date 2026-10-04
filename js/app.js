@@ -106,6 +106,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
     async function cargarActividadesPasadas(fecha) {
         if (!fecha) return;
         try {
+            // Filtrado estricto por usuario y por fecha en el registro diario
             const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${fecha}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, {
                 method: 'GET', headers: headers
             });
@@ -126,7 +127,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR OPTIMIZADO: Consulta inmediata y fluida por cada letra escrita
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
@@ -165,7 +165,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
         }
     }
 
-    // Control de tiempo para evitar solapamiento de peticiones al escribir rápido
     let temporizadorBusqueda;
     inputActividad.addEventListener('input', (e) => {
         clearTimeout(temporizadorBusqueda);
@@ -184,9 +183,10 @@ export function iniciarAppPrincipal(nombreUsuario) {
         }, 150);
     });
 
+    // CORREGIDO: Carga exclusivamente las actividades de hoy hechas por el USUARIO ACTUAL
     async function cargarActividadesHoy() {
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&order=created_at.desc`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, { headers });
             const data = await res.json();
             
             if (!data || data.length === 0) {
@@ -309,7 +309,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             cargarActividadesPasadas(fechaElegida);
         } catch (err) {
             alert("⚠ " + err.message);
-            btnSubmitPasado.disabled = false;
+            btnSubmitPasado.disabledberg = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = '❌ Fehler beim Speichern.';
             mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-red-100 text-red-700';
