@@ -128,7 +128,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR INTELIGENTE ESTRICTO (Solo muestra actividades de la categoría del usuario, sin mezclar otras ramas)
+    // BUSCADOR INTELIGENTE: Muestra actividades de tu categoría o generales, excluyendo otros oficios
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
@@ -137,16 +137,15 @@ export function iniciarAppPrincipal(nombreUsuario) {
         try {
             let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
             
-            // Aplicamos estrictamente los códigos permitidos de su rama (ej. Electricidad)
+            // Filtra por los códigos de la categoría eléctrica O por actividades generales (ausbildung is null)
             if (ausbildungsPermitidos.length > 0) {
-                url += `&ausbildung=in.(${ausbildungsPermitidos.join(',')})`;
+                url += `&or=(ausbildung.in.(${ausbildungsPermitidos.join(',')}),ausbildung.is.null)`;
             }
             url += `&limit=5`;
 
             let res = await fetch(url, { headers });
             let data = await res.json();
 
-            // Si no hay resultados en su categoría, simplemente no muestra sugerencias (evita cruzar con Maler, Gärtner, etc.)
             if (!data || data.length === 0) {
                 contenedorSugerenciasEl.classList.add('hidden');
                 return;
