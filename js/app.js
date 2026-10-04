@@ -157,7 +157,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
 
     async function cargarActividadesHoy() {
         try {
-            // Filtrado optimizado por fecha para asegurar visualización inmediata
             const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&order=created_at.desc`, { headers });
             const data = await res.json();
             
@@ -186,8 +185,9 @@ export function iniciarAppPrincipal(nombreUsuario) {
         const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         try {
-            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
-                method: 'POST', headers: headers,
+            const responseRegistro = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
+                method: 'POST', 
+                headers: headers,
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad, 
                     fecha: hoyISO, 
@@ -196,9 +196,16 @@ export function iniciarAppPrincipal(nombreUsuario) {
                     ausbildung: ausbildungUsuario 
                 })
             });
+
+            if (!responseRegistro.ok) {
+                const errorText = await responseRegistro.text();
+                console.error("Error detallado de Supabase:", errorText);
+                throw new Error("Supabase rechazó el registro: " + errorText);
+            }
             
             await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
-                method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad,
                     ausbildung: ausbildungUsuario 
@@ -217,6 +224,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             setTimeout(() => mensaje.classList.add('hidden'), 2000);
             cargarActividadesHoy();
         } catch (err) {
+            console.error("Capturado en catch:", err);
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
             mensaje.textContent = '❌ Fehler beim Speichern.';
@@ -234,8 +242,9 @@ export function iniciarAppPrincipal(nombreUsuario) {
         btnSubmitPasado.textContent = 'Wird gespeichert...';
 
         try {
-            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
-                method: 'POST', headers: headers,
+            const responsePasado = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
+                method: 'POST', 
+                headers: headers,
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad, 
                     fecha: fechaElegida, 
@@ -244,8 +253,16 @@ export function iniciarAppPrincipal(nombreUsuario) {
                     ausbildung: ausbildungUsuario 
                 })
             });
+
+            if (!responsePasado.ok) {
+                const errorText = await responsePasado.text();
+                console.error("Error detallado de Supabase (pasado):", errorText);
+                throw new Error("Supabase rechazó el registro pasado: " + errorText);
+            }
+
             await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
-                method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad,
                     ausbildung: ausbildungUsuario 
@@ -264,6 +281,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
             cargarActividadesPasadas(fechaElegida);
         } catch (err) {
+            console.error("Capturado en catch (pasado):", err);
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = '❌ Fehler beim Speichern.';
