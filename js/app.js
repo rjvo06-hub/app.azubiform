@@ -128,7 +128,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR INTELIGENTE CON FILTRO POR CATEGORÍA DE AUSBILDUNG Y RESPALDO GENERAL
+    // BUSCADOR INTELIGENTE ESTRICTO (Solo muestra actividades de la categoría del usuario, sin mezclar otras ramas)
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
@@ -136,6 +136,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
         }
         try {
             let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
+            
+            // Aplicamos estrictamente los códigos permitidos de su rama (ej. Electricidad)
             if (ausbildungsPermitidos.length > 0) {
                 url += `&ausbildung=in.(${ausbildungsPermitidos.join(',')})`;
             }
@@ -144,13 +146,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             let res = await fetch(url, { headers });
             let data = await res.json();
 
-            // Si no encuentra con los códigos de su categoría, busca de forma general
-            if ((!data || data.length === 0)) {
-                let urlGeneral = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
-                const resGeneral = await fetch(urlGeneral, { headers });
-                data = await resGeneral.json();
-            }
-
+            // Si no hay resultados en su categoría, simplemente no muestra sugerencias (evita cruzar con Maler, Gärtner, etc.)
             if (!data || data.length === 0) {
                 contenedorSugerenciasEl.classList.add('hidden');
                 return;
