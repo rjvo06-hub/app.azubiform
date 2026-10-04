@@ -96,7 +96,8 @@ export function inicializarAuth(onLoginExitoso) {
 
     formLogin.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('loginEmail').value.trim();
+        // Normalizamos el email a minúsculas para evitar errores por mayúsculas
+        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
         const password = document.getElementById('loginPassword').value;
         loginMensaje.classList.add('hidden');
 
@@ -136,7 +137,8 @@ export function inicializarAuth(onLoginExitoso) {
     formRegistro.addEventListener('submit', async (e) => {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
+        // Normalizamos el email a minúsculas en el registro también
+        const email = document.getElementById('regEmail').value.trim().toLowerCase();
         const ausbildung = document.getElementById('regAusbildung').value.trim(); // Captura el código corto seleccionado
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
