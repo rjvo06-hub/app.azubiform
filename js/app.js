@@ -13,6 +13,31 @@ export function iniciarAppPrincipal(nombreUsuario) {
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
     console.log("Ausbildung del usuario actual en localStorage:", ausbildungUsuario);
 
+    // Lista de códigos permitidos para el usuario (incluye su especialidad y afines de la misma categoría)
+    let ausbildungsPermitidos = [ausbildungUsuario];
+
+    // Cargar automáticamente todas las profesiones de la misma categoría para unificar la vista (ej. Electricidad)
+    async function cargarAusbildungsRelacionados() {
+        if (!ausbildungUsuario) return;
+        try {
+            const resProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(ausbildungUsuario)}&select=categoria`, { headers });
+            const dataProf = await resProf.json();
+            if (dataProf && dataProf.length > 0 && dataProf[0].categoria) {
+                const categoria = dataProf[0].categoria;
+                const resCat = await fetch(`${SUPABASE_URL}/rest/v1/profesions?categoria=eq.${encodeURIComponent(categoria)}&select=codigo`, { headers });
+                const dataCat = await resCat.json();
+                if (dataCat && dataCat.length > 0) {
+                    ausbildungsPermitidos = dataCat.map(p => p.codigo);
+                    console.log("Ausbildungen relacionados cargados para esta categoría:", ausbildungsPermitidos);
+                }
+            }
+        } catch (err) {
+            console.error("Error al cargar ausbildungen relacionados:", err);
+        }
+    }
+
+    cargarAusbildungsRelacionados();
+
     const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
     document.getElementById('fechaActual').textContent = fechaHoyStr.charAt(0).toUpperCase() + fechaHoyStr.slice(1);
@@ -103,7 +128,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR INTELIGENTE CON FILTRO POR AUSBILDUNG Y RESPALDO GENERAL
+    // BUSCADOR INTELIGENTE CON FILTRO POR CATEGORÍA DE AUSBILDUNG Y RESPALDO GENERAL
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
@@ -111,15 +136,15 @@ export function iniciarAppPrincipal(nombreUsuario) {
         }
         try {
             let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
-            if (ausbildungUsuario) {
-                url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
+            if (ausbildungsPermitidos.length > 0) {
+                url += `&ausbildung=in.(${ausbildungsPermitidos.join(',')})`;
             }
             url += `&limit=5`;
 
             let res = await fetch(url, { headers });
             let data = await res.json();
 
-            // Si no encuentra con su ausbildung exacto, busca de forma general para que nunca quede vacío si hay datos
+            // Si no encuentra con los códigos de su categoría, busca de forma general
             if ((!data || data.length === 0)) {
                 let urlGeneral = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
                 const resGeneral = await fetch(urlGeneral, { headers });
