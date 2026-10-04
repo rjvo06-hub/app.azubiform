@@ -199,8 +199,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
 
             if (!responseRegistro.ok) {
                 const errorText = await responseRegistro.text();
-                console.error("Error detallado de Supabase:", errorText);
-                throw new Error("Supabase rechazó el registro: " + errorText);
+                throw new Error("Supabase error: " + errorText);
             }
             
             await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
@@ -224,7 +223,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             setTimeout(() => mensaje.classList.add('hidden'), 2000);
             cargarActividadesHoy();
         } catch (err) {
-            console.error("Capturado en catch:", err);
+            alert("⚠️ " + err.message); // Muestra el error exacto en tu teléfono
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
             mensaje.textContent = '❌ Fehler beim Speichern.';
@@ -256,8 +255,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
 
             if (!responsePasado.ok) {
                 const errorText = await responsePasado.text();
-                console.error("Error detallado de Supabase (pasado):", errorText);
-                throw new Error("Supabase rechazó el registro pasado: " + errorText);
+                throw new Error("Supabase error (pasado): " + errorText);
             }
 
             await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
@@ -281,7 +279,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
             cargarActividadesPasadas(fechaElegida);
         } catch (err) {
-            console.error("Capturado en catch (pasado):", err);
+            alert("⚠️️ " + err.message);
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = '❌ Fehler beim Speichern.';
