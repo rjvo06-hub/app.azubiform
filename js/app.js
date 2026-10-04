@@ -103,7 +103,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) { console.error(err); }
     }
 
-    // BUSCADOR INTELIGENTE CON DOBLE FILTRO Y RESPALDO GENERAL
+    // BUSCADOR ESTRICTO RESTRINGIDO AL CÁTALOGO DE CADA AUSBILDUNG
     async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
         if (textoBusqueda.length < 2) { 
             contenedorSugerenciasEl.classList.add('hidden'); 
@@ -113,17 +113,13 @@ export function iniciarAppPrincipal(nombreUsuario) {
             let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
             if (ausbildungUsuario) {
                 url += `&ausbildung=eq.${encodeURIComponent(ausbildungUsuario)}`;
+            } else {
+                url += `&ausbildung=is.null`;
             }
             url += `&limit=5`;
 
             let res = await fetch(url, { headers });
             let data = await res.json();
-
-            if ((!data || data.length === 0) && ausbildungUsuario) {
-                let urlGeneral = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
-                const resGeneral = await fetch(urlGeneral, { headers });
-                data = await resGeneral.json();
-            }
 
             if (!data || data.length === 0) {
                 contenedorSugerenciasEl.classList.add('hidden');
@@ -143,7 +139,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             });
             contenedorSugerenciasEl.classList.remove('hidden');
         } catch (err) { 
-            console.error("Error en búsqueda de actividades:", err); 
+            console.error("Error en búsqueda estricta de actividades:", err); 
         }
     }
 
@@ -223,7 +219,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             setTimeout(() => mensaje.classList.add('hidden'), 2000);
             cargarActividadesHoy();
         } catch (err) {
-            alert("⚠️ " + err.message); // Muestra el error exacto en tu teléfono
+            alert("⚠️ " + err.message);
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
             mensaje.textContent = '❌ Fehler beim Speichern.';
@@ -279,7 +275,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
             cargarActividadesPasadas(fechaElegida);
         } catch (err) {
-            alert("⚠️️ " + err.message);
+            alert("⚠ " + err.message);
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = '❌ Fehler beim Speichern.';
