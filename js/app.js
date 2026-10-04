@@ -119,7 +119,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
             let res = await fetch(url, { headers });
             let data = await res.json();
 
-            // Si el filtro específico no arroja resultados, hacemos búsqueda general en el catálogo
             if ((!data || data.length === 0) && ausbildungUsuario) {
                 let urlGeneral = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}&limit=5`;
                 const resGeneral = await fetch(urlGeneral, { headers });
@@ -158,8 +157,10 @@ export function iniciarAppPrincipal(nombreUsuario) {
 
     async function cargarActividadesHoy() {
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, { headers });
+            // Filtrado optimizado por fecha para asegurar visualización inmediata
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&order=created_at.desc`, { headers });
             const data = await res.json();
+            
             if (!data || data.length === 0) {
                 listaActividades.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>';
                 contador.textContent = '0 erfasst';
@@ -173,7 +174,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><span class="text-[10px] text-gray-400">${item.hora || ''}</span>`;
                 listaActividades.appendChild(div);
             });
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error("Error cargando actividades de hoy:", err); }
     }
 
     formulario.onsubmit = async (e) => {
@@ -196,7 +197,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 })
             });
             
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad,
@@ -243,7 +244,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
                     ausbildung: ausbildungUsuario 
                 })
             });
-            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad`, {
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad,
