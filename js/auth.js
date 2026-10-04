@@ -96,13 +96,13 @@ export function inicializarAuth(onLoginExitoso) {
 
     formLogin.addEventListener('submit', async (e) => {
         e.preventDefault();
-        // Normalizamos el email a minúsculas para evitar errores por mayúsculas
-        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+        const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
         loginMensaje.classList.add('hidden');
 
         try {
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, {
+            // Usamos ilike en lugar de eq para que la búsqueda de correo sea insensible a mayúsculas/minúsculas
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=ilike.${encodeURIComponent(email)}`, {
                 method: 'GET', 
                 headers: headers
             });
@@ -119,7 +119,7 @@ export function inicializarAuth(onLoginExitoso) {
             }
 
             if (!usuarioExistente.verificado) {
-                mostrarMensaje('⚠️ Bitte bestätige zuerst deine E-Mail-Adresse über den Link in deinem Postfach.');
+                mostrarMensaje('⚠️️ Bitte bestätige zuerst deine E-Mail-Adresse über den Link in deinem Postfach.');
                 return;
             }
 
@@ -137,8 +137,7 @@ export function inicializarAuth(onLoginExitoso) {
     formRegistro.addEventListener('submit', async (e) => {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
-        // Normalizamos el email a minúsculas en el registro también
-        const email = document.getElementById('regEmail').value.trim().toLowerCase();
+        const email = document.getElementById('regEmail').value.trim();
         const ausbildung = document.getElementById('regAusbildung').value.trim(); // Captura el código corto seleccionado
         const password = document.getElementById('regPassword').value;
         const passwordConfirm = document.getElementById('regPasswordConfirm').value;
@@ -150,7 +149,8 @@ export function inicializarAuth(onLoginExitoso) {
         }
 
         try {
-            const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, {
+            // Verificamos con ilike para evitar duplicados por diferencias de mayúsculas
+            const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=ilike.${encodeURIComponent(email)}`, {
                 method: 'GET', 
                 headers: headers
             });
