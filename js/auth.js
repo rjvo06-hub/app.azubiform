@@ -10,11 +10,21 @@ export function inicializarAuth(onLoginExitoso) {
     const formRegistro = document.getElementById('formRegistro');
     const selectTipoPrograma = document.getElementById('regTipoPrograma'); 
     const selectAusbildung = document.getElementById('regAusbildung'); 
+    const labelFachrichtung = document.getElementById('labelRegFachrichtung');
 
-    // Evento seguro para el selector dinámico
+    // Evento seguro para el selector dinámico y cambio de etiqueta
     if (selectTipoPrograma) {
         selectTipoPrograma.addEventListener('change', (e) => {
             const tipoSeleccionado = e.target.value;
+            
+            if (labelFachrichtung) {
+                if (tipoSeleccionado === 'fos') {
+                    labelFachrichtung.textContent = "FOS-Fachrichtung (Fachbereich)";
+                } else {
+                    labelFachrichtung.textContent = "Fachrichtung / Beruf";
+                }
+            }
+
             cargarProfesionesPorTipo(tipoSeleccionado);
         });
     }
@@ -77,6 +87,9 @@ export function inicializarAuth(onLoginExitoso) {
             if (formRegistro) formRegistro.reset();
             if (selectAusbildung) {
                 selectAusbildung.innerHTML = '<option value="" disabled selected>-- Wähle zuerst den Typ oben --</option>';
+            }
+            if (labelFachrichtung) {
+                labelFachrichtung.textContent = "Fachrichtung / Beruf";
             }
         }
     };
