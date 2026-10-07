@@ -170,7 +170,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
         }
     }
 
-    // Función global para cargar una plantilla guardada directo en el editor visual
     window.cargarPlantillaParaEditar = async function(schoolNameEnc, fileIdentifierEnc, jsonStrEnc) {
         const schoolName = decodeURIComponent(schoolNameEnc);
         const fileIdentifier = decodeURIComponent(fileIdentifierEnc);
@@ -180,10 +179,8 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
         contenedor.querySelector('#inputFileIdentifier').value = fileIdentifier;
         coordenadasDetectadas = coords;
 
-        // Cambiar a la pestaña del editor
         window.cambiarTabPdf('editor');
 
-        // Renderizar el PDF de fondo y cargar las coordenadas en el editor interactivo
         try {
             const loadingTask = pdfjsLib.getDocument('./admin.pdf');
             const pdfDoc = await loadingTask.promise;
@@ -204,7 +201,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
 
             renderizarEditorVisual(viewport);
             divResultado.classList.remove('hidden');
-            alert(`✅ Vorlage "${schoolName}" erfolgreich in den Editor geladen! Du kannst sie jetzt anpassen.`);
+            alert(`✅ Vorlage "${schoolName}" erfolgreich in den Editor geladen!`);
         } catch (err) {
             console.error("Fehler beim Laden des PDFs:", err);
             alert("❌ Fehler beim Laden der PDF-Datei für den Editor.");
@@ -383,4 +380,65 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                         coordenadasDetectadas[horaKey].y2 = coordenadasDetectadas[key].y2;
                         const horaDiv = overlay.querySelector(`[data-field="${horaKey}"]`);
                         if (horaDiv) horaDiv.style.top = `${(842 - coordenadasDetectadas[horaKey].y2) * scaleFactor}px`;
-                    } else if (key === horaKey && coordenadasDetectadas
+                    } else if (key === horaKey && coordenadasDetectadas[txtKey]) {
+                        coordenadasDetectadas[txtKey].y1 = coordenadasDetectadas[key].y1;
+                        coordenadasDetectadas[txtKey].y2 = coordenadasDetectadas[key].y2;
+                        const txtDiv = overlay.querySelector(`[data-field="${txtKey}"]`);
+                        if (txtDiv) txtDiv.style.top = `${(842 - coordenadasDetectadas[txtKey].y2) * scaleFactor}px`;
+                    }
+                });
+
+                logCoordenadas.textContent = JSON.stringify(coordenadasDetectadas, null, 2);
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    div.style.zIndex = "10";
+                    div.style.borderColor = "#fbbf24";
+                }
+            });
+
+            div.setAttribute('data-field', key);
+            overlay.appendChild(div);
+        });
+
+        logCoordenadas.textContent = JSON.stringify(coordenadasDetectadas, null, 2);
+    }
+
+    btnGuardar.addEventListener('click', async () => {
+        const schoolName = inputSchoolName.value.trim();
+        const fileIdentifier = inputFileIdentifier.value.trim();
+
+        if (!schoolName || !fileIdentifier) {
+            alert("Bitte fülle den Schulnamen und den Bezeichner aus.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
+                method: 'POST',
+                headers: {
+                    ...headers,
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify({
+                    school_name: schoolName,
+                    file_identifier: fileIdentifier,
+                    pdf_filename: nombreArchivoOriginal || 'admin.pdf',
+                    coordinates_json: coordenadasDetectadas
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || 'Fehler beim Speichern');
+            }
+
+            alert("✅ Vorlage und angepasste Positionen erfolgreich aktualisiert und gespeichert!");
+        } catch (err) {
+            console.error("Fehler beim Speichern in school_templates:", err);
+            alert("❌ Fehler: " + err.message);
+        }
+    });
+}
