@@ -162,6 +162,8 @@
             <div class="space-x-1.5 flex items-center">
                 <button id="btnMenuConsulta" onclick="abrirModalConsulta()" class="text-indigo-600 font-semibold hover:underline">📊 Abfragen</button>
                 <span class="text-gray-300">|</span>
+                <button onclick="ejecutarFOS()" class="text-emerald-600 font-semibold hover:underline">🖨 FOS PDF</button>
+                <span class="text-gray-300">|</span>
                 <button id="btnMenuImpresion" onclick="abrirModalImpresionAusbildung()" class="text-emerald-600 font-semibold hover:underline hidden">🖨 Drucken</button>
                 <span id="sepMenuImpresion" class="text-gray-300 hidden">|</span>
                 <button id="btnMenuPdfManager" onclick="abrirModalPdfManager()" class="text-amber-600 font-semibold hover:underline hidden">📄 PDF Manager</button>
@@ -472,6 +474,23 @@
         // Exponer print_fos globalmente para su uso en la interfaz
         window.print_fos = print_fos;
         inicializarImpresionFOS();
+
+        // Función para disparar la impresión FOS del usuario actual
+        window.ejecutarFOS = function() {
+            const usuarioActual = localStorage.getItem('usuario_actual');
+            if (!usuarioActual) {
+                alert("❌ Kein Benutzer angemeldet.");
+                return;
+            }
+
+            const hoy = new Date();
+            const dia = hoy.getDay();
+            const diff = hoy.getDate() - dia + (dia === 0 ? -6 : 1);
+            const lunes = new Date(hoy.setDate(diff));
+            const fechaInicioSemana = lunes.toISOString().split('T')[0];
+
+            print_fos(usuarioActual, fechaInicioSemana);
+        };
 
         window.abrirModalPdfManager = function() {
             document.getElementById('modalPdfManager').classList.remove('hidden');
