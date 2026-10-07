@@ -72,7 +72,7 @@
             </div>
             <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
             <p class="text-xs text-gray-600 leading-relaxed px-1">
-                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Ausbildungsnachweis</strong>[cite: 11]. Wir speichern deine Einträge sicher und chronologisch ab, damit dein Berichtsheft lückenlos und übersichtlich bleibt[cite: 11].
+                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Ausbildungsnachweis</strong>. Wir speichern deine Einträge sicher und chronologisch ab, damit dein Berichtsheft lückenlos und übersichtlich bleibt.
             </p>
         </div>
 
@@ -130,4 +130,189 @@
                 <div>
                     <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
-                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:
+                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁</span></button>
+                    </div>
+                </div>
+                <div>
+                    <label for="regPasswordConfirm" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort wiederholen</label>
+                    <div class="relative">
+                        <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPassConfirm">👁️</span></button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-amber-600 text-white font-medium py-2 rounded-lg hover:bg-amber-700 transition">Registrierung abschließen</button>
+            </form>
+            <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
+        </div>
+
+        <div class="text-center mt-4 px-4">
+            <p class="text-xs text-gray-500">
+                Hast du Fragen oder benötigst du weitere Informationen? Sende uns eine E-Mail an 
+                <a href="mailto:info@azubiform.de" class="text-indigo-600 font-semibold hover:underline">info@azubiform.de</a>.
+            </p>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: APP PRINCIPAL -->
+    <div id="appSection" class="w-full max-w-md hidden flex flex-col items-center">
+        <div class="w-full bg-white p-3 rounded-xl shadow-sm mb-4 flex justify-between items-center text-xs text-gray-600">
+            <span>Benutzer: <strong id="lblUsuario" class="text-indigo-600"></strong></span>
+            <div class="space-x-1.5 flex items-center">
+                <button id="btnMenuConsulta" onclick="abrirModalConsulta()" class="text-indigo-600 font-semibold hover:underline">📊 Abfragen</button>
+                <span class="text-gray-300">|</span>
+                <button onclick="ejecutarFOS()" class="text-emerald-600 font-semibold hover:underline">🖨 FOS PDF</button>
+                <span class="text-gray-300">|</span>
+                <button id="btnMenuImpresion" onclick="abrirModalImpresionAusbildung()" class="text-emerald-600 font-semibold hover:underline hidden">🖨 Drucken</button>
+                <span id="sepMenuImpresion" class="text-gray-300 hidden">|</span>
+                <button id="btnMenuPdfManager" onclick="abrirModalPdfManager()" class="text-amber-600 font-semibold hover:underline">📄 PDF Manager</button>
+                <span class="text-gray-300">|</span>
+                <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
+            </div>
+        </div>
+
+        <div id="panelGenerarCodigo" class="w-full bg-white p-4 rounded-xl shadow-lg mb-4 hidden">
+            <h3 class="text-xs font-semibold text-gray-700 uppercase mb-2">Neuen Einmalcode generieren</h3>
+            <div class="flex gap-2">
+                <input type="text" id="inputNuevoCodigo" placeholder="z.B. AF.NuevoCodigo" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button type="button" id="btnCrearCodigo" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition">Erstellen</button>
+            </div>
+            <p id="msgEstadoCodigo" class="text-xs mt-2 hidden"></p>
+        </div>
+
+        <div class="w-full bg-white p-6 rounded-xl shadow-lg mb-6 relative">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="block text-xs font-semibold text-gray-700 uppercase mb-1">Aktivitätsprotokoll</h2>
+                <button type="button" onclick="abrirModalPasado()" class="text-xs bg-amber-100 text-amber-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-amber-200 transition">📅 Tag nachtragen</button>
+            </div>
+            <div id="fechaActual" class="text-sm font-medium text-gray-600 bg-gray-50 p-2 rounded-lg text-center mb-4 border border-gray-200">Datum wird geladen...</div>
+
+            <form id="registroForm" class="space-y-4 relative">
+                <div class="relative">
+                    <label for="actividad" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                    <div class="relative flex items-center">
+                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        
+                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-indigo-600 rounded-full transition focus:outline-none">
+                            <svg id="icon-btnVozActividad" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                </div>
+                <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Zur Liste hinzufügen</button>
+            </form>
+            <div id="mensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
+        </div>
+
+        <div class="w-full bg-white p-6 rounded-xl shadow-lg">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-gray-800 text-sm">Meine heutigen Aktivitäten</h3>
+                <span id="contador" class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-1 rounded-full">0 erfasst</span>
+            </div>
+            <div id="listaActividades" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                <p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GESTOR Y EXTRACTOR DE PDF -->
+    <div id="modalPdfManager" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-4">
+        <div class="w-full max-w-5xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[90vh]">
+            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex justify-between items-center">
+                <h2 class="font-bold text-sm">Gestor y Extractor de Datos PDF (Plantillas & Clientes)</h2>
+                <button onclick="cerrarModalPdfManager()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                <div id="contenedorPdfManagerApp"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL IMPRESIÓN AUSBILDUNGSNACHWEIS -->
+    <div id="modalImpresionAusbildung" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-2 overflow-y-auto">
+        <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[95vh]">
+            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex flex-wrap justify-between items-center gap-3 no-print">
+                <div class="flex items-center space-x-3">
+                    <h2 class="font-bold text-sm">A4-Druckgenerator</h2>
+                    <select id="selectUsuarioImpresion" lang="de" class="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded text-xs focus:outline-none"><option value="">Benutzer werden geladen...</option></select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="cambiarSemanaImpresion(-1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">◀ Vorherige Woche</button>
+                    <span id="lblSemanaImpresion" class="text-xs font-semibold text-emerald-400">Wird berechnet...</span>
+                    <button onclick="cambiarSemanaImpresion(1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">Nächste Woche ▶</button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-1.5 rounded shadow">🖨 Blatt drucken</button>
+                    <button onclick="cerrarModalImpresionAusbildung()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 bg-gray-200 flex justify-center">
+                <div class="page-print shadow-2xl bg-white">
+                    <div id="pr_nombre"></div>
+                    <div id="pr_semana_inicio"></div>
+                    <div id="pr_semana_fin"></div>
+                    <div id="pr_ano_fin"></div>
+                    <div id="pr_m1" class="linea-impresion"></div><div id="pr_m2" class="linea-impresion"></div><div id="pr_m3" class="linea-impresion"></div><div id="pr_m4" class="linea-impresion"></div><div id="pr_m5" class="linea-impresion"></div><div id="pr_m6" class="linea-impresion"></div>
+                    <div id="pr_di1" class="linea-impresion"></div><div id="pr_di2" class="linea-impresion"></div><div id="pr_di3" class="linea-impresion"></div><div id="pr_di4" class="linea-impresion"></div><div id="pr_di5" class="linea-impresion"></div><div id="pr_di6" class="linea-impresion"></div>
+                    <div id="pr_mi1" class="linea-impresion"></div><div id="pr_mi2" class="linea-impresion"></div><div id="pr_mi3" class="linea-impresion"></div><div id="pr_mi4" class="linea-impresion"></div><div id="pr_mi5" class="linea-impresion"></div><div id="pr_mi6" class="linea-impresion"></div>
+                    <div id="pr_do1" class="linea-impresion"></div><div id="pr_do2" class="linea-impresion"></div><div id="pr_do3" class="linea-impresion"></div><div id="pr_do4" class="linea-impresion"></div><div id="pr_do5" class="linea-impresion"></div><div id="pr_do6" class="linea-impresion"></div>
+                    <div id="pr_fr1" class="linea-impresion"></div><div id="pr_fr2" class="linea-impresion"></div><div id="pr_fr3" class="linea-impresion"></div><div id="pr_fr4" class="linea-impresion"></div><div id="pr_fr5" class="linea-impresion"></div><div id="pr_fr6" class="linea-impresion"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL VISTA PRELIMINAR FOS -->
+    <div id="modalImpresionFOS" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-2 overflow-y-auto">
+        <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[95vh]">
+            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex flex-wrap justify-between items-center gap-3 no-print">
+                <div class="flex items-center space-x-2">
+                    <button onclick="cambiarSemanaFOS(-1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">◀ Vorherige Woche</button>
+                    <span id="lblFosInfoUsuario" class="text-xs font-semibold text-emerald-400">Wird berechnet...</span>
+                    <button onclick="cambiarSemanaFOS(1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">Nächste Woche ▶</button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-1.5 rounded shadow">🖨 Blatt drucken</button>
+                    <button onclick="cerrarModalFOS()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 bg-gray-200 flex justify-center">
+                <div id="fosPreviewContainer" class="page-print shadow-2xl bg-white p-8 relative">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DÍA ANTERIOR -->
+    <div id="modalPasado" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-xl relative max-h-[90vh] flex flex-col">
+            <button type="button" onclick="cerrarModalPasado()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+            <h2 class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Nachträglicher Eintrag</h2>
+            <h1 class="text-xl font-bold text-gray-800 mb-4">Vergangene Aktivität hinzufügen</h1>
+            <form id="formPasado" class="space-y-3 mb-4">
+                <div>
+                    <label for="fechaPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Datum auswählen</label>
+                    <input type="date" id="fechaPasada" lang="de" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="relative">
+                    <label for="actividadPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                    <div class="relative flex items-center">
+                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        
+                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-amber-600 rounded-full transition focus:outline-none">
+                            <svg id="icon-btnVozPasada" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                </div>
+                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2 rounded-lg hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen</button>
+            </form>
+            <div id="mensajePasado" class="text-xs text-center hidden py-1.5 mb-3 rounded-lg font-medium"></div>
+            <div class="border-t border-gray-100 pt-3 flex-1 overflow-y
