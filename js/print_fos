@@ -1,7 +1,7 @@
 import { SUPABASE_URL, headers } from './config.js';
 
-export function inicializarImpresion() {
-    console.log("Módulo print_fos inicializado correctamente.");
+export function inicializarImpresionFOS() {
+    console.log("Módulo print_fos.js inicializado correctamente.");
 }
 
 // Función principal print_fos para generar y previsualizar el PDF rellenado con los datos del alumno
@@ -58,7 +58,6 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
 
         // 6. Estampar dinámicamente las actividades registradas
         actividades.forEach(act => {
-            // Aquí puedes mapear cada actividad según el día de la semana correspondiente usando las coordenadas guardadas
             console.log("Estampando actividad en PDF:", act.actividad);
         });
 
