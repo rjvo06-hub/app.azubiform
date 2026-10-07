@@ -12,7 +12,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
                 <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Automatische Texterkennung & Feld-Mapping</h3>
-                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels, zeigt eine <strong class="underline">optische Vorschau</strong> der erkannten Felder und speichert sie in <code class="font-bold">school_templates</code>.</p>
+                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels, zeigt eine <strong class="underline">optische Vorschau mit Beispieltexten</strong> und speichert sie in <code class="font-bold">school_templates</code>.</p>
             </div>
 
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
@@ -32,11 +32,11 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
 
             <div id="resultadoAnalisisAuto" class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
                 <div class="flex items-center space-x-2 text-emerald-600 font-bold">
-                    <span>✅</span> <span id="lblEstadoEscaneo">PDF erfolgreich analysiert! Überprüfe die erkannten Felder in der Vorschau:</span>
+                    <span>✅</span> <span id="lblEstadoEscaneo">PDF erfolgreich analysiert! So sieht die Textvorschau aus:</span>
                 </div>
                 
-                <!-- VISTA PREVIA VISUAL CON CANVAS Y MARCADORES -->
-                <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-100 p-2 flex justify-center max-h-[450px]">
+                <!-- VISTA PREVIA VISUAL CON TEXTOS DE EJEMPLO -->
+                <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-100 p-2 flex justify-center max-h-[500px]">
                     <div id="canvasWrapperPreview" class="relative inline-block shadow-md bg-white">
                         <canvas id="pdfPreviewCanvas" class="block"></canvas>
                         <div id="pdfPreviewOverlay" class="absolute inset-0 pointer-events-none"></div>
@@ -77,7 +77,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 const pdfDoc = await pdfjsLib.getDocument(typedarray).promise;
                 const pagina = await pdfDoc.getPage(1);
                 
-                // Renderizar el PDF en el canvas de vista previa
                 const renderScale = 1.25;
                 const viewport = pagina.getViewport({ scale: renderScale });
                 const context = canvas.getContext('2d');
@@ -114,12 +113,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                     if (texto.includes('Betreuende')) {
                         coordenadasDetectadas.betreuende_lehrkraft = { x1: x + 110, y1: y - 4, x2: x + 260, y2: y + 10 };
                     }
-                    if (texto.includes('Wochenbericht')) {
-                        coordenadasDetectadas.wochenbericht_bloque = { x1: x + 100, y1: y - 4, x2: x + 250, y2: y + 10 };
-                    }
-                    if (texto.includes('Ausbildungsstätte')) {
-                        coordenadasDetectadas.ausbildungsstaette = { x1: x + 110, y1: y - 4, x2: x + 260, y2: y + 10 };
-                    }
                     if (texto === 'Montag') {
                         coordenadasDetectadas.lunes_texto = { x1: x + 70, y1: y - 5, x2: x + 350, y2: y + 35 };
                         coordenadasDetectadas.lunes_horas = { x1: x + 360, y1: y - 5, x2: x + 420, y2: y + 35 };
@@ -142,28 +135,42 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                     }
                 });
 
-                // Dibujar indicadores visuales en el overlay del canvas
+                // Diccionario de textos referenciales de ejemplo para la vista previa
+                const textosEjemplo = {
+                    nombre: "Katharina Schwarz",
+                    klasse: "FOS 12W",
+                    ausbildungsrichtung: "Sozialwesen",
+                    betreuende_lehrkraft: "Frau Müller",
+                    lunes_texto: "Einführung in die Abteilung & Teambesprechung",
+                    lunes_horas: "8 Std.",
+                    martes_texto: "Betreuung von Projekten mit Kindern",
+                    martes_horas: "8 Std.",
+                    miércoles_texto: "Dokumentation und Berichtsheftpflege",
+                    miércoles_horas: "7 Std.",
+                    jueves_texto: "Unterstützung im Gruppenalltag",
+                    jueves_horas: "8 Std.",
+                    viernes_texto: "Wochenreflexion und Abschlussbesprechung",
+                    viernes_horas: "6 Std."
+                };
+
+                // Dibujar textos referenciales reales sobre el overlay del canvas
                 overlay.innerHTML = '';
                 const scaleFactor = (viewport.width / renderScale) / 595.27;
 
                 Object.keys(coordenadasDetectadas).forEach(key => {
                     const c = coordenadasDetectadas[key];
                     if (c && c.x1 !== undefined) {
-                        const box = document.createElement('div');
-                        box.className = "absolute border border-indigo-600 bg-indigo-200/40 text-[9px] text-indigo-900 font-mono px-1 overflow-hidden rounded";
+                        const divTexto = document.createElement('div');
+                        divTexto.className = "absolute text-black font-sans text-[10px] font-medium whitespace-nowrap bg-amber-100/90 border border-amber-300 px-1 rounded shadow-sm";
                         
                         const left = c.x1 * scaleFactor;
                         const top = (842 - c.y2) * scaleFactor; 
-                        const width = (c.x2 - c.x1) * scaleFactor;
-                        const height = (c.y2 - c.y1) * scaleFactor;
 
-                        box.style.left = `${left}px`;
-                        box.style.top = `${top}px`;
-                        box.style.width = `${Math.max(width, 40)}px`;
-                        box.style.height = `${Math.max(height, 15)}px`;
-                        box.textContent = key;
+                        divTexto.style.left = `${left}px`;
+                        divTexto.style.top = `${top}px`;
+                        divTexto.textContent = textosEjemplo[key] || `[Beispiel: ${key}]`;
 
-                        overlay.appendChild(box);
+                        overlay.appendChild(divTexto);
                     }
                 });
 
