@@ -133,17 +133,17 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
         }
 
         try {
-            // Petición POST directa mediante fetch utilizando la misma estructura del proyecto
             const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
                 method: 'POST',
                 headers: {
                     ...headers,
-                    'Prefer': 'resolution=merge-duplicates' // Equivalente a un upsert en Supabase REST API
+                    'Prefer': 'resolution=merge-duplicates'
                 },
                 body: JSON.stringify({
                     school_name: schoolName,
                     file_identifier: fileIdentifier,
-                    pdf_filename: nombreArchivoOriginal || 'admin.pdf'
+                    pdf_filename: nombreArchivoOriginal || 'admin.pdf',
+                    coordinates_json: coordenadasDetectadas // Enviando el JSON con las coordenadas mapeadas
                 })
             });
 
