@@ -131,24 +131,21 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             return;
         }
 
-        // Búsqueda inteligente del cliente de Supabase disponible en el entorno
-        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase || (window.app && window.app.supabase);
+        // Detector ultra-robusto que busca el cliente en cualquier variable global o local disponible
+        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase || window._supabase || (window.app && window.app.supabase);
 
         if (!clienteActivo) {
-            alert("❌ Supabase-Client nicht verfügbar. Bitte stelle sicher, dass du angemeldet bist.");
+            alert("❌ Supabase-Client nicht gefunden. Bitte stelle sicher, dass du eingeloggt bist und lade die Seite neu.");
             return;
         }
 
         try {
-            // Guardar directamente en tu tabla real 'school_templates' con las columnas correctas
             const { error: errSupabase } = await clienteActivo
                 .from('school_templates')
                 .upsert({
                     school_name: schoolName,
                     file_identifier: fileIdentifier,
-                    pdf_filename: nombreArchivoOriginal || 'admin.pdf',
-                    // Si tienes una columna JSON para guardar las coordenadas mapeadas, la incluimos aquí de forma segura:
-                    // coordenadas: coordenadasDetectadas 
+                    pdf_filename: nombreArchivoOriginal || 'admin.pdf'
                 }, { onConflict: 'file_identifier' });
 
             if (errSupabase) throw errSupabase;
