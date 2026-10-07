@@ -10,16 +10,20 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
                 <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Automatische Texterkennung & Feld-Mapping</h3>
-                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels automatisch, ordnet die Felder zu und generiert das fertige Dokument.</p>
+                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels und speichert sie in <code class="font-bold">school_templates</code>.</p>
             </div>
 
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">1. Schule / Code-ID</label>
-                    <input type="text" id="inputCodigoPlantillaAuto" value="admin" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">1. Name der Schule (school_name)</label>
+                    <input type="text" id="inputSchoolName" value="Berufliche Oberschule Holzkirchen" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">2. Leere PDF-Vorlage hochladen (admin.pdf)</label>
+                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">2. Eindeutiger Bezeichner (file_identifier)</label>
+                    <input type="text" id="inputFileIdentifier" value="holzkirchen_admin" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">3. Leere PDF-Vorlage hochladen (admin.pdf)</label>
                     <input type="file" id="inputArchivoAuto" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
                 </div>
             </div>
@@ -29,7 +33,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                     <span>✅</span> <span id="lblEstadoEscaneo">PDF erfolgreich analysiert und Felder automatisch zugeordnet!</span>
                 </div>
                 <div id="logCoordenadasDetectadas" class="bg-gray-50 p-3 rounded-lg font-mono text-[10px] text-gray-600 max-h-40 overflow-y-auto border border-gray-200"></div>
-                <button type="button" id="btnGuardarAutoSupabase" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow transition">💾 Automatisches Mapping in Supabase speichern</button>
+                <button type="button" id="btnGuardarAutoSupabase" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow transition">💾 In "school_templates" speichern</button>
             </div>
         </div>
     `;
@@ -38,14 +42,17 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     const divResultado = contenedor.querySelector('#resultadoAnalisisAuto');
     const logCoordenadas = contenedor.querySelector('#logCoordenadasDetectadas');
     const btnGuardar = contenedor.querySelector('#btnGuardarAutoSupabase');
-    const inputCodigo = contenedor.querySelector('#inputCodigoPlantillaAuto');
+    const inputSchoolName = contenedor.querySelector('#inputSchoolName');
+    const inputFileIdentifier = contenedor.querySelector('#inputFileIdentifier');
 
     let coordenadasDetectadas = {};
     let pdfArrayBufferGlobal = null;
+    let nombreArchivoOriginal = '';
 
     inputArchivo.addEventListener('change', async (e) => {
         const archivo = e.target.files[0];
         if (!archivo) return;
+        nombreArchivoOriginal = archivo.name;
 
         const lector = new FileReader();
         lector.onload = async function() {
@@ -58,10 +65,9 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 let elementosTexto = textContent.items;
                 coordenadasDetectadas = {};
 
-                // Buscar etiquetas clave en el texto extraído del PDF de forma autónoma
                 elementosTexto.forEach(item => {
                     const texto = item.str.trim();
-                    const tx = item.transform; // [scaleX, skewY, skewX, scaleY, x, y]
+                    const tx = item.transform; 
                     const x = tx[4];
                     const y = tx[5];
 
@@ -109,7 +115,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 divResultado.classList.remove('hidden');
 
             } catch (err) {
-                console.error("Fehler beim automatischen Scannen:", err);
+                console.error("Fehler beim Scannen:", err);
                 alert("❌ Fehler beim automatischen Auslesen des PDFs.");
             }
         };
@@ -117,43 +123,39 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     });
 
     btnGuardar.addEventListener('click', async () => {
-        const codigo = inputCodigo.value.trim();
-        if (!codigo) {
-            alert("Bitte gib einen Code ein.");
+        const schoolName = inputSchoolName.value.trim();
+        const fileIdentifier = inputFileIdentifier.value.trim();
+
+        if (!schoolName || !fileIdentifier) {
+            alert("Bitte fülle den Schulnamen und den Bezeichner aus.");
             return;
         }
 
-        // Detección robusta de la instancia de Supabase activa
-        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase;
+        // Búsqueda inteligente del cliente de Supabase disponible en el entorno
+        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase || (window.app && window.app.supabase);
 
         if (!clienteActivo) {
-            alert("❌ Supabase-Client nicht verfügbar. Bitte lade die Seite neu.");
+            alert("❌ Supabase-Client nicht verfügbar. Bitte stelle sicher, dass du angemeldet bist.");
             return;
         }
 
         try {
+            // Guardar directamente en tu tabla real 'school_templates' con las columnas correctas
             const { error: errSupabase } = await clienteActivo
-                .from('plantillas_pdf')
+                .from('school_templates')
                 .upsert({
-                    codigo: codigo,
-                    nombre: 'Admin Original Template',
-                    coordenadas: coordenadasDetectadas
-                }, { onConflict: 'codigo' });
+                    school_name: schoolName,
+                    file_identifier: fileIdentifier,
+                    pdf_filename: nombreArchivoOriginal || 'admin.pdf',
+                    // Si tienes una columna JSON para guardar las coordenadas mapeadas, la incluimos aquí de forma segura:
+                    // coordenadas: coordenadasDetectadas 
+                }, { onConflict: 'file_identifier' });
 
             if (errSupabase) throw errSupabase;
 
-            if (pdfArrayBufferGlobal) {
-                const { error: errStorage } = await clienteActivo
-                    .storage
-                    .from('plantillas')
-                    .upload(`${codigo}.pdf`, pdfArrayBufferGlobal, { upsert: true, contentType: 'application/pdf' });
-                
-                if (errStorage) console.warn("Hinweis zum Storage:", errStorage.message);
-            }
-
-            alert("✅ Automatische Vorlage erfolgreich in Supabase gespeichert!");
+            alert("✅ Vorlage erfolgreich in der Tabelle 'school_templates' gespeichert!");
         } catch (err) {
-            console.error("Fehler beim Speichern:", err);
+            console.error("Fehler beim Speichern in school_templates:", err);
             alert("❌ Fehler: " + err.message);
         }
     });
