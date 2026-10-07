@@ -3,15 +3,14 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     if (!contenedor) return;
 
     let coordenadasMapeadas = {
-        nombre: null,
+        nombre: null,              // Será un rectángulo {x1, y1, x2, y2}
         betreuende_lehrkraft: null,
         klasse: null,
         ausbildungsrichtung: null,
         semana_numero: null,
         ausbildungsstaette: null,
         semana_inicio: null,
-        semana_fin: null,
-        lunes: [],
+        lunes: [],                 // Cada día será una caja de bloque completa
         martes: [],
         miércoles: [],
         jueves: [],
@@ -22,28 +21,28 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     let paginaActualGlobal = null;
     let escalaGlobal = 1.5;
     let pasoActual = 1;
+    let puntoTemporalInicio = null; // Para capturar el primer click de la caja
 
-    // Pasos optimizados y ultra-lógicos basados en la estructura real del formato
     const pasosConfig = [
-        { id: 1, campo: 'nombre', titulo: '1. Klicke auf das Feld: "Schüler/in / Schüler" (Links)' },
-        { id: 2, campo: 'betreuende_lehrkraft', titulo: '2. Klicke auf das Feld gegenüber: "Betreuende Lehrkraft" (Rechts)' },
-        { id: 3, campo: 'klasse', titulo: '3. Klicke auf das Feld: "Klasse" (Links)' },
-        { id: 4, campo: 'ausbildungsrichtung', titulo: '4. Klicke auf das Feld gegenüber: "Ausbildungsrichtung" (Rechts)' },
-        { id: 5, campo: 'semana_numero', titulo: '5. Klicke auf das Feld: "Wochenbericht Nr. ... vom"' },
-        { id: 6, campo: 'ausbildungsstaette', titulo: '6. Klicke auf das Feld gegenüber: "Ausbildungsstätte" (Rechts)' },
-        { id: 7, campo: 'semana_inicio', titulo: '7. Klicke auf das Startfeld für das Datum ("Von / Bis")' },
-        { id: 8, campo: 'lunes_1', titulo: '8. Klicke auf die ERSTE Zeile bei: "Montag" (Die 6 Linien passen sich perfekt an)' },
-        { id: 9, campo: 'martes_1', titulo: '9. Klicke auf die ERSTE Zeile bei: "Dienstag"' },
-        { id: 10, campo: 'miércoles_1', titulo: '10. Klicke auf die ERSTE Zeile bei: "Mittwoch"' },
-        { id: 11, campo: 'jueves_1', titulo: '11. Klicke auf die ERSTE Zeile bei: "Donnerstag"' },
-        { id: 12, campo: 'viernes_1', titulo: '12. Klicke auf die ERSTE Zeile bei: "Freitag"' },
-        { id: 13, campo: 'listo', titulo: '🎉 Alle Felder erfolgreich erfasst! Du kannst die Vorlage speichern.' }
+        { id: 1, campo: 'nombre', titulo: '1. Ziehe ein Rechteck um das Feld: "Schüler/in" (Klicke Start- und Endpunkt)' },
+        { id: 2, campo: 'betreuende_lehrkraft', titulo: '2. Ziehe ein Rechteck um: "Betreuende Lehrkraft"' },
+        { id: 3, campo: 'klasse', titulo: '3. Ziehe ein Rechteck um: "Klasse"' },
+        { id: 4, campo: 'ausbildungsrichtung', titulo: '4. Ziehe ein Rechteck um: "Ausbildungsrichtung"' },
+        { id: 5, campo: 'semana_numero', titulo: '5. Ziehe ein Rechteck um: "Wochenbericht Nr."' },
+        { id: 6, campo: 'ausbildungsstaette', titulo: '6. Ziehe ein Rechteck um: "Ausbildungsstätte"' },
+        { id: 7, campo: 'semana_inicio', titulo: '7. Ziehe ein Rechteck um den Datumsbereich ("Von / Bis")' },
+        { id: 8, campo: 'lunes', titulo: '8. Ziehe ein Rechteck um den GESAMTEN KASTEN des MONTAGS (Inhalt passt sich automatisch an)' },
+        { id: 9, campo: 'martes', titulo: '9. Ziehe ein Rechteck um den Kasten des DIENSTAGS' },
+        { id: 10, campo: 'miércoles', titulo: '10. Ziehe ein Rechteck um den Kasten des MITTWOCHS' },
+        { id: 11, campo: 'jueves', titulo: '11. Ziehe ein Rechteck um den Kasten des DONNERSTAGS' },
+        { id: 12, campo: 'viernes', titulo: '12. Ziehe ein Rechteck um den Kasten des FREITAGS' },
+        { id: 13, campo: 'listo', titulo: '🎉 Alle Bereiche erfolgreich erfasst! Du kannst die Vorlage jetzt speichern.' }
     ];
 
     contenedor.innerHTML = `
         <div class="space-y-4">
             <div class="flex border-b border-gray-200">
-                <button type="button" class="pb-2 px-4 text-xs font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none">🪄 Optimierter Vorlagen-Assistent</button>
+                <button type="button" class="pb-2 px-4 text-xs font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none">🪄 Rechteck-Assistent (Box-Auswahl)</button>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -70,13 +69,13 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             </div>
         </div>
 
-        <!-- VENTANA EMERGENTE (MODAL A PANTALLA COMPLETA REAL PARA MAPEAR) -->
+        <!-- VENTANA EMERGENTE (MODAL A PANTALLA COMPLETA REAL PARA MAPEAR CAJAS) -->
         <div id="modalZoomPdf" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-[99999] p-2 sm:p-6">
             <div class="w-full max-w-7xl bg-white rounded-2xl shadow-2xl relative flex flex-col h-[95vh]">
                 <div class="p-4 bg-gray-900 text-white rounded-t-2xl flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
                     <div>
                         <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wide block">Schritt <span id="lblPasoNum">1</span> von 12</span>
-                        <h4 id="lblInstruccionPaso" class="text-xs sm:text-sm font-bold text-white">Klicke auf das Feld</h4>
+                        <h4 id="lblInstruccionPaso" class="text-xs sm:text-sm font-bold text-white">Ziehe ein Rechteck...</h4>
                     </div>
                     <div class="flex items-center space-x-2">
                         <button type="button" id="btnZoomOut" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg">🔍- Zoom</button>
@@ -160,7 +159,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             viewport: viewport
         };
         paginaActualGlobal.render(renderContext).promise.then(() => {
-            dibujarPinesVisuales();
+            dibujarCajasVisuales();
         });
     }
 
@@ -168,96 +167,91 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         const pasoObj = pasosConfig.find(p => p.id === pasoActual);
         if (pasoObj) {
             lblPasoNum.textContent = pasoActual;
-            lblInstruccionPaso.textContent = pasoObj.titulo;
+            lblInstruccionPaso.textContent = !puntoTemporalInicio ? pasoObj.titulo : "👉 Klicke nun auf die andere diagonale Ecke (Endpunkt des Rechtecks)";
         }
         if (pasoActual > 12) {
-            lblInstruccionPaso.textContent = "🎉 Alle Felder erfolgreich erfasst! Du kannst die Vorlage speichern.";
+            lblInstruccionPaso.textContent = "🎉 Alle Bereiche erfolgreich erfasst! Du kannst die Vorlage speichern.";
             btnGuardar.classList.remove('hidden');
         }
     }
 
+    // Lógica de selección por 2 clics (Esquina 1 y Esquina 2 para formar la caja)
     canvas.addEventListener('click', (e) => {
         if (pasoActual > 12) return;
 
         const rect = canvas.getBoundingClientRect();
-        const xClickPx = e.clientX - rect.left;
-        const yClickPx = e.clientY - rect.top;
+        const xReal = (e.clientX - rect.left) / escalaGlobal;
+        const yReal = (e.clientY - rect.top) / escalaGlobal;
 
-        const xReal = xClickPx / escalaGlobal;
-        const yReal = yClickPx / escalaGlobal;
+        if (!puntoTemporalInicio) {
+            // Primer clic: Esquina superior izquierda
+            puntoTemporalInicio = { x: xReal, y: yReal };
+            actualizarInstruccionUI();
+        } else {
+            // Segundo clic: Esquina inferior derecha (forma el rectángulo)
+            const x1 = Math.min(puntoTemporalInicio.x, xReal);
+            const y1 = Math.min(puntoTemporalInicio.y, yReal);
+            const x2 = Math.max(puntoTemporalInicio.x, xReal);
+            const y2 = Math.max(puntoTemporalInicio.y, yReal);
 
-        const pasoObj = pasosConfig.find(p => p.id === pasoActual);
-        if (!pasoObj) return;
+            const caja = { x1, y1, x2, y2 };
+            const pasoObj = pasosConfig.find(p => p.id === pasoActual);
+            const campo = pasoObj.campo;
 
-        const campo = pasoObj.campo;
-
-        if (campo === 'nombre') {
-            coordenadasMapeadas.nombre = { x: xReal, y: yReal };
-        } else if (campo === 'betreuende_lehrkraft') {
-            coordenadasMapeadas.betreuende_lehrkraft = { x: xReal, y: yReal };
-        } else if (campo === 'klasse') {
-            coordenadasMapeadas.klasse = { x: xReal, y: yReal };
-        } else if (campo === 'ausbildungsrichtung') {
-            coordenadasMapeadas.ausbildungsrichtung = { x: xReal, y: yReal };
-        } else if (campo === 'semana_numero') {
-            coordenadasMapeadas.semana_numero = { x: xReal, y: yReal };
-        } else if (campo === 'ausbildungsstaette') {
-            coordenadasMapeadas.ausbildungsstaette = { x: xReal, y: yReal };
-        } else if (campo === 'semana_inicio') {
-            // Guardamos la fecha de inicio y calculamos automáticamente el final y el año en la misma línea horizontal
-            coordenadasMapeadas.semana_inicio = { x: xReal, y: yReal };
-            coordenadasMapeadas.semana_fin = { x: xReal + 40, y: yReal }; // Desplazamiento horizontal automático
-        } else if (campo.includes('_1')) {
-            const dia = campo.split('_')[0];
-            coordenadasMapeadas[dia] = [];
-            const espacioEntreLineasCompacto = 11; // Altura compacta ajustada perfectamente al espacio de cada día
-
-            for (let i = 0; i < 6; i++) {
-                coordenadasMapeadas[dia].push({
-                    x: xReal,
-                    y: yReal + (i * espacioEntreLineasCompacto)
-                });
+            if (['lunes', 'martes', 'miércoles', 'jueves', 'viernes'].includes(campo)) {
+                coordenadasMapeadas[campo] = caja; // Guardamos la caja completa del día
+            } else {
+                coordenadasMapeadas[campo] = caja; // Guardamos la caja del campo de texto
             }
-        }
 
-        pasoActual++;
-        actualizarInstruccionUI();
-        dibujarPinesVisuales();
+            puntoTemporalInicio = null;
+            pasoActual++;
+            actualizarInstruccionUI();
+            dibujarCajasVisuales();
+        }
     });
 
-    function dibujarPinesVisuales() {
+    function dibujarCajasVisuales() {
         capaPines.innerHTML = '';
-        const todosPuntos = [];
+        const todasCajas = [];
 
-        if (coordenadasMapeadas.nombre) todosPuntos.push({ label: 'Name', ...coordenadasMapeadas.nombre });
-        if (coordenadasMapeadas.betreuende_lehrkraft) todosPuntos.push({ label: 'Lehrkraft', ...coordenadasMapeadas.betreuende_lehrkraft });
-        if (coordenadasMapeadas.klasse) todosPuntos.push({ label: 'Klasse', ...coordenadasMapeadas.klasse });
-        if (coordenadasMapeadas.ausbildungsrichtung) todosPuntos.push({ label: 'Ausb.Richt.', ...coordenadasMapeadas.ausbildungsrichtung });
-        if (coordenadasMapeadas.semana_numero) todosPuntos.push({ label: 'Nr.', ...coordenadasMapeadas.semana_numero });
-        if (coordenadasMapeadas.ausbildungsstaette) todosPuntos.push({ label: 'Stätte', ...coordenadasMapeadas.ausbildungsstaette });
-        if (coordenadasMapeadas.semana_inicio) todosPuntos.push({ label: 'Datum', ...coordenadasMapeadas.semana_inicio });
+        if (coordenadasMapeadas.nombre) todasCajas.push({ label: 'Name', ...coordenadasMapeadas.nombre });
+        if (coordenadasMapeadas.betreuende_lehrkraft) todasCajas.push({ label: 'Lehrkraft', ...coordenadasMapeadas.betreuende_lehrkraft });
+        if (coordenadasMapeadas.klasse) todasCajas.push({ label: 'Klasse', ...coordenadasMapeadas.klasse });
+        if (coordenadasMapeadas.ausbildungsrichtung) todasCajas.push({ label: 'Ausb.Richt.', ...coordenadasMapeadas.ausbildungsrichtung });
+        if (coordenadasMapeadas.semana_numero) todasCajas.push({ label: 'Nr.', ...coordenadasMapeadas.semana_numero });
+        if (coordenadasMapeadas.ausbildungsstaette) todasCajas.push({ label: 'Stätte', ...coordenadasMapeadas.ausbildungsstaette });
+        if (coordenadasMapeadas.semana_inicio) todasCajas.push({ label: 'Datum', ...coordenadasMapeadas.semana_inicio });
 
         ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'].forEach(dia => {
-            coordenadasMapeadas[dia].forEach((pt, idx) => {
-                todosPuntos.push({ label: `${dia[0].toUpperCase()}${idx+1}`, ...pt });
-            });
+            if (coordenadasMapeadas[dia]) {
+                todasCajas.push({ label: dia.toUpperCase(), ...coordenadasMapeadas[dia] });
+            }
         });
 
-        todosPuntos.forEach(pt => {
-            const pin = document.createElement('div');
-            pin.className = 'absolute bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-md transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center';
-            pin.style.left = (pt.x * escalaGlobal) + 'px';
-            pin.style.top = (pt.y * escalaGlobal) + 'px';
-            pin.textContent = pt.label;
-            capaPines.appendChild(pin);
+        todasCajas.forEach(c => {
+            const divCaja = document.createElement('div');
+            divCaja.className = 'absolute border-2 border-amber-500 bg-amber-500 bg-opacity-20 pointer-events-none flex items-start p-0.5';
+            divCaja.style.left = (c.x1 * escalaGlobal) + 'px';
+            divCaja.style.top = (c.y1 * escalaGlobal) + 'px';
+            divCaja.style.width = ((c.x2 - c.x1) * escalaGlobal) + 'px';
+            divCaja.style.height = ((c.y2 - c.y1) * escalaGlobal) + 'px';
+
+            const etiqueta = document.createElement('span');
+            etiqueta.className = 'bg-amber-600 text-white text-[9px] font-bold px-1 rounded';
+            etiqueta.textContent = c.label;
+            divCaja.appendChild(etiqueta);
+
+            capaPines.appendChild(divCaja);
         });
     }
 
     btnReiniciar.addEventListener('click', () => {
         pasoActual = 1;
-        coordenadasMapeadas = { nombre: null, betreuende_lehrkraft: null, klasse: null, ausbildungsrichtung: null, semana_numero: null, ausbildungsstaette: null, semana_inicio: null, semana_fin: null, lunes: [], martes: [], miércoles: [], jueves: [], viernes: [] };
+        puntoTemporalInicio = null;
+        coordenadasMapeadas = { nombre: null, betreuende_lehrkraft: null, klasse: null, ausbildungsrichtung: null, semana_numero: null, ausbildungsstaette: null, semana_inicio: null, lunes: null, martes: null, miércoles: null, jueves: null, viernes: null };
         actualizarInstruccionUI();
-        dibujarPinesVisuales();
+        dibujarCajasVisuales();
     });
 
     btnGuardar.addEventListener('click', async () => {
@@ -285,7 +279,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
             if (error) throw error;
 
-            alert("✅ Vorlage erfolgreich in Supabase gespeichert!");
+            alert("✅ Vorlage mit Rechteck-Bereichen erfolgreich gespeichert!");
             modalZoom.classList.add('hidden');
         } catch (err) {
             console.error("Error al guardar en Supabase:", err);
