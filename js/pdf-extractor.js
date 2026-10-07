@@ -8,13 +8,13 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
         <div class="space-y-4">
             <div class="flex border-b border-gray-200 space-x-4">
                 <button type="button" id="tabEditor" onclick="cambiarTabPdf('editor')" class="pb-2 px-4 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none">🤖 Editor & Drag-and-Drop</button>
-                <button type="button" id="tabConsulta" onclick="cambiarTabPdf('consulta')" class="pb-2 px-4 text-xs font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none">🔍 Gespeicherte Vorlagen abfragen</button>
+                <button type="button" id="tabConsulta" onclick="cambiarTabPdf('consulta')" class="pb-2 px-4 text-xs font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none">🔍 Gespeicherte Vorlagen abfragen & bearbeiten</button>
             </div>
 
             <!-- SECCIÓN 1: EDITOR -->
             <div id="seccionEditor" class="space-y-4">
                 <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
-                    <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Präzises Feld-Mapping (Drag & Drop oder manuelle Feinabstimmung)</h3>
+                    <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Präzises Feld-Mapping (Drag & Drop oder manuelle Feineinstellung)</h3>
                     <p class="text-xs text-indigo-800">Ziehe die Felder auf dem PDF oder passe die exakten X/Y-Werte in der rechten Seitenleiste an.</p>
                 </div>
 
@@ -62,11 +62,11 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 </div>
             </div>
 
-            <!-- SECCIÓN 2: CONSULTA -->
+            <!-- SECCIÓN 2: CONSULTA Y AUDITORÍA DE PLANTILLAS -->
             <div id="seccionConsulta" class="space-y-4 hidden">
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold text-gray-800 uppercase">In Supabase gespeicherte Vorlagen</h3>
+                        <h3 class="text-xs font-bold text-gray-800 uppercase">In Supabase gespeicherte Vorlagen (Audit & Bearbeitung)</h3>
                         <button type="button" id="btnRecargarPlantillas" class="bg-indigo-50 text-indigo-600 font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">🔄 Liste aktualisieren</button>
                     </div>
                     <div id="listaPlantillasGuardadas" class="space-y-2 max-h-[450px] overflow-y-auto pr-1">
@@ -97,64 +97,8 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
         }
     };
 
-    async function cargarPlantillasGuardadas() {
-        const listaDiv = contenedor.querySelector('#listaPlantillasGuardadas');
-        listaDiv.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Wird geladen...</p>`;
-
-        try {
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, {
-                method: 'GET',
-                headers: headers
-            });
-
-            if (!response.ok) throw new Error("Fehler beim Laden der Vorlagen.");
-            const plantillas = await response.json();
-
-            if (!plantillas || plantillas.length === 0) {
-                listaDiv.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Keine gespeicherten Vorlagen gefunden.</p>`;
-                return;
-            }
-
-            let html = '';
-            plantillas.forEach((tpl) => {
-                html += `
-                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="font-bold text-gray-800 text-xs">${tpl.school_name || 'Unbekannte Schule'}</span>
-                                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded ml-2">${tpl.file_identifier || 'N/A'}</span>
-                            </div>
-                            <span class="text-[10px] text-gray-500">Datei: ${tpl.pdf_filename || 'admin.pdf'}</span>
-                        </div>
-                        <details class="text-[10px] bg-white p-2 rounded border border-gray-200">
-                            <summary class="font-semibold text-indigo-600 cursor-pointer">Koordinaten-JSON anzeigen</summary>
-                            <pre class="mt-2 font-mono text-gray-600 overflow-x-auto max-h-32">${JSON.stringify(tpl.coordinates_json, null, 2)}</pre>
-                        </details>
-                    </div>
-                `;
-            });
-
-            listaDiv.innerHTML = html;
-        } catch (err) {
-            console.error("Fehler beim Abfragen:", err);
-            listaDiv.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Fehler beim Laden der Daten.</p>`;
-        }
-    }
-
-    contenedor.querySelector('#btnRecargarPlantillas').addEventListener('click', cargarPlantillasGuardadas);
-
-    const inputArchivo = contenedor.querySelector('#inputArchivoAuto');
-    const divResultado = contenedor.querySelector('#resultadoAnalisisAuto');
-    const logCoordenadas = contenedor.querySelector('#logCoordenadasDetectadas');
-    const btnGuardar = contenedor.querySelector('#btnGuardarAutoSupabase');
-    const inputSchoolName = contenedor.querySelector('#inputSchoolName');
-    const inputFileIdentifier = contenedor.querySelector('#inputFileIdentifier');
-    const canvas = contenedor.querySelector('#pdfPreviewCanvas');
-    const overlay = contenedor.querySelector('#pdfPreviewOverlay');
-    const panelLista = contenedor.querySelector('#panelElementosLista');
-
     let coordenadasDetectadas = {};
-    let nombreArchivoOriginal = '';
+    let nombreArchivoOriginal = 'admin.pdf';
     let renderScale = 1.25;
 
     const textosEjemplo = {
@@ -178,6 +122,106 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
         viernes_horas: "6 Std.",
         total_horas: "37 Std."
     };
+
+    async function cargarPlantillasGuardadas() {
+        const listaDiv = contenedor.querySelector('#listaPlantillasGuardadas');
+        listaDiv.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Wird geladen...</p>`;
+
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) throw new Error("Fehler beim Laden der Vorlagen.");
+            const plantillas = await response.json();
+
+            if (!plantillas || plantillas.length === 0) {
+                listaDiv.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Keine gespeicherten Vorlagen gefunden.</p>`;
+                return;
+            }
+
+            let html = '';
+            plantillas.forEach((tpl) => {
+                const jsonStr = encodeURIComponent(JSON.stringify(tpl.coordinates_json || {}));
+                html += `
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-gray-800 text-xs">${tpl.school_name || 'Unbekannte Schule'}</span>
+                                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded ml-2">${tpl.file_identifier || 'N/A'}</span>
+                            </div>
+                            <div class="space-x-2 flex items-center">
+                                <button type="button" onclick="cargarPlantillaParaEditar('${encodeURIComponent(tpl.school_name)}', '${encodeURIComponent(tpl.file_identifier)}', '${jsonStr}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] px-2.5 py-1 rounded shadow">✏️ Bearbeiten</button>
+                            </div>
+                        </div>
+                        <details class="text-[10px] bg-white p-2 rounded border border-gray-200">
+                            <summary class="font-semibold text-indigo-600 cursor-pointer">Koordinaten-JSON anzeigen (Audit)</summary>
+                            <pre class="mt-2 font-mono text-gray-600 overflow-x-auto max-h-32">${JSON.stringify(tpl.coordinates_json, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            });
+
+            listaDiv.innerHTML = html;
+        } catch (err) {
+            console.error("Fehler beim Abfragen:", err);
+            listaDiv.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Fehler beim Laden der Daten.</p>`;
+        }
+    }
+
+    // Función global para cargar una plantilla guardada directo en el editor visual
+    window.cargarPlantillaParaEditar = async function(schoolNameEnc, fileIdentifierEnc, jsonStrEnc) {
+        const schoolName = decodeURIComponent(schoolNameEnc);
+        const fileIdentifier = decodeURIComponent(fileIdentifierEnc);
+        const coords = JSON.parse(decodeURIComponent(jsonStrEnc));
+
+        contenedor.querySelector('#inputSchoolName').value = schoolName;
+        contenedor.querySelector('#inputFileIdentifier').value = fileIdentifier;
+        coordenadasDetectadas = coords;
+
+        // Cambiar a la pestaña del editor
+        window.cambiarTabPdf('editor');
+
+        // Renderizar el PDF de fondo y cargar las coordenadas en el editor interactivo
+        try {
+            const loadingTask = pdfjsLib.getDocument('./admin.pdf');
+            const pdfDoc = await loadingTask.promise;
+            const pagina = await pdfDoc.getPage(1);
+            
+            const viewport = pagina.getViewport({ scale: renderScale });
+            const context = canvas.getContext('2d');
+
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            canvas.style.width = `${viewport.width / renderScale}px`;
+            canvas.style.height = `${viewport.height / renderScale}px`;
+
+            await pagina.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            renderizarEditorVisual(viewport);
+            divResultado.classList.remove('hidden');
+            alert(`✅ Vorlage "${schoolName}" erfolgreich in den Editor geladen! Du kannst sie jetzt anpassen.`);
+        } catch (err) {
+            console.error("Fehler beim Laden des PDFs:", err);
+            alert("❌ Fehler beim Laden der PDF-Datei für den Editor.");
+        }
+    };
+
+    contenedor.querySelector('#btnRecargarPlantillas').addEventListener('click', cargarPlantillasGuardadas);
+
+    const inputArchivo = contenedor.querySelector('#inputArchivoAuto');
+    const divResultado = contenedor.querySelector('#resultadoAnalisisAuto');
+    const logCoordenadas = contenedor.querySelector('#logCoordenadasDetectadas');
+    const btnGuardar = contenedor.querySelector('#btnGuardarAutoSupabase');
+    const inputSchoolName = contenedor.querySelector('#inputSchoolName');
+    const inputFileIdentifier = contenedor.querySelector('#inputFileIdentifier');
+    const canvas = contenedor.querySelector('#pdfPreviewCanvas');
+    const overlay = contenedor.querySelector('#pdfPreviewOverlay');
+    const panelLista = contenedor.querySelector('#panelElementosLista');
 
     inputArchivo.addEventListener('change', async (e) => {
         const archivo = e.target.files[0];
@@ -246,7 +290,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             const c = coordenadasDetectadas[key];
             if (!c) return;
 
-            // 1. Caja visual en el PDF
             const div = document.createElement('div');
             div.className = "absolute cursor-move bg-amber-100/90 border border-amber-400 text-black font-sans text-[10px] font-medium px-1.5 py-0.5 rounded shadow-sm select-none flex items-center";
             div.style.zIndex = "10";
@@ -258,7 +301,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             div.style.top = `${top}px`;
             div.textContent = `${key}: ${textosEjemplo[key] || 'Text'}`;
 
-            // 2. Tarjeta en la barra lateral con inputs numéricos de ajuste manual
             const card = document.createElement('div');
             card.className = "bg-white p-2 rounded border border-gray-200 text-[10px] space-y-1 shadow-xs";
             card.innerHTML = `
@@ -272,31 +314,28 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             `;
             panelLista.appendChild(card);
 
-            // Escuchar cambios manuales en los inputs numéricos
             card.querySelectorAll('input').forEach(input => {
                 input.addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value) || 0;
                     const type = e.target.getAttribute('data-coord-type');
                     
                     if (type === 'x') {
-                        coords[key].x1 = val;
-                        coords[key].x2 = val + 120;
+                        coordenadasDetectadas[key].x1 = val;
+                        coordenadasDetectadas[key].x2 = val + 120;
                     } else {
-                        coords[key].y1 = val;
-                        coords[key].y2 = val + 15;
+                        coordenadasDetectadas[key].y1 = val;
+                        coordenadasDetectadas[key].y2 = val + 15;
                     }
 
-                    // Actualizar posición de la caja en el canvas
-                    let newLeft = coords[key].x1 * scaleFactor;
-                    let newTop = (842 - coords[key].y2) * scaleFactor;
+                    let newLeft = coordenadasDetectadas[key].x1 * scaleFactor;
+                    let newTop = (842 - coordenadasDetectadas[key].y2) * scaleFactor;
                     div.style.left = `${newLeft}px`;
                     div.style.top = `${newTop}px`;
 
-                    logCoordenadas.textContent = JSON.stringify(coords, null, 2);
+                    logCoordenadas.textContent = JSON.stringify(coordenadasDetectadas, null, 2);
                 });
             });
 
-            // Lógica de arrastrar con el ratón
             let isDragging = false;
             let startX, startY;
 
@@ -320,18 +359,16 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 const realX1 = newX / scaleFactor;
                 const realY2 = 842 - (newY / scaleFactor);
                 
-                coords[key].x1 = realX1;
-                coords[key].x2 = realX1 + 120;
-                coords[key].y2 = realY2;
-                coords[key].y1 = realY2 - 15;
+                coordenadasDetectadas[key].x1 = realX1;
+                coordenadasDetectadas[key].x2 = realX1 + 120;
+                coordenadasDetectadas[key].y2 = realY2;
+                coordenadasDetectadas[key].y1 = realY2 - 15;
 
-                // Actualizar los inputs numéricos en el panel lateral en tiempo real
                 const inputX = card.querySelector(`[data-coord-type="x"]`);
                 const inputY = card.querySelector(`[data-coord-type="y"]`);
                 if (inputX) inputX.value = Math.round(realX1);
-                if (inputY) inputY.value = Math.round(coords[key].y1);
+                if (inputY) inputY.value = Math.round(coordenadasDetectadas[key].y1);
 
-                // Auto-alineación horizontal de los días y horas
                 const paresDias = [
                     ['lunes_texto', 'lunes_horas'],
                     ['martes_texto', 'martes_horas'],
@@ -341,70 +378,9 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 ];
 
                 paresDias.forEach(([txtKey, horaKey]) => {
-                    if (key === txtKey && coords[horaKey]) {
-                        coords[horaKey].y1 = coords[key].y1;
-                        coords[horaKey].y2 = coords[key].y2;
+                    if (key === txtKey && coordenadasDetectadas[horaKey]) {
+                        coordenadasDetectadas[horaKey].y1 = coordenadasDetectadas[key].y1;
+                        coordenadasDetectadas[horaKey].y2 = coordenadasDetectadas[key].y2;
                         const horaDiv = overlay.querySelector(`[data-field="${horaKey}"]`);
-                        if (horaDiv) horaDiv.style.top = `${(842 - coords[horaKey].y2) * scaleFactor}px`;
-                    } else if (key === horaKey && coords[txtKey]) {
-                        coords[txtKey].y1 = coords[key].y1;
-                        coords[txtKey].y2 = coords[key].y2;
-                        const txtDiv = overlay.querySelector(`[data-field="${txtKey}"]`);
-                        if (txtDiv) txtDiv.style.top = `${(842 - coords[txtKey].y2) * scaleFactor}px`;
-                    }
-                });
-
-                logCoordenadas.textContent = JSON.stringify(coords, null, 2);
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (isDragging) {
-                    isDragging = false;
-                    div.style.zIndex = "10";
-                    div.style.borderColor = "#fbbf24";
-                }
-            });
-
-            div.setAttribute('data-field', key);
-            overlay.appendChild(div);
-        });
-
-        logCoordenadas.textContent = JSON.stringify(coords, null, 2);
-    }
-
-    btnGuardar.addEventListener('click', async () => {
-        const schoolName = inputSchoolName.value.trim();
-        const fileIdentifier = inputFileIdentifier.value.trim();
-
-        if (!schoolName || !fileIdentifier) {
-            alert("Bitte fülle den Schulnamen und den Bezeichner aus.");
-            return;
-        }
-
-        try {
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
-                method: 'POST',
-                headers: {
-                    ...headers,
-                    'Prefer': 'resolution=merge-duplicates'
-                },
-                body: JSON.stringify({
-                    school_name: schoolName,
-                    file_identifier: fileIdentifier,
-                    pdf_filename: nombreArchivoOriginal || 'admin.pdf',
-                    coordinates_json: coordenadasDetectadas
-                })
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.message || 'Fehler beim Speichern');
-            }
-
-            alert("✅ Vorlage und angepasste Positionen erfolgreich gespeichert!");
-        } catch (err) {
-            console.error("Fehler beim Speichern in school_templates:", err);
-            alert("❌ Fehler: " + err.message);
-        }
-    });
-}
+                        if (horaDiv) horaDiv.style.top = `${(842 - coordenadasDetectadas[horaKey].y2) * scaleFactor}px`;
+                    } else if (key === horaKey && coordenadasDetectadas
