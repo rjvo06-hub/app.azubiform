@@ -2,13 +2,12 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     const contenedor = document.getElementById(contenedorId);
     if (!contenedor) return;
 
-    // Estado local para los puntos de la plantilla
     let coordenadasMapeadas = {
         nombre: null,
         semana_inicio: null,
         semana_fin: null,
         ano: null,
-        lunes: [],   // Guardará las líneas calculadas automáticamente
+        lunes: [],
         martes: [],
         miércoles: [],
         jueves: [],
@@ -17,7 +16,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
     let pdfDocGlobal = null;
     let paginaActualGlobal = null;
-    let escalaGlobal = 1.5; // Escala nítida para ver los detalles pequeños como "Schüler"
+    let escalaGlobal = 1.5;
     let pasoActual = 1;
 
     const pasosConfig = [
@@ -25,7 +24,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         { id: 2, campo: 'semana_inicio', titulo: 'Klicke auf das Feld für das Startdatum der Woche' },
         { id: 3, campo: 'semana_fin', titulo: 'Klicke auf das Feld für das Enddatum der Woche' },
         { id: 4, campo: 'ano', titulo: 'Klicke auf das Feld für das Jahr' },
-        { id: 5, campo: 'lunes_1', titulo: 'Klicke auf die ERSTE Zeile des MONTAGS (die restlichen Zeilen werden automatisch berechnet)' },
+        { id: 5, campo: 'lunes_1', titulo: 'Klicke auf die ERSTE Zeile des MONTAGS (automatische Berechnung)' },
         { id: 6, campo: 'martes_1', titulo: 'Klicke auf die ERSTE Zeile des DIENSTAGS (automatische Berechnung)' },
         { id: 7, campo: 'miércoles_1', titulo: 'Klicke auf die ERSTE Zeile des MITTWOCHS (automatische Berechnung)' },
         { id: 8, campo: 'jueves_1', titulo: 'Klicke auf die ERSTE Zeile des DONNERSTAGS (automatische Berechnung)' },
@@ -39,7 +38,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 <button type="button" class="pb-2 px-4 text-xs font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none">🪄 Interaktiver Vorlagen-Assistent</button>
             </div>
 
-            <!-- DATOS DE LA PLANTILLA -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                 <div>
                     <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">Name der Schule / Vorlage</label>
@@ -56,7 +54,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 <input type="file" id="inputArchivoPlantilla" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer">
             </div>
 
-            <!-- VISOR Y ASISTENTE -->
             <div id="contenedorVisorAsistente" class="hidden space-y-3">
                 <div class="bg-gray-900 text-white p-3 rounded-xl flex flex-wrap justify-between items-center gap-2">
                     <div>
@@ -143,7 +140,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         const xClickPx = e.clientX - rect.left;
         const yClickPx = e.clientY - rect.top;
 
-        // Convertir coordenadas de pantalla a escala real del PDF
         const xReal = xClickPx / escalaGlobal;
         const yReal = yClickPx / escalaGlobal;
 
@@ -161,12 +157,11 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         } else if (campo === 'ano') {
             coordenadasMapeadas.ano = { x: xReal, y: yReal };
         } else if (campo.includes('_1')) {
-            // Truco del autocalculado de líneas consecutivas (ej. Lunes)
-            const dia = campo.split('_')[0]; // lunes, martes, etc.
+            const dia = campo.split('_')[0];
             coordenadasMapeadas[dia] = [];
-            const espacioEntreLineas = 16; // Distancia estándar vertical aproximada en puntos PDF
+            const espacioEntreLineas = 16;
 
-            for (let i = 0; i < 6; i++) { // Por lo general 6 líneas por día
+            for (let i = 0; i < 6; i++) {
                 coordenadasMapeadas[dia].push({
                     x: xReal,
                     y: yReal + (i * espacioEntreLineas)
