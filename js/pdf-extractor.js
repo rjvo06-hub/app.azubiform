@@ -12,7 +12,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
                 <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Automatische Texterkennung & Feld-Mapping</h3>
-                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels und speichert sie in der Tabelle <code class="font-bold">school_templates</code>.</p>
+                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels, zeigt eine <strong class="underline">optische Vorschau</strong> der erkannten Felder und speichert sie in <code class="font-bold">school_templates</code>.</p>
             </div>
 
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
@@ -30,11 +30,24 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 </div>
             </div>
 
-            <div id="resultadoAnalisisAuto" class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3 text-xs">
+            <div id="resultadoAnalisisAuto" class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
                 <div class="flex items-center space-x-2 text-emerald-600 font-bold">
-                    <span>✅</span> <span id="lblEstadoEscaneo">PDF erfolgreich analysiert und Felder automatisch zugeordnet!</span>
+                    <span>✅</span> <span id="lblEstadoEscaneo">PDF erfolgreich analysiert! Überprüfe die erkannten Felder in der Vorschau:</span>
                 </div>
-                <div id="logCoordenadasDetectadas" class="bg-gray-50 p-3 rounded-lg font-mono text-[10px] text-gray-600 max-h-40 overflow-y-auto border border-gray-200"></div>
+                
+                <!-- VISTA PREVIA VISUAL CON CANVAS Y MARCADORES -->
+                <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-100 p-2 flex justify-center max-h-[450px]">
+                    <div id="canvasWrapperPreview" class="relative inline-block shadow-md bg-white">
+                        <canvas id="pdfPreviewCanvas" class="block"></canvas>
+                        <div id="pdfPreviewOverlay" class="absolute inset-0 pointer-events-none"></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] text-gray-500 uppercase font-bold">Erkannter JSON-Code:</span>
+                </div>
+                <div id="logCoordenadasDetectadas" class="bg-gray-50 p-3 rounded-lg font-mono text-[10px] text-gray-600 max-h-32 overflow-y-auto border border-gray-200"></div>
+                
                 <button type="button" id="btnGuardarAutoSupabase" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow transition">💾 In "school_templates" speichern</button>
             </div>
         </div>
@@ -46,6 +59,8 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
     const btnGuardar = contenedor.querySelector('#btnGuardarAutoSupabase');
     const inputSchoolName = contenedor.querySelector('#inputSchoolName');
     const inputFileIdentifier = contenedor.querySelector('#inputFileIdentifier');
+    const canvas = contenedor.querySelector('#pdfPreviewCanvas');
+    const overlay = contenedor.querySelector('#pdfPreviewOverlay');
 
     let coordenadasDetectadas = {};
     let nombreArchivoOriginal = '';
@@ -61,8 +76,23 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             try {
                 const pdfDoc = await pdfjsLib.getDocument(typedarray).promise;
                 const pagina = await pdfDoc.getPage(1);
-                const textContent = await pagina.getTextContent();
+                
+                // Renderizar el PDF en el canvas de vista previa
+                const renderScale = 1.25;
+                const viewport = pagina.getViewport({ scale: renderScale });
+                const context = canvas.getContext('2d');
 
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                canvas.style.width = `${viewport.width / renderScale}px`;
+                canvas.style.height = `${viewport.height / renderScale}px`;
+
+                await pagina.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+
+                const textContent = await pagina.getTextContent();
                 let elementosTexto = textContent.items;
                 coordenadasDetectadas = {};
 
@@ -112,6 +142,31 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                     }
                 });
 
+                // Dibujar indicadores visuales en el overlay del canvas
+                overlay.innerHTML = '';
+                const scaleFactor = (viewport.width / renderScale) / 595.27;
+
+                Object.keys(coordenadasDetectadas).forEach(key => {
+                    const c = coordenadasDetectadas[key];
+                    if (c && c.x1 !== undefined) {
+                        const box = document.createElement('div');
+                        box.className = "absolute border border-indigo-600 bg-indigo-200/40 text-[9px] text-indigo-900 font-mono px-1 overflow-hidden rounded";
+                        
+                        const left = c.x1 * scaleFactor;
+                        const top = (842 - c.y2) * scaleFactor; 
+                        const width = (c.x2 - c.x1) * scaleFactor;
+                        const height = (c.y2 - c.y1) * scaleFactor;
+
+                        box.style.left = `${left}px`;
+                        box.style.top = `${top}px`;
+                        box.style.width = `${Math.max(width, 40)}px`;
+                        box.style.height = `${Math.max(height, 15)}px`;
+                        box.textContent = key;
+
+                        overlay.appendChild(box);
+                    }
+                });
+
                 logCoordenadas.textContent = JSON.stringify(coordenadasDetectadas, null, 2);
                 divResultado.classList.remove('hidden');
 
@@ -143,7 +198,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                     school_name: schoolName,
                     file_identifier: fileIdentifier,
                     pdf_filename: nombreArchivoOriginal || 'admin.pdf',
-                    coordinates_json: coordenadasDetectadas // Enviando el JSON con las coordenadas mapeadas
+                    coordinates_json: coordenadasDetectadas
                 })
             });
 
