@@ -6,7 +6,7 @@ export function inicializarImpresionFOS() {
 
 export async function print_fos(nombreUsuario, fechaInicioSemana) {
     try {
-        // 1. Obtener los datos del usuario actual para conocer su 'school_name'
+        // 1. Obtener los datos del usuario actual para conocer su 'school_name' y su programa/especialidad
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
             method: 'GET',
             headers: headers
@@ -22,14 +22,23 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
 
         const usuarioActual = usuarios[0];
         const schoolName = usuarioActual.school_name;
+        // Si el usuario pertenece a FOS social, el campo ausbildung en registro_diario reflejará algo como 'fos-sozial'
+        const tipoAusbildung = usuarioActual.ausbildung || ''; // Ej: 'fos-sozial'
 
         if (!schoolName) {
             alert("❌ Dem Benutzer ist keine Schule (school_name) zugeordnet.");
             return;
         }
 
-        // 2. Obtener las actividades del usuario (probando con el nombre o ajustando si es necesario)
-        const resActividades = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?nombre=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
+        // 2. Obtener las actividades del usuario filtrando por la columna 'usuario' y opcionalmente por 'ausbildung'
+        let urlActividades = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicioSemana}&select=*`;
+        
+        // Si tiene una especialidad definida (ej. fos-sozial), podemos refinar la búsqueda
+        if (tipoAusbildung) {
+            urlActividades += `&ausbildung=ilike.${encodeURIComponent('%' + tipoAusbildung + '%')}`;
+        }
+
+        const resActividades = await fetch(urlActividades, {
             method: 'GET',
             headers: headers
         });
@@ -99,9 +108,9 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             });
         }
 
-        // 7. Estampar dinámicamente las actividades registradas
+        // 7. Estampar dinámicamente las actividades registradas (usando act.nombre_actividad)
         actividades.forEach(act => {
-            console.log("Estampando actividad en PDF:", act.actividad);
+            console.log("Estampando actividad en PDF:", act.nombre_actividad);
         });
 
         // 8. Generar el PDF resultante para previsualización o descarga
