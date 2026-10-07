@@ -11,8 +11,8 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             </div>
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
-                <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Visuelles Feld-Mapping per Drag & Drop</h3>
-                <p class="text-xs text-indigo-800">Lade dein PDF hoch. Die erkannten Textfelder werden angezeigt. Du kannst sie mit der Maus <strong>an die exakte Position ziehen</strong> und danach in <code class="font-bold">school_templates</code> speichern.</p>
+                <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Visuelles Feld-Mapping per Drag & Drop (inkl. Stunden & Total)</h3>
+                <p class="text-xs text-indigo-800">Lade dein PDF hoch. Alle erkannten Felder (Texte, Stunden und Gesamtsumme) werden angezeigt. Ziehe sie an die exakte Position und speichere sie in <code class="font-bold">school_templates</code>.</p>
             </div>
 
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
@@ -32,7 +32,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
 
             <div id="resultadoAnalisisAuto" class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
                 <div class="flex items-center space-x-2 text-emerald-600 font-bold">
-                    <span>✅</span> <span id="lblEstadoEscaneo">PDF analysiert! Ziehe die Felder bei Bedarf an die richtige Position:</span>
+                    <span>✅</span> <span id="lblEstadoEscaneo">PDF analysiert! Platziere auch die Stunden und die Gesamtsumme an der richtigen Stelle:</span>
                 </div>
                 
                 <!-- VISTA PREVIA INTERACTIVA CON DRAG & DROP -->
@@ -115,31 +115,46 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                     }
                     if (texto === 'Montag') {
                         coordenadasDetectadas.lunes_texto = { x1: x + 70, y1: y - 5, x2: x + 350, y2: y + 35 };
+                        coordenadasDetectadas.lunes_horas = { x1: x + 360, y1: y - 5, x2: x + 430, y2: y + 35 };
                     }
                     if (texto === 'Dienstag') {
                         coordenadasDetectadas.martes_texto = { x1: x + 70, y1: y - 5, x2: x + 350, y2: y + 35 };
+                        coordenadasDetectadas.martes_horas = { x1: x + 360, y1: y - 5, x2: x + 430, y2: y + 35 };
                     }
                     if (texto === 'Mittwoch') {
                         coordenadasDetectadas.miércoles_texto = { x1: x + 70, y1: y - 5, x2: x + 350, y2: y + 35 };
+                        coordenadasDetectadas.miércoles_horas = { x1: x + 360, y1: y - 5, x2: x + 430, y2: y + 35 };
                     }
                     if (texto === 'Donnerstag') {
                         coordenadasDetectadas.jueves_texto = { x1: x + 70, y1: y - 5, x2: x + 350, y2: y + 35 };
+                        coordenadasDetectadas.jueves_horas = { x1: x + 360, y1: y - 5, x2: x + 430, y2: y + 35 };
                     }
                     if (texto === 'Freitag') {
                         coordenadasDetectadas.viernes_texto = { x1: x + 70, y1: y - 5, x2: x + 350, y2: y + 35 };
+                        coordenadasDetectadas.viernes_horas = { x1: x + 360, y1: y - 5, x2: x + 430, y2: y + 35 };
+                    }
+                    if (texto.includes('Arbeitszeit')) {
+                        coordenadasDetectadas.total_horas = { x1: x + 150, y1: y - 4, x2: x + 250, y2: y + 10 };
                     }
                 });
 
+                // Textos de referencia incluyendo horas y totalización
                 const textosEjemplo = {
                     nombre: "Katharina Schwarz",
                     klasse: "FOS 12W",
                     ausbildungsrichtung: "Sozialwesen",
                     betreuende_lehrkraft: "Frau Müller",
                     lunes_texto: "Einführung in die Abteilung",
+                    lunes_horas: "8 Std.",
                     martes_texto: "Betreuung von Projekten",
+                    martes_horas: "8 Std.",
                     miércoles_texto: "Dokumentation im Betrieb",
+                    miércoles_horas: "7 Std.",
                     jueves_texto: "Unterstützung im Gruppenalltag",
-                    viernes_texto: "Wochenreflexion"
+                    jueves_horas: "8 Std.",
+                    viernes_texto: "Wochenreflexion",
+                    viernes_horas: "6 Std.",
+                    total_horas: "37 Std."
                 };
 
                 renderizarCajasArrastrables(coordenadasDetectadas, textosEjemplo, viewport);
@@ -171,7 +186,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 div.style.top = `${top}px`;
                 div.textContent = `${key}: ${textos[key] || 'Text'}`;
 
-                // Lógica de arrastrar y soltar (Drag and Drop)
                 let isDragging = false;
                 let startX, startY;
 
@@ -192,11 +206,10 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                     div.style.left = `${newX}px`;
                     div.style.top = `${newY}px`;
 
-                    // Actualizar las coordenadas en tiempo real en el objeto
                     const realX1 = newX / scaleFactor;
                     const realY2 = 842 - (newY / scaleFactor);
                     coords[key].x1 = realX1;
-                    coords[key].x2 = realX1 + 150;
+                    coords[key].x2 = realX1 + 100;
                     coords[key].y2 = realY2;
                     coords[key].y1 = realY2 - 15;
 
@@ -226,31 +239,3 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             alert("Bitte fülle den Schulnamen und den Bezeichner aus.");
             return;
         }
-
-        try {
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
-                method: 'POST',
-                headers: {
-                    ...headers,
-                    'Prefer': 'resolution=merge-duplicates'
-                },
-                body: JSON.stringify({
-                    school_name: schoolName,
-                    file_identifier: fileIdentifier,
-                    pdf_filename: nombreArchivoOriginal || 'admin.pdf',
-                    coordinates_json: coordenadasDetectadas
-                })
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.message || 'Fehler beim Speichern');
-            }
-
-            alert("✅ Vorlage und angepasste Positionen erfolgreich gespeichert!");
-        } catch (err) {
-            console.error("Fehler beim Speichern in school_templates:", err);
-            alert("❌ Fehler: " + err.message);
-        }
-    });
-}
