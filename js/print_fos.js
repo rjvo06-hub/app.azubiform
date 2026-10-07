@@ -118,10 +118,10 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             lblInfo.textContent = `Woche: ${fechaInicioSemana} bis ${fechaFinSemana} (${actividades.length} Einträge)`;
         }
 
-        // Renderizar el PDF base con PDF.js como fondo visual
+        // Renderizar contenedor con canvas para el PDF de fondo
         previewContainer.innerHTML = `
-            <div class="relative w-full h-full flex justify-center items-center bg-gray-100">
-                <canvas id="pdfCanvasFOS" class="shadow-lg"></canvas>
+            <div class="relative inline-block shadow-2xl bg-white">
+                <canvas id="pdfCanvasFOS" class="block"></canvas>
                 <div id="overlayCamposFOS" class="absolute inset-0 pointer-events-none"></div>
             </div>
         `;
@@ -135,7 +135,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         
         const canvas = document.getElementById('pdfCanvasFOS');
         const context = canvas.getContext('2d');
-        const viewport = page.getViewport({ scale: 1.5 }); // Escala de nitidez
+        const viewport = page.getViewport({ scale: 1.25 }); // Escala optimizada para visualización
 
         canvas.height = viewport.height;
         canvas.width = viewport.width;
@@ -145,37 +145,34 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             viewport: viewport
         }).promise;
 
-        // 6. Superponer los textos usando las coordenadas de la base de datos
+        // 6. Superponer los textos con precisión usando escala relativa al viewport del PDF
         const overlay = document.getElementById('overlayCamposFOS');
-        const escalaX = canvas.clientWidth / viewport.width;
-        const escalaY = canvas.clientHeight / viewport.height;
+        const scaleX = canvas.width / viewport.width;
+        const scaleY = canvas.height / viewport.height;
 
-        // Estampar el nombre del usuario si existe coordenada
+        // Estampar el nombre del alumno en su cuadro correspondiente
         if (coordenadas.nombre) {
             const divNombre = document.createElement('div');
-            divNombre.className = "absolute text-black font-mono text-xs whitespace-nowrap";
-            divNombre.style.left = `${coordenadas.nombre.x1}px`;
-            divNombre.style.top = `${coordenadas.nombre.y1}px`;
+            divNombre.className = "absolute text-black font-sans text-xs font-semibold whitespace-nowrap";
+            divNombre.style.left = `${(coordenadas.nombre.x1 || 150) * scaleX}px`;
+            divNombre.style.top = `${(coordenadas.nombre.y1 || 50) * scaleY}px`;
             divNombre.textContent = nombreUsuario;
             overlay.appendChild(divNombre);
         }
 
-        // Estampar dinámicamente las actividades según sus coordenadas mapeadas
+        // Agrupar o distribuir las actividades en las filas del reporte (Montag, Dienstag, etc.)
         actividades.forEach((act, index) => {
-            const coordKey = `actividad_${index + 1}` || `m${index + 1}`;
-            const coord = coordenadas[coordKey] || coordenadas.actividad || null;
-
             const divAct = document.createElement('div');
-            divAct.className = "absolute text-black font-mono text-xs whitespace-nowrap overflow-hidden";
+            divAct.className = "absolute text-black font-sans text-[11px] whitespace-nowrap overflow-hidden";
             
-            if (coord) {
-                divAct.style.left = `${coord.x1}px`;
-                divAct.style.top = `${coord.y1}px`;
-            } else {
-                // Posición de respaldo si no hay coordenada exacta para esta línea
-                divAct.style.left = `100px`;
-                divAct.style.top = `${150 + (index * 25)}px`;
-            }
+            // Posicionamiento dinámico basado en las filas de la tabla de la plantilla visual
+            // (Ajustamos un offset vertical por cada línea de actividad registrada)
+            const baseTop = 220 + (index * 22); // Espaciado vertical entre líneas de actividad
+            const baseLeft = 140; // Margen izquierdo dentro de la columna de actividades
+
+            divAct.style.left = `${baseLeft * scaleX}px`;
+            divAct.style.top = `${baseTop * scaleY}px`;
+            divAct.style.maxWidth = '450px';
             
             divAct.textContent = act.nombre_actividad || '';
             overlay.appendChild(divAct);
