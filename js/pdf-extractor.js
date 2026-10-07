@@ -1,6 +1,10 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 
-export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
+// Inicializar Supabase directamente con tus credenciales seguras
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+export function inicializarLectorYAnalizadorPdf(contenedorId) {
     const contenedor = document.getElementById(contenedorId);
     if (!contenedor) return;
 
@@ -48,7 +52,6 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     const inputFileIdentifier = contenedor.querySelector('#inputFileIdentifier');
 
     let coordenadasDetectadas = {};
-    let pdfArrayBufferGlobal = null;
     let nombreArchivoOriginal = '';
 
     inputArchivo.addEventListener('change', async (e) => {
@@ -58,9 +61,9 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
         const lector = new FileReader();
         lector.onload = async function() {
-            pdfArrayBufferGlobal = new Uint8Array(this.result);
+            const typedarray = new Uint8Array(this.result);
             try {
-                const pdfDoc = await pdfjsLib.getDocument(pdfArrayBufferGlobal).promise;
+                const pdfDoc = await pdfjsLib.getDocument(typedarray).promise;
                 const pagina = await pdfDoc.getPage(1);
                 const textContent = await pagina.getTextContent();
 
@@ -133,16 +136,8 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             return;
         }
 
-        // Obtener cliente de Supabase de manera segura desde cualquier entorno disponible
-        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase;
-
-        if (!clienteActivo) {
-            alert("❌ Supabase-Client nicht gefunden. Bitte lade die Seite neu.");
-            return;
-        }
-
         try {
-            const { error: errSupabase } = await clienteActivo
+            const { error: errSupabase } = await supabase
                 .from('school_templates')
                 .upsert({
                     school_name: schoolName,
