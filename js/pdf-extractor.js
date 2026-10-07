@@ -1,3 +1,5 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
 export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     const contenedor = document.getElementById(contenedorId);
     if (!contenedor) return;
@@ -131,11 +133,11 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             return;
         }
 
-        // Detector ultra-robusto que busca el cliente en cualquier variable global o local disponible
-        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase || window._supabase || (window.app && window.app.supabase);
+        // Obtener cliente de Supabase de manera segura desde cualquier entorno disponible
+        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase;
 
         if (!clienteActivo) {
-            alert("❌ Supabase-Client nicht gefunden. Bitte stelle sicher, dass du eingeloggt bist und lade die Seite neu.");
+            alert("❌ Supabase-Client nicht gefunden. Bitte lade die Seite neu.");
             return;
         }
 
