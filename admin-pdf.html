@@ -3,71 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azubiform.de</title>
+    <title>Azubiform - PDF Template Analyzer & DB</title>
     
-    <!-- 📱 Configuración para dispositivos móviles y PWA -->
-    <meta name="apple-mobile-web-app-title" content="Azubiform">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
-
-    <!-- 🖼 Iconos -->
-    <link rel="apple-touch-icon" href="./icon_azubiform.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="./icon_azubiform.png">
-    <link rel="manifest" href="./manifest.json">
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        button, input, select {
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        @media print {
-            body * { visibility: hidden; }
-            #modalImpresionAusbildung, #modalImpresionAusbildung * { visibility: visible; }
-            #modalImpresionAusbildung {
-                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white !important;
-            }
-            .no-print { display: none !important; }
-            @page { size: A4; margin: 0; }
-        }
-
-        .page-print {
-            position: relative; width: 210mm; height: 297mm; margin: 0 auto; background-color: #ffffff; box-sizing: border-box; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
-        }
-
-        #pr_nombre { position: absolute; left: 130mm; top: -0.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
-        #pr_semana_inicio { position: absolute; left: 120mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
-        #pr_semana_fin { position: absolute; left: 140mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
-        #pr_ano_fin { position: absolute; left: 159.5mm; top: 7.5mm; width: 4mm; height: 5mm; line-height: 5mm; white-space: nowrap; text-align: center; }
-
-        .linea-impresion {
-            position: absolute; left: 30mm; width: 160mm; height: 5.5mm; line-height: 5.5mm; white-space: nowrap; overflow: hidden; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
-        }
-
-        #pr_m1 { top: 32.5mm; } #pr_m2 { top: 38.0mm; } #pr_m3 { top: 43.5mm; } #pr_m4 { top: 49.0mm; } #pr_m5 { top: 54.5mm; } #pr_m6 { top: 60.0mm; }
-        #pr_di1 { top: 67.5mm; } #pr_di2 { top: 73.0mm; } #pr_di3 { top: 78.5mm; } #pr_di4 { top: 84.0mm; } #pr_di5 { top: 89.5mm; } #pr_di6 { top: 95.0mm; }
-        #pr_mi1 { top: 102.5mm; } #pr_mi2 { top: 107.5mm; } #pr_mi3 { top: 113.5mm; } #pr_mi4 { top: 119.0mm; } #pr_mi5 { top: 124.5mm; } #pr_mi6 { top: 130.0mm; }
-        #pr_do1 { top: 137.5mm; } #pr_do2 { top: 143.0mm; } #pr_do3 { top: 148.5mm; } #pr_do4 { top: 154.0mm; } #pr_do5 { top: 159.5mm; } #pr_do6 { top: 165.0mm; }
-        #pr_fr1 { top: 172.5mm; } #pr_fr2 { top: 178.0mm; } #pr_fr3 { top: 183.5mm; } #pr_fr4 { top: 189.0mm; } #pr_fr5 { top: 194.5mm; } #pr_fr6 { top: 200.0mm; }
-    </style>
+    
+    <!-- PDF.js para renderizar e inspeccionar PDFs estáticos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center justify-center">
+<body class="bg-gray-100 min-h-screen p-6 flex flex-col items-center">
 
-    <!-- SECCIÓN 1: LOGIN -->
-    <div id="loginSection" class="w-full max-w-md">
-        <div class="w-full text-center mb-6">
-            <div class="flex items-center justify-center gap-3.5 mb-2">
-                <img src="./icon_azubiform.png" alt="Azubiform Logo" class="w-12 h-12 rounded-2xl shadow-lg flex-shrink-0 object-cover">
-                <h1 class="text-4xl font-extrabold text-indigo-700 tracking-tight">Azubiform</h1>
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-xl overflow-hidden mb-6">
+        <div class="bg-gray-900 text-white p-4 flex justify-between items-center">
+            <div>
+                <h1 class="font-bold text-base">PDF Template Analyzer & Base de Datos</h1>
+                <p class="text-xs text-gray-400">Inspecciona y guarda las coordenadas directamente en school_templates</p>
             </div>
-            <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
-            <p class="text-xs text-gray-600 leading-relaxed px-1">
-                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Ausbildungsnachweis</strong>. Wir speichern deine Einträge sicher und chronologisch ab, damit dein Berichtsheft lückenlos und übersichtlich bleibt.
-            </p>
+            <a href="./index.html" class="bg-gray-800 hover:bg-gray-700 text-xs px-3 py-1.5 rounded transition font-medium">← Zurück zur App</a>
         </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-lg">
-            <h2 class="text-xl font-bold text-gray-800 mb-4" id="tituloAuth">Anmelden</h2>
+        <div class="p-6 space-y-4">
+            <!-- Selector de archivo e inputs para la base de datos -->
+            <div class="bg-amber-50 border border-amber-200 p-4 rounded-lg space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-amber-800 uppercase mb-1">1. Statisches Schul-PDF hochladen</label>
+                    <input type="file" id="inputPdfAdminFile" accept="application/pdf" class="text-xs border border-amber-300 p-2 rounded w-full bg-white">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Nombre de la Escuela (school_name)</label>
+                        <input type="text" id="inputSchoolName" placeholder="Ej. FOS Holzkirchen" class="text-xs border border-amber-300 p-2 rounded w-full bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Identificador único (file_identifier)</label>
+                        <input type="text" id="inputFileIdentifier" placeholder="Ej. fos_holzkirchen_2026" class="text-xs border border-amber-300 p-2 rounded w-full bg-white">
+                    </div>
+                </div>
+            </div>
 
-            <div class="flex border-b border-gray-200 mb-4">
-                <button type="button" id="tabLogin" onclick="cambiarTab('login')" class="w-1/2 pb-2 text-sm font-bold
+            <!-- Panel de resultados y botón de guardado en BD -->
+            <div class="bg-gray-900 text-emerald-400 p-3 rounded-lg font-mono text-xs flex flex-wrap justify-between items-center gap-2">
+                <span id="coordOutput">Status: Bitte lade ein PDF hoch und klicke auf das Dokument...</span>
+                <div class="space-x-2">
+                    <button onclick="copiarCoordenadas()" id="btnCopiar" class="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded text-[10px] hidden">Copiar Punto</button>
+                    <button onclick="guardarEnBaseDeDatos()" id="btnGuardarDB" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded text-xs transition">Guardar en Base de Datos</button>
+                </div>
+            </div>
+
+            <!-- Visor interactivo del PDF -->
+            <div class="relative border border-gray-300 rounded-lg overflow-auto max-h-[600px] flex justify-center bg-gray-200">
+                <canvas id="pdfCanvasAdmin" class="shadow-lg cursor-crosshair"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de control y conexión a Supabase -->
+    <script type="module">
+        // Configura tus credenciales de Supabase
+        const SUPABASE_URL = 'https://tudominio.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'tu-clave-anon';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const inputFile = document.getElementById('inputPdfAdminFile');
+        const canvas = document.getElementById('pdfCanvasAdmin');
+        const outputDiv = document.getElementById('coordOutput');
+        const btnCopiar = document.getElementById('btnCopiar');
+        const inputSchoolName = document.getElementById('inputSchoolName');
+        const inputFileIdentifier = document.getElementById('inputFileIdentifier');
+        const ctx = canvas.getContext('2d');
+
+        let ultimaX = 0;
+        let ultimaY = 0;
+        let nombrePdfActual = "";
+        
+        // Objeto para acumular las coordenadas mapeadas (puedes estructurarlo como necesites para tu JSONB)
+        let coordenadasJsonData = {
+            puntos: []
+        };
+
+        inputFile.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            nombrePdfActual = file.name;
+            outputDiv.textContent = "Lade und rendere PDF...";
+            const fileReader = new FileReader();
+
+            fileReader.onload = async function() {
+                try {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const page = await pdf.getPage(1);
+
+                    const scale = 1.5;
+                    const viewport = page.getViewport({ scale: scale });
+
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: viewport
+                    }).promise;
+
+                    outputDiv.textContent = "PDF erfolgreich geladen! Klicke auf Positionen im Dokument.";
+                } catch (err) {
+                    console.error(err);
+                    outputDiv.textContent = "Fehler beim Verarbeiten der PDF-Datei.";
+                }
+            };
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        // Capturar clics y acumular coordenadas
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const scale = 1.5;
+            
+            const x = Number(((event.clientX - rect.left) / scale).toFixed(2));
+            const y = Number(((canvas.height - (event.clientY - rect.top)) / scale).toFixed(2));
+
+            ultimaX = x;
+            ultimaY = y;
+
+            // Añadir al objeto JSON acumulativo
+            coordenadasJsonData.puntos.push({ x, y });
+
+            outputDiv.innerHTML = `Registrado -> X: <span class="text-white font-bold">${x}</span> | Y: <span class="text-white font-bold">${y}</span> (Total puntos: ${coordenadasJsonData.puntos.length})`;
+            btnCopiar.classList.remove('hidden');
+        });
+
+        window.copiarCoordenadas = function() {
+            const texto = `{ x: ${ultimaX}, y: ${ultimaY} }`;
+            navigator.clipboard.writeText(texto);
+            alert("Último punto copiado: " + texto);
+        };
+
+        // Función para enviar los datos a la tabla school_templates
+        window.guardarEnBaseDeDatos = async function() {
+            const schoolName = inputSchoolName.value.trim();
+            const fileIdentifier = inputFileIdentifier.value.trim();
+
+            if (!schoolName || !fileIdentifier) {
+                alert("Por favor, rellena el nombre de la escuela y el identificador único.");
+                return;
+            }
+
+            if (coordenadasJsonData.puntos.length === 0) {
+                alert("No has seleccionado ninguna coordenada en el PDF todavía.");
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('school_templates')
+                    .upsert([
+                        {
+                            school_name: schoolName,
+                            file_identifier: fileIdentifier,
+                            pdf_filename: nombrePdfActual,
+                            coordinates_json: coordenadasJsonData
+                        }
+                    ], { onConflict: 'file_identifier' });
+
+                if (error) {
+                    console.error("Error de Supabase:", error);
+                    alert("Error al guardar: " + error.message);
+                } else {
+                    alert("¡Plantilla y coordenadas guardadas con éxito en la base de datos!");
+                    console.log("Guardado exitoso:", data);
+                }
+            } catch (err) {
+                console.error("Error inesperado:", err);
+                alert("Ocurrió un error inesperado al conectar con la base de datos.");
+            }
+        };
+    </script>
+</body>
+</html>
