@@ -4,12 +4,13 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
     let coordenadasMapeadas = {
         nombre: null,
+        betreuende_lehrkraft: null,
         klasse: null,
-        ausbildung: null,
+        ausbildungsrichtung: null,
         semana_numero: null,
+        ausbildungsstaette: null,
         semana_inicio: null,
         semana_fin: null,
-        ano: null,
         lunes: [],
         martes: [],
         miércoles: [],
@@ -22,27 +23,27 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     let escalaGlobal = 1.5;
     let pasoActual = 1;
 
-    // Pasos amplificados para cubrir absolutamente todos los datos impresos en el PDF
+    // Pasos optimizados y ultra-lógicos basados en la estructura real del formato
     const pasosConfig = [
-        { id: 1, campo: 'nombre', titulo: 'Klicke auf das Feld neben: "Schüler/in / Schüler"' },
-        { id: 2, campo: 'klasse', titulo: 'Klicke auf das Feld neben: "Klasse"' },
-        { id: 3, campo: 'ausbildung', titulo: 'Klicke auf das Feld neben: "Ausbildungsrichtung / Beruf"' },
-        { id: 4, campo: 'semana_numero', titulo: 'Klicke auf das Feld neben: "Wochenbericht Nr."' },
-        { id: 5, campo: 'semana_inicio', titulo: 'Klicke auf das Datumsfeld nach: "... vom" (Startdatum)' },
-        { id: 6, campo: 'semana_fin', titulo: 'Klicke auf das Enddatum-Feld (bis)' },
-        { id: 7, campo: 'ano', titulo: 'Klicke auf das Feld für das Jahr' },
-        { id: 8, campo: 'lunes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Montag" (Wochen-Aktivitäten)' },
-        { id: 9, campo: 'martes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Dienstag"' },
-        { id: 10, campo: 'miércoles_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Mittwoch"' },
-        { id: 11, campo: 'jueves_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Donnerstag"' },
-        { id: 12, campo: 'viernes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Freitag"' },
+        { id: 1, campo: 'nombre', titulo: '1. Klicke auf das Feld: "Schüler/in / Schüler" (Links)' },
+        { id: 2, campo: 'betreuende_lehrkraft', titulo: '2. Klicke auf das Feld gegenüber: "Betreuende Lehrkraft" (Rechts)' },
+        { id: 3, campo: 'klasse', titulo: '3. Klicke auf das Feld: "Klasse" (Links)' },
+        { id: 4, campo: 'ausbildungsrichtung', titulo: '4. Klicke auf das Feld gegenüber: "Ausbildungsrichtung" (Rechts)' },
+        { id: 5, campo: 'semana_numero', titulo: '5. Klicke auf das Feld: "Wochenbericht Nr. ... vom"' },
+        { id: 6, campo: 'ausbildungsstaette', titulo: '6. Klicke auf das Feld gegenüber: "Ausbildungsstätte" (Rechts)' },
+        { id: 7, campo: 'semana_inicio', titulo: '7. Klicke auf das Startfeld für das Datum ("Von / Bis")' },
+        { id: 8, campo: 'lunes_1', titulo: '8. Klicke auf die ERSTE Zeile bei: "Montag" (Die 6 Linien passen sich perfekt an)' },
+        { id: 9, campo: 'martes_1', titulo: '9. Klicke auf die ERSTE Zeile bei: "Dienstag"' },
+        { id: 10, campo: 'miércoles_1', titulo: '10. Klicke auf die ERSTE Zeile bei: "Mittwoch"' },
+        { id: 11, campo: 'jueves_1', titulo: '11. Klicke auf die ERSTE Zeile bei: "Donnerstag"' },
+        { id: 12, campo: 'viernes_1', titulo: '12. Klicke auf die ERSTE Zeile bei: "Freitag"' },
         { id: 13, campo: 'listo', titulo: '🎉 Alle Felder erfolgreich erfasst! Du kannst die Vorlage speichern.' }
     ];
 
     contenedor.innerHTML = `
         <div class="space-y-4">
             <div class="flex border-b border-gray-200">
-                <button type="button" class="pb-2 px-4 text-xs font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none">🪄 Vollständiger Vorlagen-Assistent</button>
+                <button type="button" class="pb-2 px-4 text-xs font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none">🪄 Optimierter Vorlagen-Assistent</button>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -192,27 +193,29 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
         if (campo === 'nombre') {
             coordenadasMapeadas.nombre = { x: xReal, y: yReal };
+        } else if (campo === 'betreuende_lehrkraft') {
+            coordenadasMapeadas.betreuende_lehrkraft = { x: xReal, y: yReal };
         } else if (campo === 'klasse') {
             coordenadasMapeadas.klasse = { x: xReal, y: yReal };
-        } else if (campo === 'ausbildung') {
-            coordenadasMapeadas.ausbildung = { x: xReal, y: yReal };
+        } else if (campo === 'ausbildungsrichtung') {
+            coordenadasMapeadas.ausbildungsrichtung = { x: xReal, y: yReal };
         } else if (campo === 'semana_numero') {
             coordenadasMapeadas.semana_numero = { x: xReal, y: yReal };
+        } else if (campo === 'ausbildungsstaette') {
+            coordenadasMapeadas.ausbildungsstaette = { x: xReal, y: yReal };
         } else if (campo === 'semana_inicio') {
+            // Guardamos la fecha de inicio y calculamos automáticamente el final y el año en la misma línea horizontal
             coordenadasMapeadas.semana_inicio = { x: xReal, y: yReal };
-        } else if (campo === 'semana_fin') {
-            coordenadasMapeadas.semana_fin = { x: xReal, y: yReal };
-        } else if (campo === 'ano') {
-            coordenadasMapeadas.ano = { x: xReal, y: yReal };
+            coordenadasMapeadas.semana_fin = { x: xReal + 40, y: yReal }; // Desplazamiento horizontal automático
         } else if (campo.includes('_1')) {
             const dia = campo.split('_')[0];
             coordenadasMapeadas[dia] = [];
-            const espacioEntreLineas = 16;
+            const espacioEntreLineasCompacto = 11; // Altura compacta ajustada perfectamente al espacio de cada día
 
             for (let i = 0; i < 6; i++) {
                 coordenadasMapeadas[dia].push({
                     x: xReal,
-                    y: yReal + (i * espacioEntreLineas)
+                    y: yReal + (i * espacioEntreLineasCompacto)
                 });
             }
         }
@@ -227,12 +230,12 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         const todosPuntos = [];
 
         if (coordenadasMapeadas.nombre) todosPuntos.push({ label: 'Name', ...coordenadasMapeadas.nombre });
+        if (coordenadasMapeadas.betreuende_lehrkraft) todosPuntos.push({ label: 'Lehrkraft', ...coordenadasMapeadas.betreuende_lehrkraft });
         if (coordenadasMapeadas.klasse) todosPuntos.push({ label: 'Klasse', ...coordenadasMapeadas.klasse });
-        if (coordenadasMapeadas.ausbildung) todosPuntos.push({ label: 'Ausb.', ...coordenadasMapeadas.ausbildung });
+        if (coordenadasMapeadas.ausbildungsrichtung) todosPuntos.push({ label: 'Ausb.Richt.', ...coordenadasMapeadas.ausbildungsrichtung });
         if (coordenadasMapeadas.semana_numero) todosPuntos.push({ label: 'Nr.', ...coordenadasMapeadas.semana_numero });
-        if (coordenadasMapeadas.semana_inicio) todosPuntos.push({ label: 'Von', ...coordenadasMapeadas.semana_inicio });
-        if (coordenadasMapeadas.semana_fin) todosPuntos.push({ label: 'Bis', ...coordenadasMapeadas.semana_fin });
-        if (coordenadasMapeadas.ano) todosPuntos.push({ label: 'Jahr', ...coordenadasMapeadas.ano });
+        if (coordenadasMapeadas.ausbildungsstaette) todosPuntos.push({ label: 'Stätte', ...coordenadasMapeadas.ausbildungsstaette });
+        if (coordenadasMapeadas.semana_inicio) todosPuntos.push({ label: 'Datum', ...coordenadasMapeadas.semana_inicio });
 
         ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'].forEach(dia => {
             coordenadasMapeadas[dia].forEach((pt, idx) => {
@@ -252,7 +255,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
     btnReiniciar.addEventListener('click', () => {
         pasoActual = 1;
-        coordenadasMapeadas = { nombre: null, klasse: null, ausbildung: null, semana_numero: null, semana_inicio: null, semana_fin: null, ano: null, lunes: [], martes: [], miércoles: [], jueves: [], viernes: [] };
+        coordenadasMapeadas = { nombre: null, betreuende_lehrkraft: null, klasse: null, ausbildungsrichtung: null, semana_numero: null, ausbildungsstaette: null, semana_inicio: null, semana_fin: null, lunes: [], martes: [], miércoles: [], jueves: [], viernes: [] };
         actualizarInstruccionUI();
         dibujarPinesVisuales();
     });
