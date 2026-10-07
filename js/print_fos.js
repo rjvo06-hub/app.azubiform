@@ -1,6 +1,5 @@
 import { SUPABASE_URL, headers } from './config.js';
 
-// Variable global para llevar el control de la fecha que se está visualizando
 let fechaActualFOS = null;
 let usuarioActualFOS = null;
 
@@ -12,7 +11,6 @@ export function inicializarImpresionFOS() {
         if (modal) modal.classList.add('hidden');
     };
 
-    // Función para cambiar de semana desde los botones de la vista previa
     window.cambiarSemanaFOS = function(deltaSemanas) {
         if (!fechaActualFOS || !usuarioActualFOS) return;
         
@@ -20,16 +18,15 @@ export function inicializarImpresionFOS() {
         fecha.setDate(fecha.getDate() + (deltaSemanas * 7));
         fechaActualFOS = fecha.toISOString().split('T')[0];
         
-        // Recargar la vista con la nueva semana
         print_fos(usuarioActualFOS, fechaActualFOS);
     };
 }
 
 export async function print_fos(nombreUsuario, fechaInicioSemana) {
     try {
+        console.log("Iniciando print_fos para:", nombreUsuario);
         usuarioActualFOS = nombreUsuario;
         
-        // Si no se pasa una fecha de inicio, calculamos el lunes de la semana actual
         if (!fechaInicioSemana) {
             const hoy = new Date();
             const dia = hoy.getDay();
@@ -62,19 +59,15 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             return;
         }
 
-        // 2. Calcular la fecha de fin de semana (6 días después del lunes)
+        // 2. Calcular la fecha de fin de semana
         let dLunes = new Date(fechaInicioSemana);
         let dDomingo = new Date(dLunes);
         dDomingo.setDate(dDomingo.getDate() + 6);
         const fechaFinSemana = dDomingo.toISOString().split('T')[0];
 
-        // 3. Obtener las actividades del usuario filtrando por el rango de la semana seleccionada
+        // 3. Obtener las actividades de la tabla registro_diario
         let urlActividades = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicioSemana}&fecha=lte.${fechaFinSemana}&select=*`;
         
-        if (tipoAusbildung) {
-            urlActividades += `&ausbildung=ilike.${encodeURIComponent('%' + tipoAusbildung + '%')}`;
-        }
-
         const resActividades = await fetch(urlActividades, {
             method: 'GET',
             headers: headers
@@ -106,13 +99,13 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             }
         }
 
-        // 5. Construir la vista preliminar visual en el modal con botones de navegación
+        // 5. Construir la vista preliminar visual en el modal
         const previewContainer = document.getElementById('fosPreviewContainer');
         const modalFOS = document.getElementById('modalImpresionFOS');
         const lblInfo = document.getElementById('lblFosInfoUsuario');
 
         if (!previewContainer || !modalFOS) {
-            alert("❌ Vorschau-Container nicht im HTML gefunden.");
+            alert("❌ Vorschau-Container oder Modal nicht im HTML gefunden.");
             return;
         }
 
@@ -159,6 +152,6 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
 
     } catch (err) {
         console.error("Fehler bei print_fos:", err);
-        alert("❌ Fehler: " + err.message);
+        alert("❌ Fehler bei print_fos: " + err.message);
     }
 }
