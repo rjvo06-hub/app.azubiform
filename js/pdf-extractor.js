@@ -4,6 +4,9 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
     let coordenadasMapeadas = {
         nombre: null,
+        klasse: null,
+        ausbildung: null,
+        semana_numero: null,
         semana_inicio: null,
         semana_fin: null,
         ano: null,
@@ -19,24 +22,27 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     let escalaGlobal = 1.5;
     let pasoActual = 1;
 
-    // Instrucciones guiadas basadas estrictamente en los textos reales (letras negras) del formato
+    // Pasos amplificados para cubrir absolutamente todos los datos impresos en el PDF
     const pasosConfig = [
-        { id: 1, campo: 'nombre', titulo: 'Klicke auf das Feld neben/unter: "Schüler/in / Schüler"' },
-        { id: 2, campo: 'semana_inicio', titulo: 'Klicke auf das Startfeld bei: "Wochenbericht Nr. ... vom"' },
-        { id: 3, campo: 'semana_fin', titulo: 'Klicke auf das Endfeld (bis Datum) der Woche' },
-        { id: 4, campo: 'ano', titulo: 'Klicke auf das Feld für die Jahreszahl / Jahr' },
-        { id: 5, campo: 'lunes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Montag" (Rest berechnet sich automatisch)' },
-        { id: 6, campo: 'martes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Dienstag"' },
-        { id: 7, campo: 'miércoles_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Mittwoch"' },
-        { id: 8, campo: 'jueves_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Donnerstag"' },
-        { id: 9, campo: 'viernes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Freitag"' },
-        { id: 10, campo: 'listo', titulo: '🎉 Alle Punkte erfolgreich erfasst! Du kannst die Vorlage jetzt speichern.' }
+        { id: 1, campo: 'nombre', titulo: 'Klicke auf das Feld neben: "Schüler/in / Schüler"' },
+        { id: 2, campo: 'klasse', titulo: 'Klicke auf das Feld neben: "Klasse"' },
+        { id: 3, campo: 'ausbildung', titulo: 'Klicke auf das Feld neben: "Ausbildungsrichtung / Beruf"' },
+        { id: 4, campo: 'semana_numero', titulo: 'Klicke auf das Feld neben: "Wochenbericht Nr."' },
+        { id: 5, campo: 'semana_inicio', titulo: 'Klicke auf das Datumsfeld nach: "... vom" (Startdatum)' },
+        { id: 6, campo: 'semana_fin', titulo: 'Klicke auf das Enddatum-Feld (bis)' },
+        { id: 7, campo: 'ano', titulo: 'Klicke auf das Feld für das Jahr' },
+        { id: 8, campo: 'lunes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Montag" (Wochen-Aktivitäten)' },
+        { id: 9, campo: 'martes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Dienstag"' },
+        { id: 10, campo: 'miércoles_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Mittwoch"' },
+        { id: 11, campo: 'jueves_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Donnerstag"' },
+        { id: 12, campo: 'viernes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Freitag"' },
+        { id: 13, campo: 'listo', titulo: '🎉 Alle Felder erfolgreich erfasst! Du kannst die Vorlage speichern.' }
     ];
 
     contenedor.innerHTML = `
         <div class="space-y-4">
             <div class="flex border-b border-gray-200">
-                <button type="button" class="pb-2 px-4 text-xs font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none">🪄 Interaktiver Vorlagen-Assistent</button>
+                <button type="button" class="pb-2 px-4 text-xs font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none">🪄 Vollständiger Vorlagen-Assistent</button>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -68,7 +74,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             <div class="w-full max-w-7xl bg-white rounded-2xl shadow-2xl relative flex flex-col h-[95vh]">
                 <div class="p-4 bg-gray-900 text-white rounded-t-2xl flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
                     <div>
-                        <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wide block">Schritt <span id="lblPasoNum">1</span> von 9</span>
+                        <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wide block">Schritt <span id="lblPasoNum">1</span> von 12</span>
                         <h4 id="lblInstruccionPaso" class="text-xs sm:text-sm font-bold text-white">Klicke auf das Feld</h4>
                     </div>
                     <div class="flex items-center space-x-2">
@@ -163,14 +169,14 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             lblPasoNum.textContent = pasoActual;
             lblInstruccionPaso.textContent = pasoObj.titulo;
         }
-        if (pasoActual > 9) {
-            lblInstruccionPaso.textContent = "🎉 Alle Punkte erfasst! Du kannst die Vorlage speichern.";
+        if (pasoActual > 12) {
+            lblInstruccionPaso.textContent = "🎉 Alle Felder erfolgreich erfasst! Du kannst die Vorlage speichern.";
             btnGuardar.classList.remove('hidden');
         }
     }
 
     canvas.addEventListener('click', (e) => {
-        if (pasoActual > 9) return;
+        if (pasoActual > 12) return;
 
         const rect = canvas.getBoundingClientRect();
         const xClickPx = e.clientX - rect.left;
@@ -186,6 +192,12 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
         if (campo === 'nombre') {
             coordenadasMapeadas.nombre = { x: xReal, y: yReal };
+        } else if (campo === 'klasse') {
+            coordenadasMapeadas.klasse = { x: xReal, y: yReal };
+        } else if (campo === 'ausbildung') {
+            coordenadasMapeadas.ausbildung = { x: xReal, y: yReal };
+        } else if (campo === 'semana_numero') {
+            coordenadasMapeadas.semana_numero = { x: xReal, y: yReal };
         } else if (campo === 'semana_inicio') {
             coordenadasMapeadas.semana_inicio = { x: xReal, y: yReal };
         } else if (campo === 'semana_fin') {
@@ -215,9 +227,12 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         const todosPuntos = [];
 
         if (coordenadasMapeadas.nombre) todosPuntos.push({ label: 'Name', ...coordenadasMapeadas.nombre });
-        if (coordenadasMapeadas.semana_inicio) todosPuntos.push({ label: 'Inicio', ...coordenadasMapeadas.semana_inicio });
-        if (coordenadasMapeadas.semana_fin) todosPuntos.push({ label: 'Fin', ...coordenadasMapeadas.semana_fin });
-        if (coordenadasMapeadas.ano) todosPuntos.push({ label: 'Año', ...coordenadasMapeadas.ano });
+        if (coordenadasMapeadas.klasse) todosPuntos.push({ label: 'Klasse', ...coordenadasMapeadas.klasse });
+        if (coordenadasMapeadas.ausbildung) todosPuntos.push({ label: 'Ausb.', ...coordenadasMapeadas.ausbildung });
+        if (coordenadasMapeadas.semana_numero) todosPuntos.push({ label: 'Nr.', ...coordenadasMapeadas.semana_numero });
+        if (coordenadasMapeadas.semana_inicio) todosPuntos.push({ label: 'Von', ...coordenadasMapeadas.semana_inicio });
+        if (coordenadasMapeadas.semana_fin) todosPuntos.push({ label: 'Bis', ...coordenadasMapeadas.semana_fin });
+        if (coordenadasMapeadas.ano) todosPuntos.push({ label: 'Jahr', ...coordenadasMapeadas.ano });
 
         ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'].forEach(dia => {
             coordenadasMapeadas[dia].forEach((pt, idx) => {
@@ -237,7 +252,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
     btnReiniciar.addEventListener('click', () => {
         pasoActual = 1;
-        coordenadasMapeadas = { nombre: null, semana_inicio: null, semana_fin: null, ano: null, lunes: [], martes: [], miércoles: [], jueves: [], viernes: [] };
+        coordenadasMapeadas = { nombre: null, klasse: null, ausbildung: null, semana_numero: null, semana_inicio: null, semana_fin: null, ano: null, lunes: [], martes: [], miércoles: [], jueves: [], viernes: [] };
         actualizarInstruccionUI();
         dibujarPinesVisuales();
     });
