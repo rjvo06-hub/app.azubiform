@@ -137,11 +137,17 @@
             <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
         </div>
 
-        <div class="text-center mt-4 px-4">
+        <div class="text-center mt-4 px-4 space-y-3">
             <p class="text-xs text-gray-500">
                 Hast du Fragen oder benötigst du weitere Informationen? Sende uns eine E-Mail an 
                 <a href="mailto:info@azubiform.de" class="text-indigo-600 font-semibold hover:underline">info@azubiform.de</a>.
             </p>
+            <!-- BOTÓN AÑADIDO PARA ABRIR ADMIN-PDF -->
+            <div>
+                <a href="./admin-pdf.html" target="_blank" class="inline-block bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow transition">
+                    📐 PDF Analyzer & Coordenadas öffnen (admin-pdf.html)
+                </a>
+            </div>
         </div>
     </div>
 
@@ -299,199 +305,4 @@
                 </div>
             </div>
             <div class="flex justify-between items-center mb-4 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100">
-                <button id="btnAnteriorConsulta" class="bg-white text-indigo-600 font-semibold px-2.5 py-1 rounded-md border border-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs">← Zurück</button>
-                <span id="lblRangoPeriodoConsulta" class="text-xs font-bold text-indigo-900 text-center">Zeitraum wird geladen...</span>
-                <button id="btnSiguienteConsulta" class="bg-white text-indigo-600 font-semibold px-2.5 py-1 rounded-md border border-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs">Weiter →</button>
-            </div>
-            <div id="contenedorResultadosConsulta" class="space-y-3 flex-1 overflow-y-auto pr-1">
-                <p class="text-xs text-gray-400 text-center py-8">Wähle einen Benutzer aus, um dessen Einträge anzuzeigen.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ -->
-    <script>
-        const micIconSVG = `
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
-        `;
-
-        const stopIconSVG = `
-            <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>
-        `;
-
-        function toggleSpeechRecognition(inputId, btnId) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert("Dein Browser unterstützt keine Spracherkennung.");
-                return;
-            }
-
-            const input = document.getElementById(inputId);
-            const btn = document.getElementById(btnId);
-            const svgIcon = document.getElementById('icon-' + btnId);
-
-            if (window.currentRecognition && window.currentActiveInput === inputId) {
-                window.currentRecognition.stop();
-                window.currentRecognition = null;
-                resetBtnRec(btn, svgIcon);
-                return;
-            }
-
-            if (window.currentRecognition) {
-                window.currentRecognition.stop();
-            }
-
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'de-DE';
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 1;
-
-            window.currentRecognition = recognition;
-            window.currentActiveInput = inputId;
-
-            let textoBase = input.value;
-            if (textoBase.length > 0 && !textoBase.endsWith(' ')) {
-                textoBase += ' ';
-            }
-
-            btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
-            btn.classList.add('text-red-600', 'animate-pulse');
-            svgIcon.innerHTML = stopIconSVG;
-
-            recognition.onresult = function(event) {
-                let textoIntermedio = '';
-                let textoFinal = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        textoFinal += event.results[i][0].transcript;
-                    } else {
-                        textoIntermedio += event.results[i][0].transcript;
-                    }
-                }
-
-                if (textoFinal) {
-                    textoBase += textoFinal + ' ';
-                }
-
-                input.value = textoBase + textoIntermedio;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-            };
-
-            recognition.onerror = function(event) {
-                console.error("Speech recognition error:", event.error);
-                if (event.error === 'not-allowed') {
-                    alert("Zugriff auf das Mikrofon verweigert. Bitte erlaube den Mikrofonzugriff in deinem Browser.");
-                }
-                resetBtnRec(btn, svgIcon);
-            };
-
-            recognition.onend = function() {
-                resetBtnRec(btn, svgIcon);
-                window.currentRecognition = null;
-                window.currentActiveInput = null;
-            };
-
-            try {
-                recognition.start();
-            } catch (e) {
-                console.error("Could not start recognition:", e);
-                resetBtnRec(btn, svgIcon);
-            }
-        }
-
-        function resetBtnRec(btn, svgIcon) {
-            btn.classList.remove('text-red-600', 'animate-pulse');
-            btn.classList.add('text-gray-400');
-            svgIcon.innerHTML = micIconSVG;
-
-            if(btn.id.includes('Pasada')) {
-                btn.classList.add('hover:text-amber-600');
-            } else {
-                btn.classList.add('hover:text-indigo-600');
-            }
-        }
-
-        document.addEventListener("visibilitychange", function() {
-            if (!document.hidden && window.currentRecognition) {
-                try {
-                    window.currentRecognition.stop();
-                } catch (e) {}
-                window.currentRecognition = null;
-                window.currentActiveInput = null;
-                
-                const btn1 = document.getElementById('btnVozActividad');
-                const svg1 = document.getElementById('icon-btnVozActividad');
-                if (btn1 && svg1) resetBtnRec(btn1, svg1);
-
-                const btn2 = document.getElementById('btnVozPasada');
-                const svg2 = document.getElementById('icon-btnVozPasada');
-                if (btn2 && svg2) resetBtnRec(btn2, svg2);
-            }
-        });
-    </script>
-
-    <!-- DIRECTOR DE ORQUESTA -->
-    <script type="module">
-        import { inicializarAuth } from './js/auth.js';
-        import { iniciarAppPrincipal } from './js/app.js';
-        import { inicializarHistorial } from './js/history.js';
-        import { inicializarImpresion } from './js/print.js';
-        import { inicializarGeneradorCodigos } from './js/admin.js';
-
-        function verificarPermisosAdmin() {
-            const acceso = localStorage.getItem('usuario_acceso');
-            const esAdmin = Number(acceso) === 1;
-            if (esAdmin) {
-                document.getElementById('btnMenuImpresion').classList.remove('hidden');
-                document.getElementById('sepMenuImpresion').classList.remove('hidden');
-            } else {
-                document.getElementById('btnMenuImpresion').classList.add('hidden');
-                document.getElementById('sepMenuImpresion').classList.add('hidden');
-            }
-            inicializarGeneradorCodigos(esAdmin);
-        }
-
-        window.cerrarSesion = function() {
-            localStorage.removeItem('usuario_actual');
-            localStorage.removeItem('usuario_ausbildung');
-            localStorage.removeItem('usuario_acceso');
-            
-            document.getElementById('formLogin').reset();
-            document.getElementById('formRegistro').reset();
-            document.getElementById('loginMensaje').classList.add('hidden');
-            document.getElementById('alertaRegistroExitoso').classList.add('hidden');
-
-            document.getElementById('appSection').classList.add('hidden');
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.body.classList.add('justify-center');
-            
-            inicializarAuth((nombre) => {
-                verificarPermisosAdmin();
-                iniciarAppPrincipal(nombre);
-                inicializarHistorial();
-                inicializarImpresion();
-            });
-        };
-
-        const usuarioGuardado = localStorage.getItem('usuario_actual');
-        
-        if (usuarioGuardado) {
-            verificarPermisosAdmin();
-            iniciarAppPrincipal(usuarioGuardado);
-            inicializarHistorial();
-            inicializarImpresion();
-        } else {
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.body.classList.remove('justify-center');
-            inicializarAuth((nombre) => {
-                verificarPermisosAdmin();
-                iniciarAppPrincipal(nombre);
-                inicializarHistorial();
-                inicializarImpresion();
-            });
-        }
-    </script>
-</body>
-</html>
+                <button id="btnAnteriorConsulta" class="bg-white text-indigo-600 font-
