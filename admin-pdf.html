@@ -3,120 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azubiform - PDF Template Analyzer (Admin)</title>
+    <title>Azubiform.de</title>
     
-    <!-- Tailwind CSS -->
+    <!-- 📱 Configuración para dispositivos móviles y PWA -->
+    <meta name="apple-mobile-web-app-title" content="Azubiform">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- 🖼 Iconos -->
+    <link rel="apple-touch-icon" href="./icon_azubiform.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon_azubiform.png">
+    <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- PDF.js para renderizar e inspeccionar PDFs estáticos -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    </script>
-</head>
-<body class="bg-gray-100 min-h-screen p-6 flex flex-col items-center">
-
-    <div class="w-full max-w-4xl bg-white rounded-xl shadow-xl overflow-hidden mb-6">
-        <div class="bg-gray-900 text-white p-4 flex justify-between items-center">
-            <div>
-                <h1 class="font-bold text-base">PDF Template Analyzer & Coordenadas</h1>
-                <p class="text-xs text-gray-400">Exklusives Admin-Tool zum Auslesen von X- und Y-Positionen statischer PDFs</p>
-            </div>
-            <a href="./index.html" class="bg-gray-800 hover:bg-gray-700 text-xs px-3 py-1.5 rounded transition font-medium">← Zurück zur App</a>
-        </div>
-
-        <div class="p-6 space-y-4">
-            <!-- Selector de archivo -->
-            <div class="bg-amber-50 border border-amber-200 p-4 rounded-lg">
-                <label class="block text-xs font-bold text-amber-800 uppercase mb-2">1. Statisches Schul-PDF hochladen (z.B. FOS Vorlage)</label>
-                <input type="file" id="inputPdfAdminFile" accept="application/pdf" class="text-xs border border-amber-300 p-2 rounded w-full bg-white">
-            </div>
-
-            <!-- Panel de resultados de coordenadas -->
-            <div class="bg-gray-900 text-emerald-400 p-3 rounded-lg font-mono text-xs flex justify-between items-center">
-                <span id="coordOutput">Status: Bitte lade ein PDF hoch und klicke auf das Dokument...</span>
-                <button onclick="copiarCoordenadas()" id="btnCopiar" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded text-[10px] hidden">Koordinaten kopieren</button>
-            </div>
-
-            <!-- Visor interactivo del PDF -->
-            <div class="relative border border-gray-300 rounded-lg overflow-auto max-h-[600px] flex justify-center bg-gray-200">
-                <canvas id="pdfCanvasAdmin" class="shadow-lg cursor-crosshair"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Script de control y seguridad -->
-    <script type="module">
-        // 1. Verificación de seguridad estricta para Admin
-        const acceso = localStorage.getItem('usuario_acceso');
-        if (Number(acceso) !== 1) {
-            alert("Zugriff verwehrt. Nur für Administratoren.");
-            window.location.href = './index.html';
+    <style>
+        button, input, select {
+            -webkit-tap-highlight-color: transparent;
         }
 
-        const inputFile = document.getElementById('inputPdfAdminFile');
-        const canvas = document.getElementById('pdfCanvasAdmin');
-        const outputDiv = document.getElementById('coordOutput');
-        const btnCopiar = document.getElementById('btnCopiar');
-        const ctx = canvas.getContext('2d');
+        @media print {
+            body * { visibility: hidden; }
+            #modalImpresionAusbildung, #modalImpresionAusbildung * { visibility: visible; }
+            #modalImpresionAusbildung {
+                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white !important;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
 
-        let ultimaX = 0;
-        let ultimaY = 0;
+        .page-print {
+            position: relative; width: 210mm; height: 297mm; margin: 0 auto; background-color: #ffffff; box-sizing: border-box; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
+        }
 
-        inputFile.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        #pr_nombre { position: absolute; left: 130mm; top: -0.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
+        #pr_semana_inicio { position: absolute; left: 120mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
+        #pr_semana_fin { position: absolute; left: 140mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
+        #pr_ano_fin { position: absolute; left: 159.5mm; top: 7.5mm; width: 4mm; height: 5mm; line-height: 5mm; white-space: nowrap; text-align: center; }
 
-            outputDiv.textContent = "Lade und rendere PDF...";
-            const fileReader = new FileReader();
+        .linea-impresion {
+            position: absolute; left: 30mm; width: 160mm; height: 5.5mm; line-height: 5.5mm; white-space: nowrap; overflow: hidden; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
+        }
 
-            fileReader.onload = async function() {
-                try {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    const page = await pdf.getPage(1); // Analizamos la primera página
-
-                    const scale = 1.5; // Escala de nitidez
-                    const viewport = page.getViewport({ scale: scale });
-
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-
-                    await page.render({
-                        canvasContext: ctx,
-                        viewport: viewport
-                    }).promise;
-
-                    outputDiv.textContent = "PDF erfolgreich geladen! Klicke auf eine Position im Dokument, um X und Y zu erhalten.";
-                } catch (err) {
-                    console.error(err);
-                    outputDiv.textContent = "Fehler beim Verarbeiten der PDF-Datei.";
-                }
-            };
-            fileReader.readAsArrayBuffer(file);
-        });
-
-        // Capturar clics para calcular las coordenadas exactas
-        canvas.addEventListener('click', (event) => {
-            const rect = canvas.getBoundingClientRect();
-            const scale = 1.5;
-            
-            const x = (event.clientX - rect.left) / scale;
-            // Invertimos el eje Y para que coincida con el estándar de coordenadas de impresión (origen abajo)
-            const y = (canvas.height - (event.clientY - rect.top)) / scale;
-
-            ultimaX = x.toFixed(2);
-            ultimaY = y.toFixed(2);
-
-            outputDiv.innerHTML = `Geklickt -> X: <span class="text-white font-bold">${ultimaX}</span> | Y: <span class="text-white font-bold">${ultimaY}</span>`;
-            btnCopiar.classList.remove('hidden');
-        });
-
-        window.copiarCoordenadas = function() {
-            const texto = `{ x: ${ultimaX}, y: ${ultimaY} }`;
-            navigator.clipboard.writeText(texto);
-            alert("Koordinaten kopiert: " + texto);
-        };
-    </script>
-</body>
-</html>
+        #pr_m1 { top: 32.5mm; } #pr_m2 { top: 38.0mm; } #pr_m3 { top: 43.5mm; } #pr_m4 { top: 49.0mm; } #pr_m5 { top: 54.5mm; } #pr_m6 { top: 60.0mm; }
+        #pr_di1 { top: 67.5mm; } #pr_di2 { top: 73.0mm; } #pr_di3 { top: 78.5mm; } #pr_di4 { top: 84.0mm; } #pr_di5 { top: 89.5mm; } #pr_di6 { top: 95
