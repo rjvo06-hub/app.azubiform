@@ -6,58 +6,142 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
 
     contenedor.innerHTML = `
         <div class="space-y-4">
-            <div class="flex border-b border-gray-200">
-                <button type="button" class="pb-2 px-4 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none">🤖 Interaktiver PDF-Editor & Drag-and-Drop</button>
+            <div class="flex border-b border-gray-200 space-x-4">
+                <button type="button" id="tabEditor" onclick="cambiarTabPdf('editor')" class="pb-2 px-4 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none">🤖 Editor & Drag-and-Drop</button>
+                <button type="button" id="tabConsulta" onclick="cambiarTabPdf('consulta')" class="pb-2 px-4 text-xs font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none">🔍 Gespeicherte Vorlagen abfragen</button>
             </div>
 
-            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
-                <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Visuelles Feld-Mapping mit Seitenleiste & Auto-Ausrichtung</h3>
-                <p class="text-xs text-indigo-800">Alle Felder sind rechts aufgelistet. Ziehe sie auf das PDF. Aktivität und Stunden für jeden Tag rasten automatisch auf dieselbe horizontale Höhe ein!</p>
-            </div>
+            <!-- SECCIÓN 1: EDITOR -->
+            <div id="seccionEditor" class="space-y-4">
+                <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
+                    <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Präzises Feld-Mapping (Drag & Drop oder manuelle Feinabstimmung)</h3>
+                    <p class="text-xs text-indigo-800">Ziehe die Felder auf dem PDF oder passe die exakten X/Y-Werte in der rechten Seitenleiste an.</p>
+                </div>
 
-            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">1. Name der Schule (school_name)</label>
-                    <input type="text" id="inputSchoolName" value="Berufliche Oberschule Holzkirchen" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">1. Name der Schule (school_name)</label>
+                        <input type="text" id="inputSchoolName" value="Berufliche Oberschule Holzkirchen" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">2. Eindeutiger Bezeichner (file_identifier)</label>
+                        <input type="text" id="inputFileIdentifier" value="holzkirchen_admin" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">3. Leere PDF-Vorlage hochladen (admin.pdf)</label>
+                        <input type="file" id="inputArchivoAuto" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">2. Eindeutiger Bezeichner (file_identifier)</label>
-                    <input type="text" id="inputFileIdentifier" value="holzkirchen_admin" class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">3. Leere PDF-Vorlage hochladen (admin.pdf)</label>
-                    <input type="file" id="inputArchivoAuto" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-                </div>
-            </div>
 
-            <div id="resultadoAnalisisAuto" class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
-                <div class="flex items-center space-x-2 text-emerald-600 font-bold">
-                    <span>✅</span> <span id="lblEstadoEscaneo">PDF analysiert! Platziere alle Felder im Dokument:</span>
-                </div>
-                
-                <div class="flex flex-col lg:flex-row gap-4">
-                    <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-100 p-2 flex justify-center items-start flex-1 max-h-[600px]">
-                        <div id="canvasWrapperPreview" class="relative inline-block shadow-md bg-white select-none">
-                            <canvas id="pdfPreviewCanvas" class="block"></canvas>
-                            <div id="pdfPreviewOverlay" class="absolute inset-0"></div>
+                <div id="resultadoAnalisisAuto" class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
+                    <div class="flex items-center space-x-2 text-emerald-600 font-bold">
+                        <span>✅</span> <span id="lblEstadoEscaneo">PDF analysiert! Passe die Positionen per Drag & Drop oder manuell an:</span>
+                    </div>
+                    
+                    <div class="flex flex-col lg:flex-row gap-4">
+                        <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-100 p-2 flex justify-center items-start flex-1 max-h-[600px]">
+                            <div id="canvasWrapperPreview" class="relative inline-block shadow-md bg-white select-none">
+                                <canvas id="pdfPreviewCanvas" class="block"></canvas>
+                                <div id="pdfPreviewOverlay" class="absolute inset-0"></div>
+                            </div>
+                        </div>
+
+                        <!-- PANEL LATERAL CON CONTROLES MANUALES -->
+                        <div class="w-full lg:w-80 bg-gray-50 border border-gray-200 p-3 rounded-lg flex flex-col max-h-[600px] overflow-y-auto">
+                            <h4 class="font-bold text-gray-700 uppercase text-[11px] mb-2 border-b pb-1">Felder & Manuelle Feineinstellung</h4>
+                            <div id="panelElementosLista" class="space-y-2 flex-1"></div>
                         </div>
                     </div>
 
-                    <div class="w-full lg:w-72 bg-gray-50 border border-gray-200 p-3 rounded-lg flex flex-col max-h-[600px] overflow-y-auto">
-                        <h4 class="font-bold text-gray-700 uppercase text-[11px] mb-2 border-b pb-1">Verfügbare Felder</h4>
-                        <div id="panelElementosLista" class="space-y-1.5 flex-1"></div>
+                    <div class="flex justify-between items-center pt-2 border-t">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold">Aktualisierter JSON-Code (live):</span>
+                    </div>
+                    <div id="logCoordenadasDetectadas" class="bg-gray-50 p-3 rounded-lg font-mono text-[10px] text-gray-600 max-h-32 overflow-y-auto border border-gray-200"></div>
+                    
+                    <button type="button" id="btnGuardarAutoSupabase" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow transition">💾 In "school_templates" speichern</button>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: CONSULTA -->
+            <div id="seccionConsulta" class="space-y-4 hidden">
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold text-gray-800 uppercase">In Supabase gespeicherte Vorlagen</h3>
+                        <button type="button" id="btnRecargarPlantillas" class="bg-indigo-50 text-indigo-600 font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">🔄 Liste aktualisieren</button>
+                    </div>
+                    <div id="listaPlantillasGuardadas" class="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                        <p class="text-xs text-gray-400 text-center py-8">Lade gespeicherte Vorlagen...</p>
                     </div>
                 </div>
-
-                <div class="flex justify-between items-center pt-2 border-t">
-                    <span class="text-[10px] text-gray-500 uppercase font-bold">Aktualisierter JSON-Code (live):</span>
-                </div>
-                <div id="logCoordenadasDetectadas" class="bg-gray-50 p-3 rounded-lg font-mono text-[10px] text-gray-600 max-h-32 overflow-y-auto border border-gray-200"></div>
-                
-                <button type="button" id="btnGuardarAutoSupabase" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow transition">💾 In "school_templates" speichern</button>
             </div>
         </div>
     `;
+
+    window.cambiarTabPdf = function(tab) {
+        const secEditor = contenedor.querySelector('#seccionEditor');
+        const secConsulta = contenedor.querySelector('#seccionConsulta');
+        const btnEditor = contenedor.querySelector('#tabEditor');
+        const btnConsulta = contenedor.querySelector('#tabConsulta');
+
+        if (tab === 'editor') {
+            secEditor.classList.remove('hidden');
+            secConsulta.classList.add('hidden');
+            btnEditor.className = "pb-2 px-4 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none";
+            btnConsulta.className = "pb-2 px-4 text-xs font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none";
+        } else {
+            secEditor.classList.add('hidden');
+            secConsulta.classList.remove('hidden');
+            btnConsulta.className = "pb-2 px-4 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none";
+            btnEditor.className = "pb-2 px-4 text-xs font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none";
+            cargarPlantillasGuardadas();
+        }
+    };
+
+    async function cargarPlantillasGuardadas() {
+        const listaDiv = contenedor.querySelector('#listaPlantillasGuardadas');
+        listaDiv.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Wird geladen...</p>`;
+
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) throw new Error("Fehler beim Laden der Vorlagen.");
+            const plantillas = await response.json();
+
+            if (!plantillas || plantillas.length === 0) {
+                listaDiv.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Keine gespeicherten Vorlagen gefunden.</p>`;
+                return;
+            }
+
+            let html = '';
+            plantillas.forEach((tpl) => {
+                html += `
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-gray-800 text-xs">${tpl.school_name || 'Unbekannte Schule'}</span>
+                                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded ml-2">${tpl.file_identifier || 'N/A'}</span>
+                            </div>
+                            <span class="text-[10px] text-gray-500">Datei: ${tpl.pdf_filename || 'admin.pdf'}</span>
+                        </div>
+                        <details class="text-[10px] bg-white p-2 rounded border border-gray-200">
+                            <summary class="font-semibold text-indigo-600 cursor-pointer">Koordinaten-JSON anzeigen</summary>
+                            <pre class="mt-2 font-mono text-gray-600 overflow-x-auto max-h-32">${JSON.stringify(tpl.coordinates_json, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            });
+
+            listaDiv.innerHTML = html;
+        } catch (err) {
+            console.error("Fehler beim Abfragen:", err);
+            listaDiv.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Fehler beim Laden der Daten.</p>`;
+        }
+    }
+
+    contenedor.querySelector('#btnRecargarPlantillas').addEventListener('click', cargarPlantillasGuardadas);
 
     const inputArchivo = contenedor.querySelector('#inputArchivoAuto');
     const divResultado = contenedor.querySelector('#resultadoAnalisisAuto');
@@ -162,6 +246,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             const c = coordenadasDetectadas[key];
             if (!c) return;
 
+            // 1. Caja visual en el PDF
             const div = document.createElement('div');
             div.className = "absolute cursor-move bg-amber-100/90 border border-amber-400 text-black font-sans text-[10px] font-medium px-1.5 py-0.5 rounded shadow-sm select-none flex items-center";
             div.style.zIndex = "10";
@@ -173,11 +258,45 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             div.style.top = `${top}px`;
             div.textContent = `${key}: ${textosEjemplo[key] || 'Text'}`;
 
+            // 2. Tarjeta en la barra lateral con inputs numéricos de ajuste manual
             const card = document.createElement('div');
-            card.className = "bg-white p-1.5 rounded border border-gray-200 text-[10px] font-medium text-gray-700 flex justify-between items-center shadow-xs";
-            card.innerHTML = `<span><strong>${key}</strong></span> <span class="text-indigo-600 text-[9px]">Aktiv</span>`;
+            card.className = "bg-white p-2 rounded border border-gray-200 text-[10px] space-y-1 shadow-xs";
+            card.innerHTML = `
+                <div class="font-bold text-gray-800 uppercase">${key}</div>
+                <div class="flex gap-1 items-center">
+                    <span>X:</span>
+                    <input type="number" data-coord-key="${key}" data-coord-type="x" value="${Math.round(c.x1)}" class="w-16 px-1 py-0.5 border rounded text-[10px] text-center">
+                    <span>Y:</span>
+                    <input type="number" data-coord-key="${key}" data-coord-type="y" value="${Math.round(c.y1)}" class="w-16 px-1 py-0.5 border rounded text-[10px] text-center">
+                </div>
+            `;
             panelLista.appendChild(card);
 
+            // Escuchar cambios manuales en los inputs numéricos
+            card.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    const type = e.target.getAttribute('data-coord-type');
+                    
+                    if (type === 'x') {
+                        coords[key].x1 = val;
+                        coords[key].x2 = val + 120;
+                    } else {
+                        coords[key].y1 = val;
+                        coords[key].y2 = val + 15;
+                    }
+
+                    // Actualizar posición de la caja en el canvas
+                    let newLeft = coords[key].x1 * scaleFactor;
+                    let newTop = (842 - coords[key].y2) * scaleFactor;
+                    div.style.left = `${newLeft}px`;
+                    div.style.top = `${newTop}px`;
+
+                    logCoordenadas.textContent = JSON.stringify(coords, null, 2);
+                });
+            });
+
+            // Lógica de arrastrar con el ratón
             let isDragging = false;
             let startX, startY;
 
@@ -206,6 +325,13 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 coords[key].y2 = realY2;
                 coords[key].y1 = realY2 - 15;
 
+                // Actualizar los inputs numéricos en el panel lateral en tiempo real
+                const inputX = card.querySelector(`[data-coord-type="x"]`);
+                const inputY = card.querySelector(`[data-coord-type="y"]`);
+                if (inputX) inputX.value = Math.round(realX1);
+                if (inputY) inputY.value = Math.round(coords[key].y1);
+
+                // Auto-alineación horizontal de los días y horas
                 const paresDias = [
                     ['lunes_texto', 'lunes_horas'],
                     ['martes_texto', 'martes_horas'],
@@ -275,7 +401,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
                 throw new Error(errData.message || 'Fehler beim Speichern');
             }
 
-            alert("✅ Vorlage und Positionen erfolgreich in Supabase gespeichert!");
+            alert("✅ Vorlage und angepasste Positionen erfolgreich gespeichert!");
         } catch (err) {
             console.error("Fehler beim Speichern in school_templates:", err);
             alert("❌ Fehler: " + err.message);
