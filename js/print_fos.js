@@ -58,7 +58,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             return;
         }
 
-        // 2. Calcular fin de semana
+        // 2. Calcular fin de semana (Domingo)
         let dLunes = new Date(fechaInicioSemana);
         let dDomingo = new Date(dLunes);
         dDomingo.setDate(dDomingo.getDate() + 6);
@@ -134,7 +134,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         
         const canvas = document.getElementById('pdfCanvasFOS');
         const context = canvas.getContext('2d');
-        const viewport = page.getViewport({ scale: 1.5 }); // Escala base para alta resolución
+        const viewport = page.getViewport({ scale: 1.5 });
 
         canvas.height = viewport.height;
         canvas.width = viewport.width;
@@ -144,14 +144,9 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             viewport: viewport
         }).promise;
 
-        // 6. Superponer textos usando ESTRICTAMENTE las coordenadas guardadas en Supabase
         const overlay = document.getElementById('overlayCamposFOS');
-        
-        // Relación de escala entre las coordenadas del PDF original (puntos) y el tamaño renderizado del canvas
-        const scaleX = canvas.clientWidth / viewport.width;
-        const scaleY = canvas.clientHeight / viewport.height;
 
-        // Estampar el nombre si la coordenada existe en coordinates_json
+        // 6. Estampar el nombre del usuario
         if (coordenadas.nombre) {
             const divNombre = document.createElement('div');
             divNombre.className = "absolute text-black font-sans text-xs font-semibold whitespace-nowrap";
@@ -161,39 +156,53 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             overlay.appendChild(divNombre);
         }
 
-        // Estampar las actividades iterando sobre las claves guardadas en coordinates_json
-        actividades.forEach((act, index) => {
-            // Buscamos si la clave de la línea existe en las coordenadas de la plantilla (ej: m1, m2, actividad_1, etc.)
-            const possibleKeys = [`m${index + 1}`, `actividad_${index + 1}`, `linea_${index + 1}`];
-            let coord = null;
-
-            for (const key of possibleKeys) {
-                if (coordenadas[key]) {
-                    coord = coordenadas[key];
-                    break;
-                }
+        // 7. Distribuir las actividades por día de la semana basándonos en las coordenadas mapeadas
+        // Agrupamos las actividades por fecha (YYYY-MM-DD)
+        const actividadesPorDia = {};
+        actividades.forEach(act => {
+            const fechaKey = act.fecha; // Ej: '2026-09-28'
+            if (!actividadesPorDia[fechaKey]) {
+                actividadesPorDia[fechaKey] = [];
             }
-
-            // Si no encuentra una clave específica, toma la genérica de actividad si existe
-            if (!coord && coordenadas.actividad) {
-                coord = coordenadas.actividad;
-            }
-
-            const divAct = document.createElement('div');
-            divAct.className = "absolute text-black font-sans text-xs whitespace-nowrap overflow-hidden";
-            
-            if (coord) {
-                divAct.style.left = `${coord.x1}px`;
-                divAct.style.top = `${coord.y1 + (index * 18)}px`; // Desplazamiento vertical por línea si agrupa varias
-            } else {
-                // Posición predeterminada de seguridad solo si la plantilla no tiene mapeada esta línea específica
-                divAct.style.left = `120px`;
-                divAct.style.top = `${200 + (index * 22)}px`;
-            }
-            
-            divAct.textContent = act.nombre_actividad || '';
-            overlay.appendChild(divAct);
+            actividadesPorDia[fechaKey].push(act);
         });
+
+        // Recorremos los días de la semana (Lunes a Viernes) a partir del lunes de la semana actual
+        for (let i = 0; i < 5; i++) {
+            let dDia = new Date(dLunes);
+            dDia.setDate(dDia.getDate() + i);
+            const fechaStr = dDia.toISOString().split('T')[0];
+            
+            const actsDelDia = actividadesPorDia[fechaStr] || [];
+            
+            // Determinamos la coordenada base para este día (ej: m1..m6 para lunes, di1..di6 para martes, etc.)
+            // O usamos las claves estándar almacenadas en la base de datos
+            const prefijoDia = ['m', 'di', 'mi', 'do', 'fr'][i]; // m = Montag, di = Dienstag, etc.
+
+            actsDelDia.forEach((act, lineIndex) => {
+                const coordKey = `${prefijoDia}${lineIndex + 1}`; // Ej: m1, m2, di1...
+                let coord = coordenadas[coordKey] || null;
+
+                // Si no hay clave específica para esa línea, buscamos una coordenada genérica o calculamos un offset
+                const divAct = document.createElement('div');
+                divAct.className = "absolute text-black font-sans text-xs whitespace-nowrap overflow-hidden";
+
+                if (coord) {
+                    divAct.style.left = `${coord.x1}px`;
+                    divAct.style.top = `${coord.y1}px`;
+                } else if (coordenadas.actividad) {
+                    divAct.style.left = `${coordenadas.actividad.x1}px`;
+                    divAct.style.top = `${coordenadas.actividad.y1 + (i * 80) + (lineIndex * 18)}px`;
+                } else {
+                    // Respaldo visual si no hay mapeo específico
+                    divAct.style.left = `130px`;
+                    divAct.style.top = `${220 + (i * 65) + (lineIndex * 18)}px`;
+                }
+
+                divAct.textContent = act.nombre_actividad || '';
+                overlay.appendChild(divAct);
+            });
+        }
 
     } catch (err) {
         console.error("Fehler bei print_fos:", err);
