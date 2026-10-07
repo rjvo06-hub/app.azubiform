@@ -81,9 +81,12 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                     </div>
                 </div>
 
-                <div class="relative bg-gray-300 flex-1 overflow-auto flex justify-center p-6" id="zonaCanvasPdfModal">
-                    <canvas id="pdfCanvasInspector" class="shadow-2xl bg-white cursor-crosshair m-auto"></canvas>
-                    <div id="capaPines" class="absolute inset-0 pointer-events-none"></div>
+                <!-- CONTENEDOR WRAPPER RELATIVO ESTRICTAMENTE AJUSTADO AL TAMAÑO DEL CANVAS -->
+                <div class="relative bg-gray-300 flex-1 overflow-auto flex p-6" id="zonaCanvasPdfModal">
+                    <div id="wrapperCanvas" class="relative m-auto shadow-2xl bg-white">
+                        <canvas id="pdfCanvasInspector" class="block cursor-crosshair"></canvas>
+                        <div id="capaPines" class="absolute inset-0 pointer-events-none"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -102,6 +105,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     const canvas = contenedor.querySelector('#pdfCanvasInspector');
     const ctx = canvas.getContext('2d');
     const capaPines = contenedor.querySelector('#capaPines');
+    const wrapperCanvas = contenedor.querySelector('#wrapperCanvas');
 
     inputArchivo.addEventListener('change', async (e) => {
         const archivo = e.target.files[0];
@@ -150,6 +154,10 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
+        // Ajustar el contenedor envolvente exactamente al tamaño del canvas escalado
+        wrapperCanvas.style.width = viewport.width + 'px';
+        wrapperCanvas.style.height = viewport.height + 'px';
+
         const renderContext = {
             canvasContext: ctx,
             viewport: viewport
@@ -171,12 +179,11 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         }
     }
 
-    // Corrección exacta de coordenadas relativas al canvas
+    // Coordenadas medido directamente sobre el canvas de forma exacta
     canvas.addEventListener('click', (e) => {
         if (pasoActual > 8) return;
 
         const rect = canvas.getBoundingClientRect();
-        // Coordenadas exactas compensando el zoom y la posición interna del canvas
         const xReal = (e.clientX - rect.left) / escalaGlobal;
         const yReal = (e.clientY - rect.top) / escalaGlobal;
 
@@ -194,10 +201,9 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             const campo = pasoObj.campo;
 
             if (campo === 'lunes') {
-                // Al marcar el lunes, replicamos automáticamente el alto y ancho exactos para toda la semana hacia abajo
                 coordenadasMapeadas.lunes = caja;
                 const altoCaja = y2 - y1;
-                const separacionFila = altoCaja + 4; // Pequeño margen real entre filas de días
+                const separacionFila = altoCaja + 4;
 
                 coordenadasMapeadas.martes = { x1, y1: y1 + separacionFila, x2, y2: y2 + separacionFila };
                 coordenadasMapeadas.miércoles = { x1, y1: y1 + (separacionFila * 2), x2, y2: y2 + (separacionFila * 2) };
@@ -234,25 +240,24 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
         todasCajas.forEach(c => {
             if (!c.x1) return;
             const divCaja = document.createElement('div');
-            divCaja.className = 'absolute border-2 border-indigo-600 bg-indigo-500 bg-opacity-25 flex items-start p-1 cursor-pointer hover:bg-opacity-40 transition shadow-sm';
+            divCaja.className = 'absolute border-2 border-indigo-600 bg-indigo-500 bg-opacity-25 flex items-start p-1 cursor-pointer hover:bg-opacity-40 transition shadow-sm pointer-events-auto';
             divCaja.style.left = (c.x1 * escalaGlobal) + 'px';
             divCaja.style.top = (c.y1 * escalaGlobal) + 'px';
             divCaja.style.width = ((c.x2 - c.x1) * escalaGlobal) + 'px';
             divCaja.style.height = ((c.y2 - c.y1) * escalaGlobal) + 'px';
             divCaja.title = `Klicken zum Korrigieren: ${c.label}`;
 
-            // Opción de corregir un campo individual al hacerle clic encima
             divCaja.addEventListener('click', (ev) => {
                 ev.stopPropagation();
                 if (confirm(`Möchtest du das Feld "${c.label}" neu erfassen?`)) {
                     coordenadasMapeadas[c.key] = null;
-                    if (c.key === ['martes', 'miércoles', 'jueves', 'viernes'].find(d => d === c.key) || c.key === 'lunes') {
+                    if (['lunes', 'martes', 'miércoles', 'jueves', 'viernes'].includes(c.key)) {
                         coordenadasMapeadas.lunes = null;
                         coordenadasMapeadas.martes = null;
                         coordenadasMapeadas.miércoles = null;
                         coordenadasMapeadas.jueves = null;
                         coordenadasMapeadas.viernes = null;
-                        pasoActual = 8; // Regresa al paso de lunes
+                        pasoActual = 8;
                     } else {
                         pasoActual = pasosConfig.findIndex(p => p.campo === c.key) + 1;
                     }
