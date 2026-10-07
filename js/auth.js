@@ -13,17 +13,14 @@ export function inicializarAuth(onLoginExitoso) {
     const contenedorFachrichtung = document.getElementById('contenedorFachrichtung');
     const labelFachrichtung = document.getElementById('labelRegFachrichtung');
 
-    // Evento para el selector principal de tipo (Ausbildung / FOS)
     if (selectTipoPrograma) {
         selectTipoPrograma.addEventListener('change', (e) => {
             const tipoSeleccionado = e.target.value;
             
             if (tipoSeleccionado) {
-                // Mostrar el campo de profesión/rama cuando ya eligió una opción
                 if (contenedorFachrichtung) contenedorFachrichtung.classList.remove('hidden');
                 if (selectAusbildung) selectAusbildung.setAttribute('required', 'required');
 
-                // Cambiar la etiqueta según corresponda
                 if (labelFachrichtung) {
                     if (tipoSeleccionado === 'fos') {
                         labelFachrichtung.textContent = "FOS-Fachrichtung (Fachbereich)";
@@ -34,7 +31,6 @@ export function inicializarAuth(onLoginExitoso) {
 
                 cargarProfesionesPorTipo(tipoSeleccionado);
             } else {
-                // Ocultar si no hay selección válida
                 if (contenedorFachrichtung) contenedorFachrichtung.classList.add('hidden');
                 if (selectAusbildung) selectAusbildung.removeAttribute('required');
             }
@@ -98,7 +94,6 @@ export function inicializarAuth(onLoginExitoso) {
             if (tituloAuth) tituloAuth.textContent = "Neuen Benutzer registrieren";
             if (formRegistro) formRegistro.reset();
             
-            // Ocultar el selector de especialidad al abrir/resetear el registro
             if (contenedorFachrichtung) contenedorFachrichtung.classList.add('hidden');
             if (selectAusbildung) {
                 selectAusbildung.removeAttribute('required');
