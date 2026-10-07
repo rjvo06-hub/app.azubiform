@@ -10,15 +10,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
     document.body.classList.remove('justify-center');
     lblUsuario.textContent = nombreUsuario;
 
-    // Validación y activación del botón Admin PDF para el superusuario
-    const accesoUsuario = localStorage.getItem('usuario_acceso');
-    if (Number(accesoUsuario) === 1 || nombreUsuario === 'rjvo06') {
-        const linkPdf = document.getElementById('linkAdminPdf');
-        const sepPdf = document.getElementById('sepAdminPdf');
-        if (linkPdf) linkPdf.style.display = 'inline';
-        if (sepPdf) sepPdf.style.display = 'inline';
-    }
-
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
     console.log("Ausbildung del usuario actual en localStorage:", ausbildungUsuario);
 
@@ -206,4 +197,123 @@ export function iniciarAppPrincipal(nombreUsuario) {
             data.forEach((item) => {
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-sm';
-                div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><span class="text-[10px] text-gray-400">${item
+                div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><span class="text-[10px] text-gray-400">${item.hora || ''}</span>`;
+                listaActividades.appendChild(div);
+            });
+        } catch (err) { console.error("Error cargando actividades de hoy:", err); }
+    }
+
+    formulario.onsubmit = async (e) => {
+        e.preventDefault();
+        const nombreActividad = inputActividad.value.trim();
+        if (!nombreActividad) return;
+        btnSubmitActividad.disabled = true;
+        btnSubmitActividad.textContent = 'Wird gespeichert...';
+        const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        try {
+            const responseRegistro = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
+                method: 'POST', 
+                headers: headers,
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad, 
+                    fecha: hoyISO, 
+                    hora: horaActual, 
+                    usuario: nombreUsuario,
+                    ausbildung: ausbildungUsuario 
+                })
+            });
+
+            if (!responseRegistro.ok) {
+                const errorText = await responseRegistro.text();
+                throw new Error("Supabase error: " + errorText);
+            }
+            
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad,
+                    ausbildung: ausbildungUsuario 
+                })
+            });
+
+            inputActividad.value = '';
+            contenedorSugerencias.classList.add('hidden');
+
+            btnSubmitActividad.disabled = false;
+            btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
+            mensaje.textContent = '✓ Aktivität hinzugefügt!';
+            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-green-100 text-green-700';
+            mensaje.classList.remove('hidden');
+            inputActividad.focus();
+            setTimeout(() => mensaje.classList.add('hidden'), 2000);
+            cargarActividadesHoy();
+        } catch (err) {
+            alert("⚠️ " + err.message);
+            btnSubmitActividad.disabled = false;
+            btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
+            mensaje.textContent = '❌ Fehler beim Speichern.';
+            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
+            mensaje.classList.remove('hidden');
+        }
+    };
+
+    formPasado.onsubmit = async (e) => {
+        e.preventDefault();
+        const fechaElegida = inputFechaPasada.value;
+        const nombreActividad = inputActividadPasada.value.trim();
+        if (!fechaElegida || !nombreActividad) return;
+        btnSubmitPasado.disabled = true;
+        btnSubmitPasado.textContent = 'Wird gespeichert...';
+
+        try {
+            const responsePasado = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
+                method: 'POST', 
+                headers: headers,
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad, 
+                    fecha: fechaElegida, 
+                    hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+                    usuario: nombreUsuario,
+                    ausbildung: ausbildungUsuario 
+                })
+            });
+
+            if (!responsePasado.ok) {
+                const errorText = await responsePasado.text();
+                throw new Error("Supabase error (pasado): " + errorText);
+            }
+
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad,
+                    ausbildung: ausbildungUsuario 
+                })
+            });
+
+            inputActividadPasada.value = '';
+            sugerenciasPasadas.classList.add('hidden');
+
+            btnSubmitPasado.disabled = false;
+            btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
+            mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
+            mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-green-100 text-green-700';
+            mensajePasado.classList.add('hidden');
+            inputActividadPasada.focus();
+            setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
+            cargarActividadesPasadas(fechaElegida);
+        } catch (err) {
+            alert("⚠ " + err.message);
+            btnSubmitPasado.disabled = false;
+            btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
+            mensajePasado.textContent = '❌ Fehler beim Speichern.';
+            mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-red-100 text-red-700';
+            mensajePasado.classList.remove('hidden');
+        }
+    };
+
+    cargarActividadesHoy();
+}
