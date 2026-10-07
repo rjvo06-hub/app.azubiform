@@ -239,3 +239,31 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
             alert("Bitte fülle den Schulnamen und den Bezeichner aus.");
             return;
         }
+
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
+                method: 'POST',
+                headers: {
+                    ...headers,
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify({
+                    school_name: schoolName,
+                    file_identifier: fileIdentifier,
+                    pdf_filename: nombreArchivoOriginal || 'admin.pdf',
+                    coordinates_json: coordenadasDetectadas
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || 'Fehler beim Speichern');
+            }
+
+            alert("✅ Vorlage und alle Positionen (inkl. Stunden & Summe) erfolgreich gespeichert!");
+        } catch (err) {
+            console.error("Fehler beim Speichern in school_templates:", err);
+            alert("❌ Fehler: " + err.message);
+        }
+    });
+}
