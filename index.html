@@ -157,7 +157,7 @@
                 
                 <!-- 🛠 ENLACE ADMIN PDF (Oculto por defecto, visible solo para acceso === 1) -->
                 <a id="linkAdminPdf" href="./admin-pdf.html" style="display: none;" class="text-amber-600 font-semibold hover:underline">🛠 Admin PDF</a>
-                <span id="sepAdminPdf" class="text-gray-300 hidden">|</span>
+                <span id="sepAdminPdf" style="display: none;" class="text-gray-300">|</span>
 
                 <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
             </div>
@@ -228,20 +228,4 @@
                     <button onclick="cerrarModalImpresionAusbildung()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto p-4 bg-gray-200 flex justify-center">
-                <div class="page-print shadow-2xl bg-white">
-                    <div id="pr_nombre"></div>
-                    <div id="pr_semana_inicio"></div>
-                    <div id="pr_semana_fin"></div>
-                    <div id="pr_ano_fin"></div>
-                    <div id="pr_m1" class="linea-impresion"></div><div id="pr_m2" class="linea-impresion"></div><div id="pr_m3" class="linea-impresion"></div><div id="pr_m4" class="linea-impresion"></div><div id="pr_m5" class="linea-impresion"></div><div id="pr_m6" class="linea-impresion"></div>
-                    <div id="pr_di1" class="linea-impresion"></div><div id="pr_di2" class="linea-impresion"></div><div id="pr_di3" class="linea-impresion"></div><div id="pr_di4" class="linea-impresion"></div><div id="pr_di5" class="linea-impresion"></div><div id="pr_di6" class="linea-impresion"></div>
-                    <div id="pr_mi1" class="linea-impresion"></div><div id="pr_mi2" class="linea-impresion"></div><div id="pr_mi3" class="linea-impresion"></div><div id="pr_mi4" class="linea-impresion"></div><div id="pr_mi5" class="linea-impresion"></div><div id="pr_mi6" class="linea-impresion"></div>
-                    <div id="pr_do1" class="linea-impresion"></div><div id="pr_do2" class="linea-impresion"></div><div id="pr_do3" class="linea-impresion"></div><div id="pr_do4" class="linea-impresion"></div><div id="pr_do5" class="linea-impresion"></div><div id="pr_do6" class="linea-impresion"></div>
-                    <div id="pr_fr1" class="linea-impresion"></div><div id="pr_fr2" class="linea-impresion"></div><div id="pr_fr3" class="linea-impresion"></div><div id="pr_fr4" class="linea-impresion"></div><div id="pr_fr5" class="linea-impresion"></div><div id="pr_fr6" class="linea-impresion"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MOD
+            <div class="flex-1
