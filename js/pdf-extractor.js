@@ -49,38 +49,53 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 </div>
             </div>
 
-            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">Leere PDF-Datei hochladen</label>
-                <input type="file" id="inputArchivoPlantilla" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer">
-            </div>
-
-            <div id="contenedorVisorAsistente" class="hidden space-y-3">
-                <div class="bg-gray-900 text-white p-3 rounded-xl flex flex-wrap justify-between items-center gap-2">
-                    <div>
-                        <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wide block">Schritt <span id="lblPasoNum">1</span> von 9</span>
-                        <h4 id="lblInstruccionPaso" class="text-xs font-bold text-white">Lade zuerst eine Vorlage</h4>
-                    </div>
-                    <button type="button" id="btnReiniciarMapeo" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-lg transition">🔄 Neu starten</button>
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div class="w-full">
+                    <label class="block text-[10px] font-bold text-gray-700 uppercase mb-1">Leere PDF-Datei hochladen</label>
+                    <input type="file" id="inputArchivoPlantilla" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer">
                 </div>
-
-                <div class="relative bg-gray-200 border-2 border-dashed border-gray-400 rounded-xl overflow-auto flex justify-center p-4 max-h-[55vh]" id="zonaCanvasPdf">
-                    <canvas id="pdfCanvasInspector" class="shadow-2xl bg-white cursor-crosshair"></canvas>
-                    <div id="capaPines" class="absolute inset-0 pointer-events-none"></div>
-                </div>
+                <button type="button" id="btnAbrirModalZoom" class="hidden w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition flex-shrink-0">🔍 In Großansicht öffnen</button>
             </div>
 
             <div class="flex justify-end pt-2">
                 <button type="button" id="btnGuardarPlantillaSupabase" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition">💾 Vorlage in Supabase speichern</button>
             </div>
         </div>
+
+        <!-- VENTANA EMERGENTE (MODAL A PANTALLA COMPLETA REAL PARA MAPEAR) -->
+        <div id="modalZoomPdf" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-[99999] p-2 sm:p-6">
+            <div class="w-full max-w-7xl bg-white rounded-2xl shadow-2xl relative flex flex-col h-[95vh]">
+                <div class="p-4 bg-gray-900 text-white rounded-t-2xl flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
+                    <div>
+                        <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wide block">Schritt <span id="lblPasoNum">1</span> von 9</span>
+                        <h4 id="lblInstruccionPaso" class="text-xs sm:text-sm font-bold text-white">Klicke auf das Feld für den Namen</h4>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" id="btnZoomOut" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg">🔍- Zoom</button>
+                        <button type="button" id="btnZoomIn" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg">🔍+ Zoom</button>
+                        <button type="button" id="btnReiniciarMapeo" class="bg-amber-800 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-lg">🔄 Neu starten</button>
+                        <button type="button" id="btnCerrarModalZoom" class="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-3 py-1.5 rounded-lg">✕ Schließen</button>
+                    </div>
+                </div>
+
+                <div class="relative bg-gray-300 flex-1 overflow-auto flex justify-center p-6" id="zonaCanvasPdfModal">
+                    <canvas id="pdfCanvasInspector" class="shadow-2xl bg-white cursor-crosshair m-auto"></canvas>
+                    <div id="capaPines" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+        </div>
     `;
 
     const inputArchivo = contenedor.querySelector('#inputArchivoPlantilla');
-    const contenedorVisor = contenedor.querySelector('#contenedorVisorAsistente');
+    const btnAbrirModal = contenedor.querySelector('#btnAbrirModalZoom');
+    const modalZoom = contenedor.querySelector('#modalZoomPdf');
+    const btnCerrarModal = contenedor.querySelector('#btnCerrarModalZoom');
     const lblPasoNum = contenedor.querySelector('#lblPasoNum');
     const lblInstruccionPaso = contenedor.querySelector('#lblInstruccionPaso');
     const btnReiniciar = contenedor.querySelector('#btnReiniciarMapeo');
     const btnGuardar = contenedor.querySelector('#btnGuardarPlantillaSupabase');
+    const btnZoomIn = contenedor.querySelector('#btnZoomIn');
+    const btnZoomOut = contenedor.querySelector('#btnZoomOut');
     const canvas = contenedor.querySelector('#pdfCanvasInspector');
     const ctx = canvas.getContext('2d');
     const capaPines = contenedor.querySelector('#capaPines');
@@ -96,7 +111,8 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 pdfDocGlobal = await pdfjsLib.getDocument(typedarray).promise;
                 paginaActualGlobal = await pdfDocGlobal.getPage(1);
                 renderizarPaginaPDF();
-                contenedorVisor.classList.remove('hidden');
+                btnAbrirModal.classList.remove('hidden');
+                modalZoom.classList.remove('hidden'); // Abre el modal automáticamente al cargar
                 actualizarInstruccionUI();
             } catch (err) {
                 console.error("Error al leer el PDF:", err);
@@ -104,6 +120,25 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             }
         };
         lector.readAsArrayBuffer(archivo);
+    });
+
+    btnAbrirModal.addEventListener('click', () => {
+        modalZoom.classList.remove('hidden');
+        renderizarPaginaPDF();
+    });
+
+    btnCerrarModal.addEventListener('click', () => {
+        modalZoom.classList.add('hidden');
+    });
+
+    btnZoomIn.addEventListener('click', () => {
+        escalaGlobal = Math.min(escalaGlobal + 0.3, 3.0);
+        renderizarPaginaPDF();
+    });
+
+    btnZoomOut.addEventListener('click', () => {
+        escalaGlobal = Math.max(escalaGlobal - 0.3, 1.0);
+        renderizarPaginaPDF();
     });
 
     function renderizarPaginaPDF() {
@@ -191,7 +226,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
         todosPuntos.forEach(pt => {
             const pin = document.createElement('div');
-            pin.className = 'absolute bg-amber-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-md transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center';
+            pin.className = 'absolute bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-md transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center';
             pin.style.left = (pt.x * escalaGlobal) + 'px';
             pin.style.top = (pt.y * escalaGlobal) + 'px';
             pin.textContent = pt.label;
@@ -232,6 +267,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             if (error) throw error;
 
             alert("✅ Vorlage erfolgreich in Supabase gespeichert!");
+            modalZoom.classList.add('hidden');
         } catch (err) {
             console.error("Error al guardar en Supabase:", err);
             alert("❌ Fehler beim Speichern der Vorlage: " + err.message);
