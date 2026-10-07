@@ -16,8 +16,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon_azubiform.png">
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- PDF.js para renderizar e inspeccionar PDFs -->
+
+    <!-- PDF.js para renderizar e inspeccionar PDFs estáticos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -95,4 +95,45 @@
                     <label for="loginPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
                         <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray
+                        <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconLoginPass">👁</span></button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Anmelden</button>
+            </form>
+
+            <form id="formRegistro" class="space-y-4 hidden">
+                <div>
+                    <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
+                    <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
+                    <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="regTipoPrograma" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Programm / Typ</label>
+                    <select id="regTipoPrograma" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>-- Wähle Ausbildung oder FOS --</option>
+                        <option value="ausbildung">Ausbildung</option>
+                        <option value="fos">FOS (Fachoberschule)</option>
+                    </select>
+                </div>
+                <!-- CONTENEDOR OCULTO INICIALMENTE HASTA QUE SE ELIJA EL PROGRAMA -->
+                <div id="contenedorFachrichtung" class="hidden">
+                    <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Fachrichtung / Beruf</label>
+                    <select id="regAusbildung" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>-- Wähle deine Option --</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
+                    <div class="relative">
+                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁</span></button>
+                    </div>
+                </div>
+                <div>
+                    <label for="regPasswordConfirm" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort wiederholen</label>
+                    <div class="relative">
+                        <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none
