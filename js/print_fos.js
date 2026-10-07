@@ -58,7 +58,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             return;
         }
 
-        // 2. Calcular fin de semana (Domingo)
+        // 2. Calcular fin de semana
         let dLunes = new Date(fechaInicioSemana);
         let dDomingo = new Date(dLunes);
         dDomingo.setDate(dDomingo.getDate() + 6);
@@ -103,6 +103,9 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         }
 
         const coordenadas = plantillaActiva ? (plantillaActiva.coordinates_json || {}) : {};
+        
+        // 🔍 VALIDACIÓN EN CONSOLA: Ver qué coordenadas exactas devolvió Supabase
+        console.log("=== SUPABASE TEMPLATE COORDENADAS ===", coordenadas);
 
         // 5. Configurar vista previa en el modal
         const previewContainer = document.getElementById('fosPreviewContainer');
@@ -119,7 +122,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         }
 
         previewContainer.innerHTML = `
-            <div class="relative inline-block shadow-2xl bg-white">
+            <div id="wrapperCanvasFOS" class="relative inline-block shadow-2xl bg-white">
                 <canvas id="pdfCanvasFOS" class="block"></canvas>
                 <div id="overlayCamposFOS" class="absolute inset-0 pointer-events-none"></div>
             </div>
@@ -127,17 +130,22 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
 
         modalFOS.classList.remove('hidden');
 
-        // Cargar y pintar la página del PDF usando PDF.js
+        // Cargar y pintar la página del PDF usando PDF.js con una escala limpia (ej. 1.0 o 1.5)
         const loadingTask = pdfjsLib.getDocument('./admin.pdf');
         const pdfDoc = await loadingTask.promise;
         const page = await pdfDoc.getPage(1);
         
         const canvas = document.getElementById('pdfCanvasFOS');
         const context = canvas.getContext('2d');
-        const viewport = page.getViewport({ scale: 1.5 });
+        const renderScale = 1.5; // Escala de renderizado para nitidez
+        const viewport = page.getViewport({ scale: renderScale });
 
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+
+        // Forzar un tamaño CSS exacto para que coincida proporcionalmente con el viewport
+        canvas.style.width = `${viewport.width / renderScale}px`;
+        canvas.style.height = `${viewport.height / renderScale}px`;
 
         await page.render({
             canvasContext: context,
@@ -145,64 +153,57 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         }).promise;
 
         const overlay = document.getElementById('overlayCamposFOS');
+        
+        // Factor de escala real entre el espacio del PDF original y los píxeles visuales del canvas en pantalla
+        const scaleFactor = (viewport.width / renderScale) / 595.27; // 595.27 es el ancho estándar en puntos de un A4
 
-        // 6. Estampar el nombre del usuario
+        // 6. Pintar el nombre del usuario validando la estructura de coordenadas
         if (coordenadas.nombre) {
+            const coordNombre = coordenadas.nombre;
+            const x = (coordNombre.x1 !== undefined ? coordNombre.x1 : (coordNombre.x || 0)) * scaleFactor;
+            const y = (coordNombre.y1 !== undefined ? coordNombre.y1 : (coordNombre.y || 0)) * scaleFactor;
+
             const divNombre = document.createElement('div');
-            divNombre.className = "absolute text-black font-sans text-xs font-semibold whitespace-nowrap";
-            divNombre.style.left = `${coordenadas.nombre.x1}px`;
-            divNombre.style.top = `${coordenadas.nombre.y1}px`;
+            divNombre.className = "absolute text-black font-sans text-xs font-semibold whitespace-nowrap bg-yellow-200/50 px-1"; // Fondo translúcido para ubicarlo visualmente
+            divNombre.style.left = `${x}px`;
+            divNombre.style.top = `${y}px`;
             divNombre.textContent = nombreUsuario;
             overlay.appendChild(divNombre);
+            console.log("Nombre pintado en:", x, y);
+        } else {
+            console.warn("⚠️ La clave 'nombre' no existe en coordinates_json.");
         }
 
-        // 7. Distribuir las actividades por día de la semana basándonos en las coordenadas mapeadas
-        // Agrupamos las actividades por fecha (YYYY-MM-DD)
-        const actividadesPorDia = {};
-        actividades.forEach(act => {
-            const fechaKey = act.fecha; // Ej: '2026-09-28'
-            if (!actividadesPorDia[fechaKey]) {
-                actividadesPorDia[fechaKey] = [];
-            }
-            actividadesPorDia[fechaKey].push(act);
-        });
+        // 7. Distribuir las actividades por día usando las claves de coordenadas guardadas
+        actividades.forEach((act, index) => {
+            const possibleKeys = [`m${index + 1}`, `actividad_${index + 1}`, `linea_${index + 1}`, `actividad`];
+            let coord = null;
 
-        // Recorremos los días de la semana (Lunes a Viernes) a partir del lunes de la semana actual
-        for (let i = 0; i < 5; i++) {
-            let dDia = new Date(dLunes);
-            dDia.setDate(dDia.getDate() + i);
-            const fechaStr = dDia.toISOString().split('T')[0];
-            
-            const actsDelDia = actividadesPorDia[fechaStr] || [];
-            
-            // Determinamos la coordenada base para este día (ej: m1..m6 para lunes, di1..di6 para martes, etc.)
-            // O usamos las claves estándar almacenadas en la base de datos
-            const prefijoDia = ['m', 'di', 'mi', 'do', 'fr'][i]; // m = Montag, di = Dienstag, etc.
-
-            actsDelDia.forEach((act, lineIndex) => {
-                const coordKey = `${prefijoDia}${lineIndex + 1}`; // Ej: m1, m2, di1...
-                let coord = coordenadas[coordKey] || null;
-
-                // Si no hay clave específica para esa línea, buscamos una coordenada genérica o calculamos un offset
-                const divAct = document.createElement('div');
-                divAct.className = "absolute text-black font-sans text-xs whitespace-nowrap overflow-hidden";
-
-                if (coord) {
-                    divAct.style.left = `${coord.x1}px`;
-                    divAct.style.top = `${coord.y1}px`;
-                } else if (coordenadas.actividad) {
-                    divAct.style.left = `${coordenadas.actividad.x1}px`;
-                    divAct.style.top = `${coordenadas.actividad.y1 + (i * 80) + (lineIndex * 18)}px`;
-                } else {
-                    // Respaldo visual si no hay mapeo específico
-                    divAct.style.left = `130px`;
-                    divAct.style.top = `${220 + (i * 65) + (lineIndex * 18)}px`;
+            for (const key of possibleKeys) {
+                if (coordenadas[key]) {
+                    coord = coordenadas[key];
+                    break;
                 }
+            }
 
-                divAct.textContent = act.nombre_actividad || '';
-                overlay.appendChild(divAct);
-            });
-        }
+            const divAct = document.createElement('div');
+            divAct.className = "absolute text-black font-sans text-xs whitespace-nowrap overflow-hidden bg-blue-200/40 px-1"; // Fondo translúcido para validar
+
+            if (coord) {
+                const x = (coord.x1 !== undefined ? coord.x1 : (coord.x || 100)) * scaleFactor;
+                const y = ((coord.y1 !== undefined ? coord.y1 : (coord.y || 150)) + (index * 16)) * scaleFactor;
+
+                divAct.style.left = `${x}px`;
+                divAct.style.top = `${y}px`;
+            } else {
+                // Coordenada por defecto si la clave no se encuentra en la BD
+                divAct.style.left = `${120 * scaleFactor}px`;
+                divAct.style.top = `${(200 + (index * 22)) * scaleFactor}px`;
+            }
+
+            divAct.textContent = act.nombre_actividad || '';
+            overlay.appendChild(divAct);
+        });
 
     } catch (err) {
         console.error("Fehler bei print_fos:", err);
