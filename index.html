@@ -16,13 +16,6 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon_azubiform.png">
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- PDF.js para renderizar e inspeccionar PDFs estáticos -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    </script>
-
     <style>
         button, input, select {
             -webkit-tap-highlight-color: transparent;
@@ -87,3 +80,418 @@
             </div>
 
             <form id="formLogin" class="space-y-4">
+                <div>
+                    <label for="loginEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
+                    <input type="email" id="loginEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="loginPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
+                    <div class="relative">
+                        <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconLoginPass">👁</span></button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Anmelden</button>
+            </form>
+
+            <form id="formRegistro" class="space-y-4 hidden">
+                <div>
+                    <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
+                    <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
+                    <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="regTipoPrograma" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Programm / Typ</label>
+                    <select id="regTipoPrograma" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>-- Wähle Ausbildung oder FOS --</option>
+                        <option value="ausbildung">Ausbildung</option>
+                        <option value="fos">FOS (Fachoberschule)</option>
+                    </select>
+                </div>
+                <!-- CONTENEDOR OCULTO INICIALMENTE HASTA QUE SE ELIJA EL PROGRAMA -->
+                <div id="contenedorFachrichtung" class="hidden">
+                    <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Fachrichtung / Beruf</label>
+                    <select id="regAusbildung" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>-- Wähle deine Option --</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
+                    <div class="relative">
+                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁</span></button>
+                    </div>
+                </div>
+                <div>
+                    <label for="regPasswordConfirm" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort wiederholen</label>
+                    <div class="relative">
+                        <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPassConfirm">👁️</span></button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-amber-600 text-white font-medium py-2 rounded-lg hover:bg-amber-700 transition">Registrierung abschließen</button>
+            </form>
+            <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
+        </div>
+
+        <div class="text-center mt-4 px-4">
+            <p class="text-xs text-gray-500">
+                Hast du Fragen oder benötigst du weitere Informationen? Sende uns eine E-Mail an 
+                <a href="mailto:info@azubiform.de" class="text-indigo-600 font-semibold hover:underline">info@azubiform.de</a>.
+            </p>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: APP PRINCIPAL -->
+    <div id="appSection" class="w-full max-w-md hidden flex flex-col items-center">
+        <div class="w-full bg-white p-3 rounded-xl shadow-sm mb-4 flex justify-between items-center text-xs text-gray-600">
+            <span>Benutzer: <strong id="lblUsuario" class="text-indigo-600"></strong></span>
+            <div class="space-x-1.5 flex items-center">
+                <button id="btnMenuConsulta" onclick="abrirModalConsulta()" class="text-indigo-600 font-semibold hover:underline">📊 Abfragen</button>
+                <span class="text-gray-300">|</span>
+                <button id="btnMenuImpresion" onclick="abrirModalImpresionAusbildung()" class="text-emerald-600 font-semibold hover:underline hidden">🖨 Drucken</button>
+                <span id="sepMenuImpresion" class="text-gray-300 hidden">|</span>
+                <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
+            </div>
+        </div>
+
+        <div id="panelGenerarCodigo" class="w-full bg-white p-4 rounded-xl shadow-lg mb-4 hidden">
+            <h3 class="text-xs font-semibold text-gray-700 uppercase mb-2">Neuen Einmalcode generieren</h3>
+            <div class="flex gap-2">
+                <input type="text" id="inputNuevoCodigo" placeholder="z.B. AF.NuevoCodigo" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button type="button" id="btnCrearCodigo" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition">Erstellen</button>
+            </div>
+            <p id="msgEstadoCodigo" class="text-xs mt-2 hidden"></p>
+        </div>
+
+        <div class="w-full bg-white p-6 rounded-xl shadow-lg mb-6 relative">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="block text-xs font-semibold text-gray-700 uppercase mb-1">Aktivitätsprotokoll</h2>
+                <button type="button" onclick="abrirModalPasado()" class="text-xs bg-amber-100 text-amber-700 font-semibold px-2.5 py-1 rounded-lg hover:bg-amber-200 transition">📅 Tag nachtragen</button>
+            </div>
+            <div id="fechaActual" class="text-sm font-medium text-gray-600 bg-gray-50 p-2 rounded-lg text-center mb-4 border border-gray-200">Datum wird geladen...</div>
+
+            <form id="registroForm" class="space-y-4 relative">
+                <div class="relative">
+                    <label for="actividad" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                    <div class="relative flex items-center">
+                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        
+                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-indigo-600 rounded-full transition focus:outline-none">
+                            <svg id="icon-btnVozActividad" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                </div>
+                <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Zur Liste hinzufügen</button>
+            </form>
+            <div id="mensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
+        </div>
+
+        <div class="w-full bg-white p-6 rounded-xl shadow-lg">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-gray-800 text-sm">Meine heutigen Aktivitäten</h3>
+                <span id="contador" class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-1 rounded-full">0 erfasst</span>
+            </div>
+            <div id="listaActividades" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                <p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL IMPRESIÓN AUSBILDUNGSNACHWEIS -->
+    <div id="modalImpresionAusbildung" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-2 overflow-y-auto">
+        <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[95vh]">
+            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex flex-wrap justify-between items-center gap-3 no-print">
+                <div class="flex items-center space-x-3">
+                    <h2 class="font-bold text-sm">A4-Druckgenerator</h2>
+                    <select id="selectUsuarioImpresion" lang="de" class="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded text-xs focus:outline-none"><option value="">Benutzer werden geladen...</option></select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="cambiarSemanaImpresion(-1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">◀ Vorherige Woche</button>
+                    <span id="lblSemanaImpresion" class="text-xs font-semibold text-emerald-400">Wird berechnet...</span>
+                    <button onclick="cambiarSemanaImpresion(1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">Nächste Woche ▶</button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-1.5 rounded shadow">🖨 Blatt drucken</button>
+                    <button onclick="cerrarModalImpresionAusbildung()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 bg-gray-200 flex justify-center">
+                <div class="page-print shadow-2xl bg-white">
+                    <div id="pr_nombre"></div>
+                    <div id="pr_semana_inicio"></div>
+                    <div id="pr_semana_fin"></div>
+                    <div id="pr_ano_fin"></div>
+                    <div id="pr_m1" class="linea-impresion"></div><div id="pr_m2" class="linea-impresion"></div><div id="pr_m3" class="linea-impresion"></div><div id="pr_m4" class="linea-impresion"></div><div id="pr_m5" class="linea-impresion"></div><div id="pr_m6" class="linea-impresion"></div>
+                    <div id="pr_di1" class="linea-impresion"></div><div id="pr_di2" class="linea-impresion"></div><div id="pr_di3" class="linea-impresion"></div><div id="pr_di4" class="linea-impresion"></div><div id="pr_di5" class="linea-impresion"></div><div id="pr_di6" class="linea-impresion"></div>
+                    <div id="pr_mi1" class="linea-impresion"></div><div id="pr_mi2" class="linea-impresion"></div><div id="pr_mi3" class="linea-impresion"></div><div id="pr_mi4" class="linea-impresion"></div><div id="pr_mi5" class="linea-impresion"></div><div id="pr_mi6" class="linea-impresion"></div>
+                    <div id="pr_do1" class="linea-impresion"></div><div id="pr_do2" class="linea-impresion"></div><div id="pr_do3" class="linea-impresion"></div><div id="pr_do4" class="linea-impresion"></div><div id="pr_do5" class="linea-impresion"></div><div id="pr_do6" class="linea-impresion"></div>
+                    <div id="pr_fr1" class="linea-impresion"></div><div id="pr_fr2" class="linea-impresion"></div><div id="pr_fr3" class="linea-impresion"></div><div id="pr_fr4" class="linea-impresion"></div><div id="pr_fr5" class="linea-impresion"></div><div id="pr_fr6" class="linea-impresion"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DÍA ANTERIOR -->
+    <div id="modalPasado" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-xl relative max-h-[90vh] flex flex-col">
+            <button type="button" onclick="cerrarModalPasado()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+            <h2 class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Nachträglicher Eintrag</h2>
+            <h1 class="text-xl font-bold text-gray-800 mb-4">Vergangene Aktivität hinzufügen</h1>
+            <form id="formPasado" class="space-y-3 mb-4">
+                <div>
+                    <label for="fechaPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Datum auswählen</label>
+                    <input type="date" id="fechaPasada" lang="de" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="relative">
+                    <label for="actividadPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                    <div class="relative flex items-center">
+                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        
+                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-1.5 text-gray-400 hover:text-amber-600 rounded-full transition focus:outline-none">
+                            <svg id="icon-btnVozPasada" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                </div>
+                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2 rounded-lg hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen</button>
+            </form>
+            <div id="mensajePasado" class="text-xs text-center hidden py-1.5 mb-3 rounded-lg font-medium"></div>
+            <div class="border-t border-gray-100 pt-3 flex-1 overflow-y-auto">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-gray-800 text-xs">Aktivitäten an diesem Datum</h3>
+                    <span id="contadorPasado" class="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">0 erfasst</span>
+                </div>
+                <div id="listaActividadesPasadas" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    <p class="text-xs text-gray-400 text-center py-2">Wähle ein Datum aus, um Einträge anzuzeigen.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONSULTA -->
+    <div id="modalConsulta" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-xl relative max-h-[90vh] flex flex-col">
+            <button type="button" onclick="cerrarModalConsulta()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+            <h2 class="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-1">Steuerungs-Panel</h2>
+            <h1 class="text-xl font-bold text-gray-800 mb-4">Aktivitätsabfrage</h1>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div>
+                    <label for="selectUsuarioConsulta" class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Benutzer</label>
+                    <select id="selectUsuarioConsulta" lang="de" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs"><option value="">Wird geladen...</option></select>
+                </div>
+                <div>
+                    <label for="selectVistaConsulta" class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Ansichtstyp</label>
+                    <select id="selectVistaConsulta" lang="de" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="semanal" selected>Wöchentlich (Standard)</option>
+                        <option value="mensual">Monatlich</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mb-4 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100">
+                <button id="btnAnteriorConsulta" class="bg-white text-indigo-600 font-semibold px-2.5 py-1 rounded-md border border-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs">← Zurück</button>
+                <span id="lblRangoPeriodoConsulta" class="text-xs font-bold text-indigo-900 text-center">Zeitraum wird geladen...</span>
+                <button id="btnSiguienteConsulta" class="bg-white text-indigo-600 font-semibold px-2.5 py-1 rounded-md border border-indigo-200 hover:bg-indigo-600 hover:text-white transition text-xs">Weiter →</button>
+            </div>
+            <div id="contenedorResultadosConsulta" class="space-y-3 flex-1 overflow-y-auto pr-1">
+                <p class="text-xs text-gray-400 text-center py-8">Wähle einen Benutzer aus, um dessen Einträge anzuzeigen.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE RECONOCIMIENTO DE VOZ -->
+    <script>
+        const micIconSVG = `
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
+        `;
+
+        const stopIconSVG = `
+            <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>
+        `;
+
+        function toggleSpeechRecognition(inputId, btnId) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Dein Browser unterstützt keine Spracherkennung.");
+                return;
+            }
+
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            const svgIcon = document.getElementById('icon-' + btnId);
+
+            if (window.currentRecognition && window.currentActiveInput === inputId) {
+                window.currentRecognition.stop();
+                window.currentRecognition = null;
+                resetBtnRec(btn, svgIcon);
+                return;
+            }
+
+            if (window.currentRecognition) {
+                window.currentRecognition.stop();
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+
+            window.currentRecognition = recognition;
+            window.currentActiveInput = inputId;
+
+            let textoBase = input.value;
+            if (textoBase.length > 0 && !textoBase.endsWith(' ')) {
+                textoBase += ' ';
+            }
+
+            btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
+            btn.classList.add('text-red-600', 'animate-pulse');
+            svgIcon.innerHTML = stopIconSVG;
+
+            recognition.onresult = function(event) {
+                let textoIntermedio = '';
+                let textoFinal = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        textoFinal += event.results[i][0].transcript;
+                    } else {
+                        textoIntermedio += event.results[i][0].transcript;
+                    }
+                }
+
+                if (textoFinal) {
+                    textoBase += textoFinal + ' ';
+                }
+
+                input.value = textoBase + textoIntermedio;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error:", event.error);
+                if (event.error === 'not-allowed') {
+                    alert("Zugriff auf das Mikrofon verweigert. Bitte erlaube den Mikrofonzugriff in deinem Browser.");
+                }
+                resetBtnRec(btn, svgIcon);
+            };
+
+            recognition.onend = function() {
+                resetBtnRec(btn, svgIcon);
+                window.currentRecognition = null;
+                window.currentActiveInput = null;
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("Could not start recognition:", e);
+                resetBtnRec(btn, svgIcon);
+            }
+        }
+
+        function resetBtnRec(btn, svgIcon) {
+            btn.classList.remove('text-red-600', 'animate-pulse');
+            btn.classList.add('text-gray-400');
+            svgIcon.innerHTML = micIconSVG;
+
+            if(btn.id.includes('Pasada')) {
+                btn.classList.add('hover:text-amber-600');
+            } else {
+                btn.classList.add('hover:text-indigo-600');
+            }
+        }
+
+        document.addEventListener("visibilitychange", function() {
+            if (!document.hidden && window.currentRecognition) {
+                try {
+                    window.currentRecognition.stop();
+                } catch (e) {}
+                window.currentRecognition = null;
+                window.currentActiveInput = null;
+                
+                const btn1 = document.getElementById('btnVozActividad');
+                const svg1 = document.getElementById('icon-btnVozActividad');
+                if (btn1 && svg1) resetBtnRec(btn1, svg1);
+
+                const btn2 = document.getElementById('btnVozPasada');
+                const svg2 = document.getElementById('icon-btnVozPasada');
+                if (btn2 && svg2) resetBtnRec(btn2, svg2);
+            }
+        });
+    </script>
+
+    <!-- DIRECTOR DE ORQUESTA -->
+    <script type="module">
+        import { inicializarAuth } from './js/auth.js';
+        import { iniciarAppPrincipal } from './js/app.js';
+        import { inicializarHistorial } from './js/history.js';
+        import { inicializarImpresion } from './js/print.js';
+        import { inicializarGeneradorCodigos } from './js/admin.js';
+
+        function verificarPermisosAdmin() {
+            const acceso = localStorage.getItem('usuario_acceso');
+            const esAdmin = Number(acceso) === 1;
+            if (esAdmin) {
+                document.getElementById('btnMenuImpresion').classList.remove('hidden');
+                document.getElementById('sepMenuImpresion').classList.remove('hidden');
+            } else {
+                document.getElementById('btnMenuImpresion').classList.add('hidden');
+                document.getElementById('sepMenuImpresion').classList.add('hidden');
+            }
+            inicializarGeneradorCodigos(esAdmin);
+        }
+
+        window.cerrarSesion = function() {
+            localStorage.removeItem('usuario_actual');
+            localStorage.removeItem('usuario_ausbildung');
+            localStorage.removeItem('usuario_acceso');
+            
+            document.getElementById('formLogin').reset();
+            document.getElementById('formRegistro').reset();
+            document.getElementById('loginMensaje').classList.add('hidden');
+            document.getElementById('alertaRegistroExitoso').classList.add('hidden');
+
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.body.classList.add('justify-center');
+            
+            inicializarAuth((nombre) => {
+                verificarPermisosAdmin();
+                iniciarAppPrincipal(nombre);
+                inicializarHistorial();
+                inicializarImpresion();
+            });
+        };
+
+        const usuarioGuardado = localStorage.getItem('usuario_actual');
+        
+        if (usuarioGuardado) {
+            verificarPermisosAdmin();
+            iniciarAppPrincipal(usuarioGuardado);
+            inicializarHistorial();
+            inicializarImpresion();
+        } else {
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.body.classList.remove('justify-center');
+            inicializarAuth((nombre) => {
+                verificarPermisosAdmin();
+                iniciarAppPrincipal(nombre);
+                inicializarHistorial();
+                inicializarImpresion();
+            });
+        }
+    </script>
+</body>
+</html>
