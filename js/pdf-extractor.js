@@ -19,17 +19,18 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
     let escalaGlobal = 1.5;
     let pasoActual = 1;
 
+    // Instrucciones guiadas basadas estrictamente en los textos reales (letras negras) del formato
     const pasosConfig = [
-        { id: 1, campo: 'nombre', titulo: 'Klicke auf das Feld für den Namen des Schülers' },
-        { id: 2, campo: 'semana_inicio', titulo: 'Klicke auf das Feld für das Startdatum der Woche' },
-        { id: 3, campo: 'semana_fin', titulo: 'Klicke auf das Feld für das Enddatum der Woche' },
-        { id: 4, campo: 'ano', titulo: 'Klicke auf das Feld für das Jahr' },
-        { id: 5, campo: 'lunes_1', titulo: 'Klicke auf die ERSTE Zeile des MONTAGS (automatische Berechnung)' },
-        { id: 6, campo: 'martes_1', titulo: 'Klicke auf die ERSTE Zeile des DIENSTAGS (automatische Berechnung)' },
-        { id: 7, campo: 'miércoles_1', titulo: 'Klicke auf die ERSTE Zeile des MITTWOCHS (automatische Berechnung)' },
-        { id: 8, campo: 'jueves_1', titulo: 'Klicke auf die ERSTE Zeile des DONNERSTAGS (automatische Berechnung)' },
-        { id: 9, campo: 'viernes_1', titulo: 'Klicke auf die ERSTE Zeile des FREITAGS (automatische Berechnung)' },
-        { id: 10, campo: 'listo', titulo: 'Alle Punkte erfolgreich erfasst! Du kannst die Vorlage jetzt speichern.' }
+        { id: 1, campo: 'nombre', titulo: 'Klicke auf das Feld neben/unter: "Schüler/in / Schüler"' },
+        { id: 2, campo: 'semana_inicio', titulo: 'Klicke auf das Startfeld bei: "Wochenbericht Nr. ... vom"' },
+        { id: 3, campo: 'semana_fin', titulo: 'Klicke auf das Endfeld (bis Datum) der Woche' },
+        { id: 4, campo: 'ano', titulo: 'Klicke auf das Feld für die Jahreszahl / Jahr' },
+        { id: 5, campo: 'lunes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Montag" (Rest berechnet sich automatisch)' },
+        { id: 6, campo: 'martes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Dienstag"' },
+        { id: 7, campo: 'miércoles_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Mittwoch"' },
+        { id: 8, campo: 'jueves_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Donnerstag"' },
+        { id: 9, campo: 'viernes_1', titulo: 'Klicke auf die ERSTE Zeile bei: "Freitag"' },
+        { id: 10, campo: 'listo', titulo: '🎉 Alle Punkte erfolgreich erfasst! Du kannst die Vorlage jetzt speichern.' }
     ];
 
     contenedor.innerHTML = `
@@ -68,7 +69,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 <div class="p-4 bg-gray-900 text-white rounded-t-2xl flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
                     <div>
                         <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wide block">Schritt <span id="lblPasoNum">1</span> von 9</span>
-                        <h4 id="lblInstruccionPaso" class="text-xs sm:text-sm font-bold text-white">Klicke auf das Feld für den Namen</h4>
+                        <h4 id="lblInstruccionPaso" class="text-xs sm:text-sm font-bold text-white">Klicke auf das Feld</h4>
                     </div>
                     <div class="flex items-center space-x-2">
                         <button type="button" id="btnZoomOut" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg">🔍- Zoom</button>
@@ -112,7 +113,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 paginaActualGlobal = await pdfDocGlobal.getPage(1);
                 renderizarPaginaPDF();
                 btnAbrirModal.classList.remove('hidden');
-                modalZoom.classList.remove('hidden'); // Abre el modal automáticamente al cargar
+                modalZoom.classList.remove('hidden');
                 actualizarInstruccionUI();
             } catch (err) {
                 console.error("Error al leer el PDF:", err);
