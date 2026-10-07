@@ -58,7 +58,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
                 let elementosTexto = textContent.items;
                 coordenadasDetectadas = {};
 
-                // Buscar etiquetas clave en el texto extraído del PDF
+                // Buscar etiquetas clave en el texto extraído del PDF de forma autónoma
                 elementosTexto.forEach(item => {
                     const texto = item.str.trim();
                     const tx = item.transform; // [scaleX, skewY, skewX, scaleY, x, y]
@@ -123,14 +123,16 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
             return;
         }
 
-        if (!supabaseClient) {
-            alert("Supabase-Client nicht verfügbar.");
+        // Detección robusta de la instancia de Supabase activa
+        const clienteActivo = supabaseClient || window.supabaseClient || window.supabase;
+
+        if (!clienteActivo) {
+            alert("❌ Supabase-Client nicht verfügbar. Bitte lade die Seite neu.");
             return;
         }
 
         try {
-            // Guardar coordenadas en Supabase
-            const { error: errSupabase } = await supabaseClient
+            const { error: errSupabase } = await clienteActivo
                 .from('plantillas_pdf')
                 .upsert({
                     codigo: codigo,
@@ -140,14 +142,13 @@ export function inicializarLectorYAnalizadorPdf(contenedorId, supabaseClient) {
 
             if (errSupabase) throw errSupabase;
 
-            // Subir también el archivo admin.pdf al Supabase Storage para tenerlo disponible para el estampado
             if (pdfArrayBufferGlobal) {
-                const { error: errStorage } = await supabaseClient
+                const { error: errStorage } = await clienteActivo
                     .storage
                     .from('plantillas')
                     .upload(`${codigo}.pdf`, pdfArrayBufferGlobal, { upsert: true, contentType: 'application/pdf' });
                 
-                if (errStorage) console.warn("Hinweis zum Storage (kann ignoriert werden, falls Bucket manuell):", errStorage.message);
+                if (errStorage) console.warn("Hinweis zum Storage:", errStorage.message);
             }
 
             alert("✅ Automatische Vorlage erfolgreich in Supabase gespeichert!");
