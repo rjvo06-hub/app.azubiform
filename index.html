@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azubiform - PDF Template Analyzer (Direkt-Modus)</title>
+    <title>Azubiform.de</title>
     
     <!-- 📱 Configuración para dispositivos móviles y PWA -->
     <meta name="apple-mobile-web-app-title" content="Azubiform">
@@ -22,89 +22,68 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
+
+    <style>
+        button, input, select {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            #modalImpresionAusbildung, #modalImpresionAusbildung * { visibility: visible; }
+            #modalImpresionAusbildung {
+                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white !important;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        .page-print {
+            position: relative; width: 210mm; height: 297mm; margin: 0 auto; background-color: #ffffff; box-sizing: border-box; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
+        }
+
+        #pr_nombre { position: absolute; left: 130mm; top: -0.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
+        #pr_semana_inicio { position: absolute; left: 120mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
+        #pr_semana_fin { position: absolute; left: 140mm; top: 7.5mm; height: 5mm; line-height: 5mm; white-space: nowrap; }
+        #pr_ano_fin { position: absolute; left: 159.5mm; top: 7.5mm; width: 4mm; height: 5mm; line-height: 5mm; white-space: nowrap; text-align: center; }
+
+        .linea-impresion {
+            position: absolute; left: 30mm; width: 160mm; height: 5.5mm; line-height: 5.5mm; white-space: nowrap; overflow: hidden; font-family: Terminal, "Courier New", Courier, monospace; font-size: 10pt;
+        }
+
+        #pr_m1 { top: 32.5mm; } #pr_m2 { top: 38.0mm; } #pr_m3 { top: 43.5mm; } #pr_m4 { top: 49.0mm; } #pr_m5 { top: 54.5mm; } #pr_m6 { top: 60.0mm; }
+        #pr_di1 { top: 67.5mm; } #pr_di2 { top: 73.0mm; } #pr_di3 { top: 78.5mm; } #pr_di4 { top: 84.0mm; } #pr_di5 { top: 89.5mm; } #pr_di6 { top: 95.0mm; }
+        #pr_mi1 { top: 102.5mm; } #pr_mi2 { top: 107.5mm; } #pr_mi3 { top: 113.5mm; } #pr_mi4 { top: 119.0mm; } #pr_mi5 { top: 124.5mm; } #pr_mi6 { top: 130.0mm; }
+        #pr_do1 { top: 137.5mm; } #pr_do2 { top: 143.0mm; } #pr_do3 { top: 148.5mm; } #pr_do4 { top: 154.0mm; } #pr_do5 { top: 159.5mm; } #pr_do6 { top: 165.0mm; }
+        #pr_fr1 { top: 172.5mm; } #pr_fr2 { top: 178.0mm; } #pr_fr3 { top: 183.5mm; } #pr_fr4 { top: 189.0mm; } #pr_fr5 { top: 194.5mm; } #pr_fr6 { top: 200.0mm; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-6 flex flex-col items-center">
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center justify-center">
 
-    <!-- ENCABEZADO DE ACCESO DIRECTO AL ANALIZADOR -->
-    <div class="w-full max-w-4xl bg-white rounded-xl shadow-xl overflow-hidden mb-6">
-        <div class="bg-gray-900 text-white p-4 flex justify-between items-center">
-            <div>
-                <h1 class="font-bold text-base">Azubiform - PDF Template Analyzer & Coordenadas</h1>
-                <p class="text-xs text-gray-400">Modo de pruebas directo (sin restricciones de inicio de sesión)</p>
+    <!-- SECCIÓN 1: LOGIN -->
+    <div id="loginSection" class="w-full max-w-md">
+        <div class="w-full text-center mb-6">
+            <div class="flex items-center justify-center gap-3.5 mb-2">
+                <img src="./icon_azubiform.png" alt="Azubiform Logo" class="w-12 h-12 rounded-2xl shadow-lg flex-shrink-0 object-cover">
+                <h1 class="text-4xl font-extrabold text-indigo-700 tracking-tight">Azubiform</h1>
             </div>
-            <span class="bg-indigo-600 text-white text-[10px] px-2.5 py-1 rounded-full font-semibold">Test-Modus aktiv</span>
+            <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
+            <p class="text-xs text-gray-600 leading-relaxed px-1">
+                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Ausbildungsnachweis</strong>. Wir speichern deine Einträge sicher und chronologisch ab, damit dein Berichtsheft lückenlos und übersichtlich bleibt.
+            </p>
         </div>
 
-        <div class="p-6 space-y-4">
-            <!-- Selector de archivo -->
-            <div class="bg-amber-50 border border-amber-200 p-4 rounded-lg">
-                <label class="block text-xs font-bold text-amber-800 uppercase mb-2">1. Statisches Schul-PDF hochladen (z.B. FOS Holzkirchen Vorlage)</label>
-                <input type="file" id="inputPdfAdminFile" accept="application/pdf" class="text-xs border border-amber-300 p-2 rounded w-full bg-white">
+        <div class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-xl font-bold text-gray-800 mb-4" id="tituloAuth">Anmelden</h2>
+
+            <div class="flex border-b border-gray-200 mb-4">
+                <button type="button" id="tabLogin" onclick="cambiarTab('login')" class="w-1/2 pb-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none transition">Ich habe bereits ein Konto</button>
+                <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition">Registrieren</button>
+            </div>
+            
+            <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-lg">
+                <p class="font-bold mb-1">Registrierung erfolgreich!</p>
+                <p>Wir haben dir eine Bestätigungs-E-Mail gesendet. Bitte prüfe dein Postfach (und Spam-Ordner) und bestätige deine E-Mail, bevor du dich anmeldest.</p>
             </div>
 
-            <!-- Panel de resultados de coordenadas -->
-            <div class="bg-gray-900 text-emerald-400 p-3 rounded-lg font-mono text-xs flex justify-between items-center shadow-inner">
-                <span id="coordOutput">Status: Bitte lade ein PDF hoch und klicke auf das Dokument...</span>
-                <button onclick="copiarCoordenadas()" id="btnCopiarCoord" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded text-[10px] hidden font-sans">Koordinaten kopieren</button>
-            </div>
-
-            <!-- Visor interactivo del PDF -->
-            <div class="relative border border-gray-300 rounded-lg overflow-auto max-h-[600px] flex justify-center bg-gray-200 shadow-md">
-                <canvas id="pdfCanvasAdmin" class="cursor-crosshair"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCRIPT DE CONTROL DEL ANALIZADOR PDF -->
-    <script>
-        let ultimaX = 0;
-        let ultimaY = 0;
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const inputFile = document.getElementById('inputPdfAdminFile');
-            const canvas = document.getElementById('pdfCanvasAdmin');
-            const outputDiv = document.getElementById('coordOutput');
-            const btnCopiar = document.getElementById('btnCopiarCoord');
-            if(!canvas) return;
-            const ctx = canvas.getContext('2d');
-
-            inputFile.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                outputDiv.textContent = "Lade und rendere PDF...";
-                const fileReader = new FileReader();
-
-                fileReader.onload = async function() {
-                    try {
-                        const typedarray = new Uint8Array(this.result);
-                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                        const page = await pdf.getPage(1); // Analizamos la primera página
-
-                        const scale = 1.5; // Escala de nitidez
-                        const viewport = page.getViewport({ scale: scale });
-
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-
-                        await page.render({
-                            canvasContext: ctx,
-                            viewport: viewport
-                        }).promise;
-
-                        outputDiv.textContent = "PDF erfolgreich geladen! Klicke auf eine Position im Dokument, um X und Y zu erhalten.";
-                    } catch (err) {
-                        console.error(err);
-                        outputDiv.textContent = "Fehler beim Verarbeiten der PDF-Datei.";
-                    }
-                };
-                fileReader.readAsArrayBuffer(file);
-            });
-
-            // Capturar clics para calcular las coordenadas exactas
-            canvas.addEventListener('click', (event) => {
-                const rect = canvas.getBoundingClientRect();
-                const scale = 1.5;
-                
-                const x = (event.clientX - rect.left) / scale;
-                const y = (canvas.height - (event.clientY - rect.top
+            <form id="formLogin" class="space-y-4">
