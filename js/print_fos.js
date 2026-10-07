@@ -24,7 +24,6 @@ export function inicializarImpresionFOS() {
 
 export async function print_fos(nombreUsuario, fechaInicioSemana) {
     try {
-        console.log("Iniciando print_fos para:", nombreUsuario);
         usuarioActualFOS = nombreUsuario;
         
         if (!fechaInicioSemana) {
@@ -36,7 +35,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         }
         fechaActualFOS = fechaInicioSemana;
 
-        // 1. Obtener los datos del usuario actual
+        // 1. Obtener datos del usuario
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
             method: 'GET',
             headers: headers
@@ -59,15 +58,19 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             return;
         }
 
-        // 2. Calcular la fecha de fin de semana
+        // 2. Calcular fin de semana
         let dLunes = new Date(fechaInicioSemana);
         let dDomingo = new Date(dLunes);
         dDomingo.setDate(dDomingo.getDate() + 6);
         const fechaFinSemana = dDomingo.toISOString().split('T')[0];
 
-        // 3. Obtener las actividades de la tabla registro_diario
+        // 3. Obtener actividades de la semana
         let urlActividades = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicioSemana}&fecha=lte.${fechaFinSemana}&select=*`;
         
+        if (tipoAusbildung) {
+            urlActividades += `&ausbildung=ilike.${encodeURIComponent('%' + tipoAusbildung + '%')}`;
+        }
+
         const resActividades = await fetch(urlActividades, {
             method: 'GET',
             headers: headers
@@ -76,7 +79,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         if (!resActividades.ok) throw new Error("Fehler beim Laden der Aktivitäten.");
         const actividades = await resActividades.json();
 
-        // 4. Buscar la plantilla o coordenadas en 'school_templates'
+        // 4. Buscar plantilla y coordenadas en 'school_templates'
         let plantillaActiva = null;
         const resPlantilla = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(schoolName)}&select=*`, {
             method: 'GET',
@@ -99,59 +102,87 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             }
         }
 
-        // 5. Construir la vista preliminar visual en el modal
+        const coordenadas = plantillaActiva ? (plantillaActiva.coordinates_json || {}) : {};
+
+        // 5. Configurar vista previa en el modal
         const previewContainer = document.getElementById('fosPreviewContainer');
         const modalFOS = document.getElementById('modalImpresionFOS');
         const lblInfo = document.getElementById('lblFosInfoUsuario');
 
         if (!previewContainer || !modalFOS) {
-            alert("❌ Vorschau-Container oder Modal nicht im HTML gefunden.");
+            alert("❌ Vorschau-Container nicht im HTML gefunden.");
             return;
         }
 
         if (lblInfo) {
-            lblInfo.textContent = `Woche: ${fechaInicioSemana} bis ${fechaFinSemana}`;
+            lblInfo.textContent = `Woche: ${fechaInicioSemana} bis ${fechaFinSemana} (${actividades.length} Einträge)`;
         }
 
-        let htmlContenido = `
-            <div class="border-b pb-4 mb-4 flex justify-between items-center">
-                <div>
-                    <h3 class="text-lg font-bold text-gray-800">FOS Berichtsheft - Vorschau</h3>
-                    <p class="text-xs text-gray-500">Schule: <strong>${schoolName}</strong> | Schüler: <strong>${nombreUsuario}</strong></p>
-                </div>
-                <div class="text-right">
-                    <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">${actividades.length} Einträge</span>
-                </div>
+        // Renderizar el PDF base con PDF.js como fondo visual
+        previewContainer.innerHTML = `
+            <div class="relative w-full h-full flex justify-center items-center bg-gray-100">
+                <canvas id="pdfCanvasFOS" class="shadow-lg"></canvas>
+                <div id="overlayCamposFOS" class="absolute inset-0 pointer-events-none"></div>
             </div>
-            <div class="space-y-3">
         `;
 
-        if (actividades.length === 0) {
-            htmlContenido += `<p class="text-xs text-gray-400 italic py-4 text-center">Keine Aktivitäten für diese Woche (${fechaInicioSemana} - ${fechaFinSemana}) gefunden.</p>`;
-        } else {
-            htmlContenido += `<ul class="space-y-2 text-xs">`;
-            actividades.forEach((act) => {
-                htmlContenido += `
-                    <li class="bg-gray-50 p-2.5 rounded border border-gray-200 flex justify-between items-center">
-                        <div>
-                            <span class="font-bold text-indigo-600 mr-2">[${act.fecha}]</span>
-                            <span>${act.nombre_actividad || 'Keine Beschreibung'}</span>
-                        </div>
-                        <span class="text-[10px] bg-gray-200 text-gray-700 px-2 py-0.5 rounded">${act.hora || 'Zeit n.v.'}</span>
-                    </li>
-                `;
-            });
-            htmlContenido += `</ul>`;
+        modalFOS.classList.remove('hidden');
+
+        // Cargar y pintar la página del PDF usando PDF.js
+        const loadingTask = pdfjsLib.getDocument('./admin.pdf');
+        const pdfDoc = await loadingTask.promise;
+        const page = await pdfDoc.getPage(1);
+        
+        const canvas = document.getElementById('pdfCanvasFOS');
+        const context = canvas.getContext('2d');
+        const viewport = page.getViewport({ scale: 1.5 }); // Escala de nitidez
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({
+            canvasContext: context,
+            viewport: viewport
+        }).promise;
+
+        // 6. Superponer los textos usando las coordenadas de la base de datos
+        const overlay = document.getElementById('overlayCamposFOS');
+        const escalaX = canvas.clientWidth / viewport.width;
+        const escalaY = canvas.clientHeight / viewport.height;
+
+        // Estampar el nombre del usuario si existe coordenada
+        if (coordenadas.nombre) {
+            const divNombre = document.createElement('div');
+            divNombre.className = "absolute text-black font-mono text-xs whitespace-nowrap";
+            divNombre.style.left = `${coordenadas.nombre.x1}px`;
+            divNombre.style.top = `${coordenadas.nombre.y1}px`;
+            divNombre.textContent = nombreUsuario;
+            overlay.appendChild(divNombre);
         }
 
-        htmlContenido += `</div>`;
-        previewContainer.innerHTML = htmlContenido;
+        // Estampar dinámicamente las actividades según sus coordenadas mapeadas
+        actividades.forEach((act, index) => {
+            const coordKey = `actividad_${index + 1}` || `m${index + 1}`;
+            const coord = coordenadas[coordKey] || coordenadas.actividad || null;
 
-        // Mostrar el modal
-        modalFOS.classList.remove('hidden');
+            const divAct = document.createElement('div');
+            divAct.className = "absolute text-black font-mono text-xs whitespace-nowrap overflow-hidden";
+            
+            if (coord) {
+                divAct.style.left = `${coord.x1}px`;
+                divAct.style.top = `${coord.y1}px`;
+            } else {
+                // Posición de respaldo si no hay coordenada exacta para esta línea
+                divAct.style.left = `100px`;
+                divAct.style.top = `${150 + (index * 25)}px`;
+            }
+            
+            divAct.textContent = act.nombre_actividad || '';
+            overlay.appendChild(divAct);
+        });
 
     } catch (err) {
         console.error("Fehler bei print_fos:", err);
-        alert("❌ Fehler bei print_fos: " + err.message);
+        alert("❌ Fehler: " + err.message);
     }
 }
