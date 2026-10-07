@@ -72,7 +72,7 @@
             </div>
             <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
             <p class="text-xs text-gray-600 leading-relaxed px-1">
-                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Ausbildungsnachweis</strong>. Wir speichern deine Einträge sicher und chronologisch ab, damit dein Berichtsheft lückenlos und übersichtlich bleibt.
+                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Ausbildungsnachweis</strong>[cite: 11]. Wir speichern deine Einträge sicher und chronologisch ab, damit dein Berichtsheft lückenlos und übersichtlich bleibt[cite: 11].
             </p>
         </div>
 
@@ -104,4 +104,30 @@
                 <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition">Anmelden</button>
             </form>
 
-            <form id="formRegistro" class="space-
+            <form id="formRegistro" class="space-y-4 hidden">
+                <div>
+                    <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
+                    <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
+                    <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="regTipoPrograma" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Programm / Typ</label>
+                    <select id="regTipoPrograma" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>-- Wähle Ausbildung oder FOS --</option>
+                        <option value="ausbildung">Ausbildung</option>
+                        <option value="fos">FOS (Fachoberschule)</option>
+                    </select>
+                </div>
+                <div id="contenedorFachrichtung" class="hidden">
+                    <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Fachrichtung / Beruf</label>
+                    <select id="regAusbildung" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
+                        <option value="" disabled selected>-- Wähle deine Option --</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
+                    <div class="relative">
+                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:
