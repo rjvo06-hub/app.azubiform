@@ -463,15 +463,20 @@
         import { iniciarAppPrincipal } from './js/app.js';
         import { inicializarHistorial } from './js/history.js';
         import { inicializarImpresion } from './js/print.js';
+        import { print_fos, inicializarImpresionFOS } from './js/print_fos.js';
         import { inicializarGeneradorCodigos } from './js/admin.js';
         import { inicializarLectorYAnalizadorPdf } from './js/pdf-extractor.js';
 
         let pdfManagerInicializado = false;
 
+        // Exponer print_fos globalmente para su uso en la interfaz
+        window.print_fos = print_fos;
+        inicializarImpresionFOS();
+
         window.abrirModalPdfManager = function() {
             document.getElementById('modalPdfManager').classList.remove('hidden');
             if (!pdfManagerInicializado) {
-                inicializarLectorYAnalizadorPdf('contenedorPdfManagerApp', window.supabaseClient || null);
+                inicializarLectorYAnalizadorPdf('contenedorPdfManagerApp');
                 pdfManagerInicializado = true;
             }
         };
