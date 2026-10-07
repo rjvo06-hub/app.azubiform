@@ -4,7 +4,6 @@ export function inicializarImpresionFOS() {
     console.log("Módulo print_fos.js inicializado correctamente.");
 }
 
-// Función principal print_fos utilizando el campo school_name del usuario
 export async function print_fos(nombreUsuario, fechaInicioSemana) {
     try {
         // 1. Obtener los datos del usuario actual para conocer su 'school_name'
@@ -22,23 +21,27 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         }
 
         const usuarioActual = usuarios[0];
-        const schoolName = usuarioActual.school_name; // Usando el campo school_name del usuario
+        const schoolName = usuarioActual.school_name;
 
         if (!schoolName) {
             alert("❌ Dem Benutzer ist keine Schule (school_name) zugeordnet.");
             return;
         }
 
-        // 2. Obtener las actividades del usuario para la semana seleccionada
-        const resActividades = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?nombre=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicioSemana}`, {
+        // 2. Obtener las actividades del usuario (probando con el nombre o ajustando si es necesario)
+        const resActividades = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?nombre=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
             method: 'GET',
             headers: headers
         });
         
-        if (!resActividades.ok) throw new Error("Fehler beim Laden der Aktivitäten.");
+        if (!resActividades.ok) {
+            const errText = await resActividades.text();
+            console.error("Supabase Error Response:", errText);
+            throw new Error("Fehler beim Laden der Aktivitäten (Supabase API Fehler).");
+        }
         const actividades = await resActividades.json();
 
-        // 3. Buscar la plantilla específica en 'school_templates' (primero por file_identifier, luego por school_name)
+        // 3. Buscar la plantilla específica en 'school_templates'
         let plantillaActiva = null;
         
         const resPlantilla = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(schoolName)}&select=*`, {
@@ -112,6 +115,6 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
 
     } catch (err) {
         console.error("Fehler bei print_fos:", err);
-        alert("❌ Fehler beim Generieren des PDFs: " + err.message);
+        alert("❌ Fehler: " + err.message);
     }
 }
