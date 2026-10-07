@@ -118,7 +118,6 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             lblInfo.textContent = `Woche: ${fechaInicioSemana} bis ${fechaFinSemana} (${actividades.length} Einträge)`;
         }
 
-        // Renderizar contenedor con canvas para el PDF de fondo
         previewContainer.innerHTML = `
             <div class="relative inline-block shadow-2xl bg-white">
                 <canvas id="pdfCanvasFOS" class="block"></canvas>
@@ -135,7 +134,7 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
         
         const canvas = document.getElementById('pdfCanvasFOS');
         const context = canvas.getContext('2d');
-        const viewport = page.getViewport({ scale: 1.25 }); // Escala optimizada para visualización
+        const viewport = page.getViewport({ scale: 1.5 }); // Escala base para alta resolución
 
         canvas.height = viewport.height;
         canvas.width = viewport.width;
@@ -145,34 +144,52 @@ export async function print_fos(nombreUsuario, fechaInicioSemana) {
             viewport: viewport
         }).promise;
 
-        // 6. Superponer los textos con precisión usando escala relativa al viewport del PDF
+        // 6. Superponer textos usando ESTRICTAMENTE las coordenadas guardadas en Supabase
         const overlay = document.getElementById('overlayCamposFOS');
-        const scaleX = canvas.width / viewport.width;
-        const scaleY = canvas.height / viewport.height;
+        
+        // Relación de escala entre las coordenadas del PDF original (puntos) y el tamaño renderizado del canvas
+        const scaleX = canvas.clientWidth / viewport.width;
+        const scaleY = canvas.clientHeight / viewport.height;
 
-        // Estampar el nombre del alumno en su cuadro correspondiente
+        // Estampar el nombre si la coordenada existe en coordinates_json
         if (coordenadas.nombre) {
             const divNombre = document.createElement('div');
             divNombre.className = "absolute text-black font-sans text-xs font-semibold whitespace-nowrap";
-            divNombre.style.left = `${(coordenadas.nombre.x1 || 150) * scaleX}px`;
-            divNombre.style.top = `${(coordenadas.nombre.y1 || 50) * scaleY}px`;
+            divNombre.style.left = `${coordenadas.nombre.x1}px`;
+            divNombre.style.top = `${coordenadas.nombre.y1}px`;
             divNombre.textContent = nombreUsuario;
             overlay.appendChild(divNombre);
         }
 
-        // Agrupar o distribuir las actividades en las filas del reporte (Montag, Dienstag, etc.)
+        // Estampar las actividades iterando sobre las claves guardadas en coordinates_json
         actividades.forEach((act, index) => {
-            const divAct = document.createElement('div');
-            divAct.className = "absolute text-black font-sans text-[11px] whitespace-nowrap overflow-hidden";
-            
-            // Posicionamiento dinámico basado en las filas de la tabla de la plantilla visual
-            // (Ajustamos un offset vertical por cada línea de actividad registrada)
-            const baseTop = 220 + (index * 22); // Espaciado vertical entre líneas de actividad
-            const baseLeft = 140; // Margen izquierdo dentro de la columna de actividades
+            // Buscamos si la clave de la línea existe en las coordenadas de la plantilla (ej: m1, m2, actividad_1, etc.)
+            const possibleKeys = [`m${index + 1}`, `actividad_${index + 1}`, `linea_${index + 1}`];
+            let coord = null;
 
-            divAct.style.left = `${baseLeft * scaleX}px`;
-            divAct.style.top = `${baseTop * scaleY}px`;
-            divAct.style.maxWidth = '450px';
+            for (const key of possibleKeys) {
+                if (coordenadas[key]) {
+                    coord = coordenadas[key];
+                    break;
+                }
+            }
+
+            // Si no encuentra una clave específica, toma la genérica de actividad si existe
+            if (!coord && coordenadas.actividad) {
+                coord = coordenadas.actividad;
+            }
+
+            const divAct = document.createElement('div');
+            divAct.className = "absolute text-black font-sans text-xs whitespace-nowrap overflow-hidden";
+            
+            if (coord) {
+                divAct.style.left = `${coord.x1}px`;
+                divAct.style.top = `${coord.y1 + (index * 18)}px`; // Desplazamiento vertical por línea si agrupa varias
+            } else {
+                // Posición predeterminada de seguridad solo si la plantilla no tiene mapeada esta línea específica
+                divAct.style.left = `120px`;
+                divAct.style.top = `${200 + (index * 22)}px`;
+            }
             
             divAct.textContent = act.nombre_actividad || '';
             overlay.appendChild(divAct);
