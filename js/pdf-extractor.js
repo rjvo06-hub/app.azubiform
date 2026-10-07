@@ -1,8 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
-
-// Inicializar Supabase directamente con tus credenciales seguras
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+import { SUPABASE_URL, headers } from './config.js';
 
 export function inicializarLectorYAnalizadorPdf(contenedorId) {
     const contenedor = document.getElementById(contenedorId);
@@ -16,7 +12,7 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
                 <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1">Automatische Texterkennung & Feld-Mapping</h3>
-                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels und speichert sie in <code class="font-bold">school_templates</code>.</p>
+                <p class="text-xs text-indigo-800">Lade deinen leeren <code class="bg-white px-1 py-0.5 rounded font-bold">admin.pdf</code> hoch. Das System scannt die Labels und speichert sie in der Tabelle <code class="font-bold">school_templates</code>.</p>
             </div>
 
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
@@ -137,15 +133,24 @@ export function inicializarLectorYAnalizadorPdf(contenedorId) {
         }
 
         try {
-            const { error: errSupabase } = await supabase
-                .from('school_templates')
-                .upsert({
+            // Petición POST directa mediante fetch utilizando la misma estructura del proyecto
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
+                method: 'POST',
+                headers: {
+                    ...headers,
+                    'Prefer': 'resolution=merge-duplicates' // Equivalente a un upsert en Supabase REST API
+                },
+                body: JSON.stringify({
                     school_name: schoolName,
                     file_identifier: fileIdentifier,
                     pdf_filename: nombreArchivoOriginal || 'admin.pdf'
-                }, { onConflict: 'file_identifier' });
+                })
+            });
 
-            if (errSupabase) throw errSupabase;
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || 'Fehler beim Speichern');
+            }
 
             alert("✅ Vorlage erfolgreich in der Tabelle 'school_templates' gespeichert!");
         } catch (err) {
