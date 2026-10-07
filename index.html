@@ -163,10 +163,10 @@
             </div>
         </div>
 
-        <!-- ACCESO EXCLUSIVO ADMIN PARA MAPEAR Y GUARDAR PLANTILLAS PDF -->
-        <div id="panelAdminPdfContainer" class="w-full mb-4 hidden">
+        <!-- ANALIZADOR DE PDF DISPONIBLE PARA TODOS LOS USUARIOS -->
+        <div id="panelAdminPdfContainer" class="w-full mb-4">
             <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl shadow-sm">
-                <h3 class="text-xs font-bold text-indigo-900 uppercase mb-2">Bereich für Administrator</h3>
+                <h3 class="text-xs font-bold text-indigo-900 uppercase mb-2">PDF Template Analyzer</h3>
                 <button type="button" id="btnToggleAnalizador" class="w-full bg-indigo-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:bg-indigo-700 transition">
                     📂 PDF Template Analyzer öffnen
                 </button>
@@ -471,113 +471,4 @@
                 if (btn1 && svg1) resetBtnRec(btn1, svg1);
 
                 const btn2 = document.getElementById('btnVozPasada');
-                const svg2 = document.getElementById('icon-btnVozPasada');
-                if (btn2 && svg2) resetBtnRec(btn2, svg2);
-            }
-        });
-    </script>
-
-    <!-- DIRECTOR DE ORQUESTA -->
-    <script type="module">
-        import { inicializarAuth } from './js/auth.js';
-        import { iniciarAppPrincipal } from './js/app.js';
-        import { inicializarHistorial } from './js/history.js';
-        import { inicializarImpresion } from './js/print.js';
-        import { inicializarGeneradorCodigos } from './js/admin.js';
-        import { inicializarAnalizadorPdf } from './pdf-analyzer.js';
-
-        function verificarPermisosAdmin() {
-            const acceso = localStorage.getItem('usuario_acceso');
-            const esAdmin = Number(acceso) === 1;
-            const containerAdminPdf = document.getElementById('panelAdminPdfContainer');
-
-            if (esAdmin) {
-                document.getElementById('btnMenuImpresion').classList.remove('hidden');
-                document.getElementById('sepMenuImpresion').classList.remove('hidden');
-                if (containerAdminPdf) containerAdminPdf.classList.remove('hidden');
-            } else {
-                document.getElementById('btnMenuImpresion').classList.add('hidden');
-                document.getElementById('sepMenuImpresion').classList.add('hidden');
-                if (containerAdminPdf) containerAdminPdf.classList.add('hidden');
-            }
-            inicializarGeneradorCodigos(esAdmin);
-        }
-
-        // Configuración de Supabase (ajusta tu URL y ANON_KEY según tu proyecto)
-        const SUPABASE_URL = 'https://tudominio.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'tu-clave-anon';
-        const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-
-        // Configurar trabajador global de PDF.js
-        if (window.pdfjsLib) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-        }
-
-        // Lógica para desplegar el analizador de PDF en el panel de administración
-        let analizadorAbierto = false;
-        const btnToggleAnalizador = document.getElementById('btnToggleAnalizador');
-        if (btnToggleAnalizador) {
-            btnToggleAnalizador.addEventListener('click', () => {
-                const contenedor = 'contenedorAnalizadorPdf';
-                if (!analizadorAbierto) {
-                    inicializarAnalizadorPdf(contenedor, supabaseClient);
-                    btnToggleAnalizador.textContent = "❌ Schließen: PDF Template Analyzer";
-                    btnToggleAnalizador.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                    btnToggleAnalizador.classList.add('bg-gray-700', 'hover:bg-gray-800');
-                    analizadorAbierto = true;
-                } else {
-                    document.getElementById(contenedor).innerHTML = '';
-                    btnToggleAnalizador.textContent = "📂 PDF Template Analyzer öffnen";
-                    btnToggleAnalizador.classList.remove('bg-gray-700', 'hover:bg-gray-800');
-                    btnToggleAnalizador.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                    analizadorAbierto = false;
-                }
-            });
-        }
-
-        window.cerrarSesion = function() {
-            localStorage.removeItem('usuario_actual');
-            localStorage.removeItem('usuario_ausbildung');
-            localStorage.removeItem('usuario_acceso');
-            
-            document.getElementById('formLogin').reset();
-            document.getElementById('formRegistro').reset();
-            document.getElementById('loginMensaje').classList.add('hidden');
-            document.getElementById('alertaRegistroExitoso').classList.add('hidden');
-
-            document.getElementById('appSection').classList.add('hidden');
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.body.classList.add('justify-center');
-            
-            // Limpiar analizador si estaba abierto
-            document.getElementById('contenedorAnalizadorPdf').innerHTML = '';
-            analizadorAbierto = false;
-
-            inicializarAuth((nombre) => {
-                verificarPermisosAdmin();
-                iniciarAppPrincipal(nombre);
-                inicializarHistorial();
-                inicializarImpresion();
-            });
-        };
-
-        const usuarioGuardado = localStorage.getItem('usuario_actual');
-        
-        if (usuarioGuardado) {
-            verificarPermisosAdmin();
-            iniciarAppPrincipal(usuarioGuardado);
-            inicializarHistorial();
-            inicializarImpresion();
-        } else {
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.body.classList.remove('justify-center');
-            inicializarAuth((nombre) => {
-                verificarPermisosAdmin();
-                iniciarAppPrincipal(nombre);
-                inicializarHistorial();
-                inicializarImpresion();
-            });
-        }
-    </script>
-</body>
-</html>
+                const svg2 = document.getElementById('icon-btn
