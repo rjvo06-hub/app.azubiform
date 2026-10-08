@@ -4,7 +4,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     const contenedor = document.getElementById(contenedorId);
     if (!contenedor) return;
 
-    // Forzamos el ID de usuario a 93 para esta prueba
     const idPrueba = 93;
 
     contenedor.innerHTML = `
@@ -42,7 +41,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let pdfPageHeight = 0;
 
     try {
-        // 1. Obtener datos del usuario
+        // 1. Obtener datos del usuario (para sacar su nombre o email por si la columna 'usuario' guarda texto)
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${idPrueba}&select=*`, {
             headers: headers
         });
@@ -51,7 +50,10 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             alert(`❌ Usuario con ID ${idPrueba} no encontrado.`);
             return;
         }
-        const schoolName = usuarios[0].school_name;
+        const usuarioData = usuarios[0];
+        const schoolName = usuarioData.school_name;
+        const nombreUsuario = usuarioData.nombre || usuarioData.email || String(idPrueba);
+
         if (!schoolName) {
             alert("❌ El usuario no tiene un 'school_name' asignado.");
             return;
@@ -69,19 +71,21 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
 
-        // 3. Obtener registros diarios filtrando por la columna 'usuario'
-        const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${idPrueba}&select=*`, {
+        // 3. Obtener registros diarios probando tanto con el ID ("93") como con el nombre/email del usuario
+        let resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${idPrueba}&select=*`, {
             headers: headers
         });
         globalRegistros = await resRegistros.json();
 
-        if (!Array.isArray(globalRegistros)) {
-            console.error("Error de Supabase en registro_diario:", globalRegistros);
-            selectSemana.innerHTML = `<option value="">Error al cargar registros</option>`;
-            return;
+        // Si no devolvió nada con el número, probamos buscando por el nombre o email del usuario
+        if (!Array.isArray(globalRegistros) || globalRegistros.length === 0) {
+            resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
+                headers: headers
+            });
+            globalRegistros = await resRegistros.json();
         }
 
-        if (globalRegistros.length === 0) {
+        if (!Array.isArray(globalRegistros) || globalRegistros.length === 0) {
             selectSemana.innerHTML = `<option value="">Keine Wochen gefunden</option>`;
             return;
         }
