@@ -9,7 +9,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     contenedor.innerHTML = `
         <div class="space-y-4 p-4 bg-gray-50 rounded-xl shadow-sm">
             <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-                <h3 class="text-xs font-bold text-indigo-900 uppercase">📄 Vista Previa FOS (Usuario ID: ${idPrueba})</h3>
+                <h3 class="text-xs font-bold text-indigo-900 uppercase">📄 Vista Previa FOS (Katharina Schwarz)</h3>
                 <div class="flex items-center space-x-2 text-xs">
                     <label class="font-bold text-gray-700">Woche wählen:</label>
                     <select id="selectSemanaFos" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
@@ -19,7 +19,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             </div>
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg text-xs">
-                <p class="text-indigo-800">Visualizando actividades y mapeando coordenadas sobre el PDF base.</p>
+                <p class="text-indigo-800">Agrupando actividades semanales de Lunes a Viernes sobre el PDF base.</p>
             </div>
 
             <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-900 flex justify-center p-2 max-h-[700px]">
@@ -36,12 +36,12 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     const overlay = contenedor.querySelector('#previewOverlay');
 
     let globalPlantilla = null;
-    let globalRegistros = [];
+    let semanasAgrupadas = {};
     let pdfPageViewport = null;
     let pdfPageHeight = 0;
 
     try {
-        // 1. Obtener datos del usuario
+        // 1. Obtener datos del usuario para extraer su nombre exacto ("Katharina Schwarz")
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${idPrueba}&select=*`, {
             headers: headers
         });
@@ -52,7 +52,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         }
         const usuarioData = usuarios[0];
         const schoolName = usuarioData.school_name;
-        const nombreUsuario = usuarioData.nombre || usuarioData.email || String(idPrueba);
+        const nombreUsuario = usuarioData.nombre; // "Katharina Schwarz"
 
         if (!schoolName) {
             alert("❌ El usuario no tiene un 'school_name' asignado.");
@@ -70,38 +70,36 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         }
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
-        
-        // Imprimir las claves de las coordenadas en la consola para revisarlas
-        console.log("📍 Coordenadas JSON de la plantilla:", coordenadas);
 
-        // 3. Obtener registros diarios del usuario 93
-        let resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${idPrueba}&select=*`, {
+        // 3. Obtener registros diarios filtrando por el nombre exacto de la usuaria en la columna 'usuario'
+        const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
             headers: headers
         });
-        globalRegistros = await resRegistros.json();
+        let registrosRaw = await resRegistros.json();
 
-        if (!Array.isArray(globalRegistros) || globalRegistros.length === 0) {
-            resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
-                headers: headers
-            });
-            globalRegistros = await resRegistros.json();
+        if (!Array.isArray(registrosRaw) || registrosRaw.length === 0) {
+            selectSemana.innerHTML = `<option value="">Keine Wochen gefunden</option>`;
+            return;
         }
 
-        if (!Array.isArray(globalRegistros) || globalRegistros.length === 0) {
+        // 4. Agrupar los registros por semana basada en la fecha de cada actividad
+        semanasAgrupadas = agruparRegistrosPorSemana(registrosRaw);
+
+        const llavesSemanas = Object.keys(semanasAgrupadas);
+        if (llavesSemanas.length === 0) {
             selectSemana.innerHTML = `<option value="">Keine Wochen gefunden</option>`;
             return;
         }
 
         selectSemana.innerHTML = '';
-        globalRegistros.forEach((reg) => {
+        llavesSemanas.forEach((semKey) => {
             const opt = document.createElement('option');
-            opt.value = reg.id;
-            const fechaStr = reg.fecha ? new Date(reg.fecha).toLocaleDateString() : 'Sin fecha';
-            opt.textContent = `ID: ${reg.id} - ${reg.nombre_actividad ? reg.nombre_actividad.substring(0, 30) + '...' : 'Actividad'} (${fechaStr})`;
+            opt.value = semKey;
+            opt.textContent = `Woche: ${semKey}`;
             selectSemana.appendChild(opt);
         });
 
-        // 4. Renderizar PDF base
+        // 5. Renderizar PDF base
         const loadingTask = pdfjsLib.getDocument('./admin.pdf');
         const pdfDoc = await loadingTask.promise;
         const pagina = await pdfDoc.getPage(1);
@@ -116,7 +114,8 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
         await pagina.render({ canvasContext: context, viewport: pdfPageViewport }).promise;
 
-        renderizarVistaPreviaSemana(globalRegistros[0].id, coordenadas);
+        // Renderizar por defecto la primera semana agrupada
+        renderizarVistaPreviaSemana(llavesSemanas[0], coordenadas);
 
         selectSemana.addEventListener('change', (e) => {
             renderizarVistaPreviaSemana(e.target.value, coordenadas);
@@ -125,6 +124,43 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     } catch (err) {
         console.error("Error al inicializar la vista previa:", err);
         alert("❌ Ocurrió un error al cargar la vista previa.");
+    }
+
+    function agruparRegistrosPorSemana(registros) {
+        const semanas = {};
+        registros.forEach(reg => {
+            if (!reg.fecha) return;
+            const fechaObj = new Date(reg.fecha);
+            
+            // Calcular el lunes de esa semana
+            const diaSemana = fechaObj.getDay();
+            const diff = fechaObj.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+            const lunes = new Date(new Date(fechaObj).setDate(diff));
+            const viernes = new Date(lunes);
+            viernes.setDate(lunes.getDate() + 4);
+
+            const claveSemana = `${lunes.toLocaleDateString()} bis ${viernes.toLocaleDateString()}`;
+
+            if (!semanas[claveSemana]) {
+                semanas[claveSemana] = {
+                    lunes: [],
+                    dienstag: [],
+                    mittwoch: [],
+                    donnerstag: [],
+                    freitag: []
+                };
+            }
+
+            const d = new Date(reg.fecha).getDay();
+            const textoActividad = reg.nombre_actividad || '';
+
+            if (d === 1) semanas[claveSemana].lunes.push(textoActividad);
+            else if (d === 2) semanas[claveSemana].dienstag.push(textoActividad);
+            else if (d === 3) semanas[claveSemana].mittwoch.push(textoActividad);
+            else if (d === 4) semanas[claveSemana].donnerstag.push(textoActividad);
+            else if (d === 5) semanas[claveSemana].freitag.push(textoActividad);
+        });
+        return semanas;
     }
 
     function pdfToCanvasCoords(box) {
@@ -136,18 +172,14 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         return { left, top: canvasTop, width, height };
     }
 
-    function renderizarVistaPreviaSemana(registroId, coordenadas) {
+    function renderizarVistaPreviaSemana(semKey, coordenadas) {
         overlay.innerHTML = '';
-        const datosSemana = globalRegistros.find(r => r.id == registroId) || {};
-        
-        // Imprimir los datos del registro seleccionado en la consola
-        console.log("📄 Datos del registro seleccionado:", datosSemana);
+        const datosSemana = semanasAgrupadas[semKey] || {};
 
         for (const [key, box] of Object.entries(coordenadas)) {
             if (!box) continue;
 
             const pos = pdfToCanvasCoords(box);
-
             const elTexto = document.createElement('div');
             elTexto.className = 'absolute text-[10px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/60 border border-indigo-300/60 rounded';
             elTexto.style.left = `${pos.left}px`;
@@ -155,9 +187,21 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             elTexto.style.width = `${pos.width}px`;
             elTexto.style.height = `${pos.height}px`;
             
-            // Si el registro tiene una propiedad que coincide con la clave de la coordenada, la pinta
-            elTexto.textContent = datosSemana[key] !== undefined && datosSemana[key] !== null ? datosSemana[key] : '';
+            const lowerKey = key.toLowerCase();
+            let textoDia = '';
+            if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                textoDia = datosSemana.lunes.join(' • ');
+            } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                textoDia = datosSemana.dienstag.join(' • ');
+            } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                textoDia = datosSemana.mittwoch.join(' • ');
+            } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                textoDia = datosSemana.donnerstag.join(' • ');
+            } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                textoDia = datosSemana.freitag.join(' • ');
+            }
 
+            elTexto.textContent = textoDia;
             overlay.appendChild(elTexto);
         }
     }
