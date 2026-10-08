@@ -39,6 +39,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let pdfPageHeight = 0;
 
     try {
+        // 1. Obtener datos del usuario (tabla 'usuarios')
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioId}&select=*`, {
             headers: headers
         });
@@ -53,6 +54,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             return;
         }
 
+        // 2. Obtener plantilla de coordenadas (tabla 'school_templates')
         const resTemplate = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?school_name=eq.${encodeURIComponent(schoolName)}&select=*`, {
             headers: headers
         });
@@ -64,12 +66,20 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
 
-        const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?user_id=eq.${usuarioId}&select=*`, {
+        // 3. Obtener registros diarios usando la columna real 'usuario'
+        const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${usuarioId}&select=*`, {
             headers: headers
         });
         globalRegistros = await resRegistros.json();
 
-        if (!globalRegistros || globalRegistros.length === 0) {
+        // Validar si Supabase devolvió un error en lugar de un arreglo
+        if (!Array.isArray(globalRegistros)) {
+            console.error("Error de Supabase en registro_diario:", globalRegistros);
+            selectSemana.innerHTML = `<option value="">Error al cargar registros</option>`;
+            return;
+        }
+
+        if (globalRegistros.length === 0) {
             selectSemana.innerHTML = `<option value="">Keine Wochen gefunden</option>`;
             return;
         }
@@ -82,6 +92,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             selectSemana.appendChild(opt);
         });
 
+        // 4. Renderizar PDF base
         const loadingTask = pdfjsLib.getDocument(globalPlantilla.pdf_filename ? `./${globalPlantilla.pdf_filename}` : './admin.pdf');
         const pdfDoc = await loadingTask.promise;
         const pagina = await pdfDoc.getPage(1);
