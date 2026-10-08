@@ -41,7 +41,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let pdfPageHeight = 0;
 
     try {
-        // 1. Obtener datos del usuario (para sacar su nombre o email por si la columna 'usuario' guarda texto)
+        // 1. Obtener datos del usuario
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${idPrueba}&select=*`, {
             headers: headers
         });
@@ -71,13 +71,12 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
 
-        // 3. Obtener registros diarios probando tanto con el ID ("93") como con el nombre/email del usuario
+        // 3. Obtener registros diarios
         let resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${idPrueba}&select=*`, {
             headers: headers
         });
         globalRegistros = await resRegistros.json();
 
-        // Si no devolvió nada con el número, probamos buscando por el nombre o email del usuario
         if (!Array.isArray(globalRegistros) || globalRegistros.length === 0) {
             resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
                 headers: headers
@@ -98,8 +97,8 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             selectSemana.appendChild(opt);
         });
 
-        // 4. Renderizar PDF base
-        const loadingTask = pdfjsLib.getDocument(globalPlantilla.pdf_filename ? `./${globalPlantilla.pdf_filename}` : './admin.pdf');
+        // 4. Renderizar PDF base apuntando de forma segura a 'admin.pdf'
+        const loadingTask = pdfjsLib.getDocument('./admin.pdf');
         const pdfDoc = await loadingTask.promise;
         const pagina = await pdfDoc.getPage(1);
 
