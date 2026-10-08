@@ -40,14 +40,29 @@
                 <div class="space-y-2">
                     <label class="text-xs font-semibold text-gray-700">Nombre del Campo:</label>
                     <select id="campoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
-                        <option value="schueler">Schüler (Nombre)</option>
+                        <!-- Datos Generales del Membrete -->
+                        <option value="schueler">Schüler / Schülerin (Nombre del alumno)</option>
                         <option value="klasse">Klasse (Clase)</option>
                         <option value="woche_vom">Woche vom (Semana)</option>
-                        <option value="montag">Montag (Lunes)</option>
-                        <option value="dienstag">Dienstag (Martes)</option>
-                        <option value="mittwoch">Mittwoch (Miércoles)</option>
-                        <option value="donnerstag">Donnerstag (Jueves)</option>
-                        <option value="freitag">Freitag (Viernes)</option>
+                        <option value="wochenbericht_nr">Wochenbericht Nr. (Número de reporte)</option>
+                        <option value="betreff">Betreff (Asunto)</option>
+                        <option value="ausbildungsrichtung">Ausbildungsrichtung (Especialidad)</option>
+                        <option value="ausbildungsstaette">Ausbildungsstätte (Empresa de prácticas)</option>
+                        <option value="betreuende_lehrkraft">Betreuende Lehrkraft (Profesor tutor)</option>
+
+                        <!-- Cuerpo: Actividades de la semana -->
+                        <option value="montag">Montag (Actividades Lunes)</option>
+                        <option value="dienstag">Dienstag (Actividades Martes)</option>
+                        <option value="mittwoch">Mittwoch (Actividades Miércoles)</option>
+                        <option value="donnerstag">Donnerstag (Actividades Jueves)</option>
+                        <option value="freitag">Freitag (Actividades Viernes)</option>
+
+                        <!-- Cuerpo: Horas de la semana -->
+                        <option value="montag_stunden">Montag - Stunden (Horas Lunes)</option>
+                        <option value="dienstag_stunden">Dienstag - Stunden (Horas Martes)</option>
+                        <option value="mittwoch_stunden">Mittwoch - Stunden (Horas Miércoles)</option>
+                        <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
+                        <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
                     </select>
                     <p class="text-[11px] text-gray-500">Haz clic y arrastra sobre el PDF para seleccionar el área del campo seleccionado.</p>
                 </div>
@@ -201,7 +216,6 @@
         window.eliminarCampo = function(campo) {
             delete coordenadasMap[campo];
             actualizarUI();
-            // Redibujar overlay visual si se desea limpiar
         };
 
         btnGuardar.addEventListener('click', async () => {
