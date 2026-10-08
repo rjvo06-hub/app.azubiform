@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapeador Estructurado FOS (Membrete y Cuerpo) - Azubiform</title>
+    <title>Mapeador Estructurado FOS (Ancla en Schüler) - Azubiform</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js -->
@@ -17,7 +17,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">🎯 Mapeador FOS (Distinción: Membrete vs Cuerpo de Actividades)</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">🎯 Mapeador FOS (Referencia base: Schüler / Schülerin)</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -35,14 +35,18 @@
 
             <!-- Panel Derecho: Gestión estructurada -->
             <div class="bg-white p-4 rounded-xl shadow-sm space-y-4 flex flex-col h-[800px]">
-                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Selección de Campo</h2>
+                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Estructura del Formulario</h2>
                 
                 <div class="space-y-3">
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-2 text-[11px] text-amber-800 rounded-r">
+                        📍 <b>Punto de partida detectado:</b> La zona comienza a partir de la celda de <i>Schüler / Schülerin</i> hacia abajo.
+                    </div>
+
                     <div>
                         <label class="text-[11px] font-semibold text-gray-700">1. Selecciona la Sección:</label>
                         <select id="seccionSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
-                            <option value="membrete">📋 Membrete / Datos Generales (Cabecera)</option>
-                            <option value="cuerpo">📝 Cuerpo / Actividades (Lunes a Viernes)</option>
+                            <option value="membrete">📋 Membrete (Desde Schüler / Datos Generales)</option>
+                            <option value="cuerpo">📝 Cuerpo (Actividades de Lunes a Viernes)</option>
                         </select>
                     </div>
 
@@ -56,10 +60,6 @@
                     <div>
                         <input type="text" id="customFieldInput" placeholder="Nombre del campo (ej: schueler, montag...)" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
                     </div>
-
-                    <p class="text-[10px] text-gray-500 bg-indigo-50 p-2 rounded border border-indigo-100">
-                        💡 <b>Tip:</b> Primero mapea los datos fijos del membrete y luego las casillas del cuerpo de actividades de lunes a viernes hasta el cierre semanal.
-                    </p>
                 </div>
 
                 <!-- Lista de campos mapeados -->
@@ -208,7 +208,7 @@
             const pdfY1 = (pageViewport.height - canvasY2) / scale;
             const pdfY2 = (pageViewport.height - canvasY1) / scale;
 
-            const seccion = seccionSelect.value; // 'membrete' o 'cuerpo'
+            const seccion = seccionSelect.value;
             const campoActual = customFieldInput.value.trim() || `campo_${Object.keys(coordenadasMap[seccion]).length + 1}`;
             
             coordenadasMap[seccion][campoActual] = {
@@ -274,7 +274,7 @@
                 });
 
                 if (response.ok) {
-                    alert("✅ ¡Estructura de Membrete y Cuerpo guardada con éxito en Supabase!");
+                    alert("✅ ¡Plantilla con ancla en Schüler guardada con éxito en Supabase!");
                 } else {
                     const err = await response.text();
                     alert("❌ Error al guardar: " + err);
