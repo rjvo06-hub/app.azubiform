@@ -166,6 +166,8 @@
                 <span id="sepMenuImpresion" class="text-gray-300 hidden">|</span>
                 <button id="btnMenuPdfManager" onclick="abrirModalPdfManager()" class="text-amber-600 font-semibold hover:underline hidden">📄 PDF Manager</button>
                 <span id="sepMenuPdfManager" class="text-gray-300 hidden">|</span>
+                <button id="btnMenuFosPreview" onclick="abrirModalFosPreview()" class="text-indigo-700 font-semibold hover:underline hidden">📄 Vorschau FOS</button>
+                <span id="sepMenuFosPreview" class="text-gray-300 hidden">|</span>
                 <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
             </div>
         </div>
@@ -226,6 +228,22 @@
             </div>
             <div class="p-6 overflow-y-auto space-y-6 flex-1">
                 <div id="contenedorPdfManagerApp"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL VISTA PREVIA FOS (Wochenauswahl & Koordinaten) -->
+    <div id="modalFosPreview" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-4">
+        <div class="w-full max-w-5xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[90vh]">
+            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <h2 class="font-bold text-sm">Vorschau des Ausbildungsnachweises (FOS)</h2>
+                    <select id="selectUsuarioFosModal" class="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded text-xs focus:outline-none"><option value="">Benutzer laden...</option></select>
+                </div>
+                <button onclick="cerrarModalFosPreview()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6 flex-1 bg-gray-50">
+                <div id="contenedorFosPreviewApp"></div>
             </div>
         </div>
     </div>
@@ -465,8 +483,10 @@
         import { inicializarImpresion } from './js/print.js';
         import { inicializarGeneradorCodigos } from './js/admin.js';
         import { inicializarLectorYAnalizadorPdf } from './js/pdf-extractor.js';
+        import { inicializarVistaPreviaSemanasFos } from './js/print_fos.js';
 
         let pdfManagerInicializado = false;
+        let fosPreviewInicializado = false;
 
         window.abrirModalPdfManager = function() {
             document.getElementById('modalPdfManager').classList.remove('hidden');
@@ -480,6 +500,52 @@
             document.getElementById('modalPdfManager').classList.add('hidden');
         };
 
+        window.abrirModalFosPreview = function() {
+            document.getElementById('modalFosPreview').classList.remove('hidden');
+            // Cargar usuarios FOS en el selector del modal y arrancar con el primero seleccionado
+            cargarUsuariosFosModal();
+        };
+
+        window.cerrarModalFosPreview = function() {
+            document.getElementById('modalFosPreview').classList.add('hidden');
+        };
+
+        async function cargarUsuariosFosModal() {
+            const selectUsr = document.getElementById('selectUsuarioFosModal');
+            try {
+                const response = await fetch(`${window.SUPABASE_URL || ''}/rest/v1/usuarios?select=id,nombre,email,ausbildung`, {
+                    headers: window.SUPABASE_HEADERS || {}
+                });
+                // Si tienes cargados los headers de config.js, los usará. Si no, ajusta según tu entorno.
+                const usuarios = await response.json();
+                const fosUsuarios = usuarios.filter(u => u.ausbildung && u.ausbildung.toLowerCase().includes('fos'));
+                
+                selectUsr.innerHTML = '';
+                if (fosUsuarios.length === 0) {
+                    selectUsr.innerHTML = `<option value="">Keine FOS-Benutzer gefunden</option>`;
+                    return;
+                }
+
+                fosUsuarios.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = u.nombre || u.email;
+                    selectUsr.appendChild(opt);
+                });
+
+                // Inicializar con el primer usuario seleccionado
+                if (fosUsuarios.length > 0) {
+                    inicializarVistaPreviaSemanasFos('contenedorFosPreviewApp', fosUsuarios[0].id);
+                }
+
+                selectUsr.onchange = (e) => {
+                    inicializarVistaPreviaSemanasFos('contenedorFosPreviewApp', e.target.value);
+                };
+            } catch (err) {
+                console.error("Error al cargar usuarios FOS:", err);
+            }
+        }
+
         function verificarPermisosAdmin() {
             const acceso = localStorage.getItem('usuario_acceso');
             const esAdmin = Number(acceso) === 1;
@@ -491,6 +557,11 @@
                 const sepPdf = document.getElementById('sepMenuPdfManager');
                 if (btnPdf) btnPdf.classList.remove('hidden');
                 if (sepPdf) sepPdf.classList.remove('hidden');
+
+                const btnFos = document.getElementById('btnMenuFosPreview');
+                const sepFos = document.getElementById('sepMenuFosPreview');
+                if (btnFos) btnFos.classList.remove('hidden');
+                if (sepFos) sepFos.classList.remove('hidden');
             } else {
                 document.getElementById('btnMenuImpresion').classList.add('hidden');
                 document.getElementById('sepMenuImpresion').classList.add('hidden');
@@ -499,6 +570,11 @@
                 const sepPdf = document.getElementById('sepMenuPdfManager');
                 if (btnPdf) btnPdf.classList.add('hidden');
                 if (sepPdf) sepPdf.classList.add('hidden');
+
+                const btnFos = document.getElementById('btnMenuFosPreview');
+                const sepFos = document.getElementById('sepMenuFosPreview');
+                if (btnFos) btnFos.classList.add('hidden');
+                if (sepFos) sepFos.classList.add('hidden');
             }
             inicializarGeneradorCodigos(esAdmin);
         }
