@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba Aislada - Coordenadas FOS</title>
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js para renderizar la plantilla PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-lg font-bold text-gray-800 mb-4">🧪 Entorno de Pruebas: Vista Previa FOS</h1>
+        <!-- Contenedor donde se inyectará el visor -->
+        <div id="visor-coordenadas"></div>
+    </div>
+
+    <!-- Cargar el script modular aislado -->
+    <script type="module">
+        import { inicializarPruebaVistaPreviaFos } from './print_fos.js';
+
+        // Ejecutamos el visor pasando el ID del contenedor y un ID de usuario fijo de prueba
+        document.addEventListener('DOMContentLoaded', () => {
+            inicializarPruebaVistaPreviaFos('visor-coordenadas', 1);
+        });
+    </script>
+</body>
+</html>
