@@ -9,7 +9,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     contenedor.innerHTML = `
         <div class="space-y-4 p-4 bg-gray-50 rounded-xl shadow-sm">
             <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-                <h3 class="text-xs font-bold text-indigo-900 uppercase">📄 Modo de Prueba: Vista Previa con Coordenadas FOS (Usuario ID: ${idPrueba})</h3>
+                <h3 class="text-xs font-bold text-indigo-900 uppercase">📄 Vista Previa FOS (Usuario ID: ${idPrueba})</h3>
                 <div class="flex items-center space-x-2 text-xs">
                     <label class="font-bold text-gray-700">Woche wählen:</label>
                     <select id="selectSemanaFos" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
@@ -19,7 +19,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             </div>
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg text-xs">
-                <p class="text-indigo-800">Entorno aislado mapeando las coordenadas X/Y del PDF vía PDF.js.</p>
+                <p class="text-indigo-800">Visualizando actividades y mapeando coordenadas sobre el PDF base.</p>
             </div>
 
             <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-900 flex justify-center p-2 max-h-[700px]">
@@ -71,7 +71,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
 
-        // 3. Obtener registros diarios
+        // 3. Obtener registros diarios del usuario 93
         let resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${idPrueba}&select=*`, {
             headers: headers
         });
@@ -90,14 +90,16 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         }
 
         selectSemana.innerHTML = '';
-        globalRegistros.forEach((reg, index) => {
+        globalRegistros.forEach((reg) => {
             const opt = document.createElement('option');
             opt.value = reg.id;
-            opt.textContent = `Woche / ID: ${reg.semana || reg.id || (index + 1)} (${new Date(reg.created_at || Date.now()).toLocaleDateString()})`;
+            // Mostramos la fecha del registro o la semana para identificarlo fácilmente
+            const fechaStr = reg.fecha ? new Date(reg.fecha).toLocaleDateString() : 'Sin fecha';
+            opt.textContent = `ID: ${reg.id} - ${reg.nombre_actividad ? reg.nombre_actividad.substring(0, 30) + '...' : 'Actividad'} (${fechaStr})`;
             selectSemana.appendChild(opt);
         });
 
-        // 4. Renderizar PDF base apuntando de forma segura a 'admin.pdf'
+        // 4. Renderizar PDF base
         const loadingTask = pdfjsLib.getDocument('./admin.pdf');
         const pdfDoc = await loadingTask.promise;
         const pagina = await pdfDoc.getPage(1);
@@ -112,6 +114,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
         await pagina.render({ canvasContext: context, viewport: pdfPageViewport }).promise;
 
+        // Renderizar por defecto el primer registro disponible
         renderizarVistaPreviaSemana(globalRegistros[0].id, coordenadas);
 
         selectSemana.addEventListener('change', (e) => {
