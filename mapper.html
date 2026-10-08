@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapeador Inteligente FOS - Azubiform</title>
+    <title>Mapeador Visual de Plantillas FOS - Azubiform</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js -->
@@ -17,7 +17,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">🎯 Mapeador Inteligente (Lectura de PDF + Dibujo Libre)</h1>
+            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual de Coordenadas FOS</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -26,30 +26,30 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Panel Izquierdo: Lienzo del PDF -->
-            <div class="lg:col-span-2 bg-white rounded-xl p-4 flex justify-center overflow-auto max-h-[800px] relative border border-gray-300 shadow-inner">
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-4 flex justify-center overflow-auto max-h-[800px] relative border border-gray-300">
                 <div class="relative inline-block cursor-crosshair" id="canvasContainer">
-                    <canvas id="pdfCanvas" class="block shadow-md"></canvas>
+                    <canvas id="pdfCanvas" class="block shadow-lg"></canvas>
                     <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
 
-            <!-- Panel Derecho: Textos detectados y mapeo -->
+            <!-- Panel Derecho: Gestión de Campos y Coordenadas -->
             <div class="bg-white p-4 rounded-xl shadow-sm space-y-4 flex flex-col h-[800px]">
-                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Asignación de Campos</h2>
+                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Campos Mapeados</h2>
                 
-                <div class="space-y-3">
-                    <div>
-                        <label class="text-[11px] font-semibold text-gray-700">1. Textos detectados en este PDF:</label>
-                        <select id="detectedLabelsSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
-                            <option value="">-- Sube un PDF primero --</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="text-[11px] font-semibold text-gray-700">2. Nombre del campo a mapear:</label>
-                        <input type="text" id="campoInput" placeholder="Selecciona arriba o escribe..." class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
-                        <p class="text-[10px] text-gray-500 mt-1">Haz clic y arrastra sobre el PDF para marcar el recuadro de ese campo.</p>
-                    </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-gray-700">Nombre del Campo:</label>
+                    <select id="campoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
+                        <option value="schueler">Schüler (Nombre)</option>
+                        <option value="klasse">Klasse (Clase)</option>
+                        <option value="woche_vom">Woche vom (Semana)</option>
+                        <option value="montag">Montag (Lunes)</option>
+                        <option value="dienstag">Dienstag (Martes)</option>
+                        <option value="mittwoch">Mittwoch (Miércoles)</option>
+                        <option value="donnerstag">Donnerstag (Jueves)</option>
+                        <option value="freitag">Freitag (Viernes)</option>
+                    </select>
+                    <p class="text-[11px] text-gray-500">Haz clic y arrastra sobre el PDF para seleccionar el área del campo seleccionado.</p>
                 </div>
 
                 <!-- Lista de campos guardados -->
@@ -60,7 +60,7 @@
                 <!-- JSON Exportado -->
                 <div class="space-y-1">
                     <label class="text-xs font-semibold text-gray-700">JSON de Coordenadas:</label>
-                    <textarea id="jsonOutput" readonly class="w-full h-24 p-2 text-[10px] font-mono bg-gray-900 text-green-400 rounded-lg border border-gray-700 focus:outline-none"></textarea>
+                    <textarea id="jsonOutput" readonly class="w-full h-28 p-2 text-[10px] font-mono bg-gray-900 text-green-400 rounded-lg border border-gray-700 focus:outline-none"></textarea>
                 </div>
             </div>
         </div>
@@ -73,8 +73,7 @@
         const canvas = document.getElementById('pdfCanvas');
         const container = document.getElementById('canvasContainer');
         const drawingOverlay = document.getElementById('drawingOverlay');
-        const detectedLabelsSelect = document.getElementById('detectedLabelsSelect');
-        const campoInput = document.getElementById('campoInput');
+        const campoSelect = document.getElementById('campoSelect');
         const listaCoordenadas = document.getElementById('listaCoordenadas');
         const jsonOutput = document.getElementById('jsonOutput');
         const btnGuardar = document.getElementById('btnGuardarSupabase');
@@ -84,6 +83,7 @@
         let scale = 1.5;
         let coordenadasMap = {};
         
+        // Variables para dibujo por arrastre
         let isDrawing = false;
         let startX = 0, startY = 0;
         let currentRect = null;
@@ -94,16 +94,10 @@
 
             const fileReader = new FileReader();
             fileReader.onload = async function() {
-                try {
-                    const typedarray = new Uint8Array(this.result);
-                    const loadingTask = pdfjsLib.getDocument({ data: typedarray });
-                    pdfDoc = await loadingTask.promise;
-                    await renderPage(1);
-                    await extraerTextosPDF(pdfDoc);
-                } catch (err) {
-                    console.error("Error al cargar el PDF:", err);
-                    alert("❌ No se pudo cargar el archivo PDF.");
-                }
+                const typedarray = new Uint8Array(this.result);
+                const loadingTask = pdfjsLib.getDocument(typedarray);
+                pdfDoc = await loadingTask.promise;
+                renderPage(1);
             };
             fileReader.readAsArrayBuffer(file);
         });
@@ -119,29 +113,7 @@
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
         }
 
-        async function extraerTextosPDF(pdf) {
-            const page = await pdf.getPage(1);
-            const textContent = await page.getTextContent();
-            
-            detectedLabelsSelect.innerHTML = '<option value="">-- Selecciona una etiqueta leída --</option>';
-            
-            const textosUnicos = [...new Set(textContent.items.map(item => item.str.trim()).filter(t => t.length > 1))]
-                .sort();
-
-            textosUnicos.forEach(texto => {
-                const opt = document.createElement('option');
-                opt.value = texto.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                opt.textContent = texto;
-                detectedLabelsSelect.appendChild(opt);
-            });
-        }
-
-        detectedLabelsSelect.addEventListener('change', (e) => {
-            if (e.target.value) {
-                campoInput.value = e.target.value;
-            }
-        });
-
+        // Eventos de ratón para dibujar cajas
         container.addEventListener('mousedown', (e) => {
             if (!pdfDoc) return;
             const rect = canvas.getBoundingClientRect();
@@ -150,7 +122,7 @@
             isDrawing = true;
 
             currentRect = document.createElement('div');
-            currentRect.className = 'absolute border-2 border-indigo-600 bg-indigo-500/25 rounded pointer-events-none';
+            currentRect.className = 'absolute border-2 border-indigo-600 bg-indigo-500/20 rounded pointer-events-none';
             currentRect.style.left = `${startX}px`;
             currentRect.style.top = `${startY}px`;
             drawingOverlay.appendChild(currentRect);
@@ -179,23 +151,25 @@
             const endX = e.clientX - rect.left;
             const endY = e.clientY - rect.top;
 
+            // Calcular coordenadas en el sistema nativo del PDF (invirtiendo el eje Y)
             const canvasX1 = Math.min(startX, endX);
             const canvasX2 = Math.max(startX, endX);
             const canvasY1 = Math.min(startY, endY);
             const canvasY2 = Math.max(startY, endY);
 
+            // Evitar cajas accidentales muy pequeñas
             if ((canvasX2 - canvasX1) < 5 || (canvasY2 - canvasY1) < 5) {
-                if (currentRect) currentRect.remove();
+                currentRect.remove();
                 return;
             }
 
             const pdfX1 = canvasX1 / scale;
             const pdfX2 = canvasX2 / scale;
+            // Invertir Y del canvas al sistema de PDF
             const pdfY1 = (pageViewport.height - canvasY2) / scale;
             const pdfY2 = (pageViewport.height - canvasY1) / scale;
 
-            const campoActual = campoInput.value.trim() || `campo_${Object.keys(coordenadasMap).length + 1}`;
-            
+            const campoActual = campoSelect.value;
             coordenadasMap[campoActual] = {
                 x1: Math.round(pdfX1 * 10) / 10,
                 y1: Math.round(pdfY1 * 10) / 10,
@@ -203,18 +177,7 @@
                 y2: Math.round(pdfY2 * 10) / 10
             };
 
-            const cajaFija = document.createElement('div');
-            cajaFija.className = 'absolute border border-indigo-700 bg-indigo-500/30 rounded text-[9px] text-indigo-900 font-bold px-1 flex items-center justify-between pointer-events-none';
-            cajaFija.style.left = `${canvasX1}px`;
-            cajaFija.style.top = `${canvasY1}px`;
-            cajaFija.style.width = `${canvasX2 - canvasX1}px`;
-            cajaFija.style.height = `${canvasY2 - canvasY1}px`;
-            cajaFija.textContent = campoActual;
-            drawingOverlay.appendChild(cajaFija);
-
-            if (currentRect) currentRect.remove();
             actualizarUI();
-            campoInput.value = '';
         });
 
         function actualizarUI() {
@@ -238,10 +201,11 @@
         window.eliminarCampo = function(campo) {
             delete coordenadasMap[campo];
             actualizarUI();
+            // Redibujar overlay visual si se desea limpiar
         };
 
         btnGuardar.addEventListener('click', async () => {
-            const schoolName = prompt("Introduce el nombre exacto de esta escuela:");
+            const schoolName = prompt("Introduce el nombre exacto de la escuela (ej. Berufliche Oberschule Holzkirchen):");
             if (!schoolName) return;
 
             try {
@@ -250,13 +214,13 @@
                     headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
                     body: JSON.stringify({
                         school_name: schoolName,
-                        pdf_filename: fileInput.files[0] ? fileInput.files[0].name : 'template.pdf',
+                        pdf_filename: 'admin.pdf',
                         coordinates_json: coordenadasMap
                     })
                 });
 
                 if (response.ok) {
-                    alert("✅ ¡Plantilla guardada con éxito en Supabase!");
+                    alert("✅ ¡Plantilla y coordenadas guardadas con éxito en Supabase!");
                 } else {
                     const err = await response.text();
                     alert("❌ Error al guardar: " + err);
