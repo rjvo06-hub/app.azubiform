@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Mapeador Inteligente FOS - Azubiform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- Cabecera -->
+        <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
+            <h1 class="text-sm font-bold text-indigo-900 uppercase">⚡ Auto-Mapeador Inteligente de Coordenadas FOS</h1>
+            <div class="flex items-center space-x-3">
+                <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                <button id="btnAutoDetectar" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">🔍 Auto-Detectar Campos</button>
+                <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Panel Izquierdo: Lienzo del PDF con Cajas Detectadas -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-4 flex justify-center overflow-auto max-h-[800px] relative border border-gray-300">
+                <div class="relative inline-block" id="canvasContainer">
+                    <canvas id="pdfCanvas" class="block shadow-lg"></canvas>
+                    <div id="previewOverlay" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+
+            <!-- Panel Derecho: JSON Generado y Ajuste Manual -->
+            <div class="bg-white p-4 rounded-xl shadow-sm space-y-4 flex flex-col h-[800px]">
+                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Coordenadas Autodetectadas</h2>
+                
+                <p class="text-[11px] text-gray-500">El sistema ha escaneado el documento en busca de etiquetas clave. Puedes revisar el JSON resultante y ajustar valores manualmente si es necesario.</p>
+
+                <!-- Lista de campos detectados -->
+                <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50" id="listaCoordenadas">
+                    <p class="text-[11px] text-gray-400 text-center mt-4">Sube un PDF y haz clic en "Auto-Detectar Campos".</p>
+                </div>
+
+                <!-- JSON Exportado -->
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-700">JSON de Coordenadas:</label>
+                    <textarea id="jsonOutput" class="w-full h-32 p-2 text-[10px] font-mono bg-gray-900 text-green-400 rounded-lg border border-gray-700 focus:outline-none"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { SUPABASE_URL, headers } from './js/config.js';
+
+        const fileInput = document.getElementById('pdfFile');
+        const canvas = document.getElementById('pdfCanvas');
+        const overlay = document.getElementById('previewOverlay');
+        const btnAutoDetectar = document.getElementById('btnAutoDetectar');
+        const listaCoordenadas = document.getElementById('listaCoordenadas');
+        const jsonOutput = document.getElementById('jsonOutput');
+        const btnGuardar = document.getElementById('btnGuardarSupabase');
+
+        let pdfDoc = null;
+        let pageViewport = null;
+        let scale = 1.5;
+        let textItemsList = [];
+        let coordenadasMap = {};
+        let pdfPageHeight = 0;
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                const loadingTask = pdfjsLib.getDocument(typedarray);
+                pdfDoc = await loadingTask.promise;
+                await renderPage(1);
+            };
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        async function renderPage(num) {
+            const page = await pdfDoc.getPage(num);
+            pageViewport = page.getViewport({ scale });
+            pdfPageHeight = pageViewport.height;
+
+            const context = canvas.getContext('2d');
+            canvas.height = pdfPageHeight;
+            canvas.width = pageViewport.width;
+
+            await page.render({ canvasContext: context, viewport: pageViewport }).promise;
+
+            // Extraer elementos de texto con sus posiciones exactas del PDF
+            const textContent = await page.getTextContent();
+            textItemsList = textContent.items;
+        }
+
+        // Función inteligente de Auto-Detección basada en anclas de texto
+        btnAutoDetectar.addEventListener('click', () => {
+            if (!textItemsList.length) {
+                alert("⚠️ Primero debes cargar un archivo PDF.");
+                return;
+            }
+
+            coordenadasMap = {};
+
+            // 1. Buscar anclas comunes en formularios FOS
+            const anclas = {
+                "montag": ["montag"],
+                "dienstag": ["dienstag"],
+                "mittwoch": ["mittwoch"],
+                "donnerstag": ["donnerstag"],
+                "freitag": ["freitag"],
+                "schueler": ["schüler/schüler", "schüler"],
+                "klasse": ["klasse"],
+                "woche_vom": ["wochenbericht", "vom"]
+            };
+
+            textItemsList.forEach(item => {
+                const textoLower = item.str.toLowerCase().trim();
+
+                for (const [campo, keywords] of Object.entries(anclas)) {
+                    if (keywords.some(kw => textoLower.includes(kw))) {
+                        // El transform de PDF.js da [scaleX, skewY, skewX, scaleY, x, y]
+                        const x = item.transform[4];
+                        const y = item.transform[5];
+
+                        // A partir de la posición de la etiqueta, calculamos inteligentemente el espacio de escritura a la derecha o debajo
+                        if (["montag", "dienstag", "mittwoch", "donnerstag", "freitag"].includes(campo)) {
+                            // Asignamos una caja estándar que abarque el espacio de actividades para ese día
+                            coordenadasMap[campo] = {
+                                x1: Math.round((x + 100) * 10) / 10,
+                                y1: Math.round((y - 5) * 10) / 10,
+                                x2: Math.round((x + 420) * 10) / 10,
+                                y2: Math.round((y + 25) * 10) / 10
+                            };
+                        } else if (campo === "schueler") {
+                            coordenadasMap["schueler"] = {
+                                x1: Math.round((x + 10) * 10) / 10,
+                                y1: Math.round((y - 25) * 10) / 10,
+                                x2: Math.round((x + 250) * 10) / 10,
+                                y2: Math.round((y - 2) * 10) / 10
+                            };
+                        } else if (campo === "klasse") {
+                            coordenadasMap["klasse"] = {
+                                x1: Math.round((x + 10) * 10) / 10,
+                                y1: Math.round((y - 25) * 10) / 10,
+                                x2: Math.round((x + 150) * 10) / 10,
+                                y2: Math.round((y - 2) * 10) / 10
+                            };
+                        }
+                    }
+                }
+            });
+
+            actualizarUI();
+            dibujarOverlayVisual();
+        });
+
+        function actualizarUI() {
+            listaCoordenadas.innerHTML = '';
+            jsonOutput.value = JSON.stringify(coordenadasMap, null, 2);
+
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const item = document.createElement('div');
+                item.className = 'bg-white p-2 rounded border border-gray-200 text-xs flex justify-between items-center shadow-xs';
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-indigo-900">${campo}</span>
+                        <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
+                    </div>
+                `;
+                listaCoordenadas.appendChild(item);
+            }
+        }
+
+        function pdfToCanvasCoords(box) {
+            const left = box.x1 * scale;
+            const canvasTop = pdfPageHeight - (box.y2 * scale);
+            const width = (box.x2 - box.x1) * scale;
+            const height = (box.y2 - box.y1) * scale;
+            return { left, top: canvasTop, width, height };
+        }
+
+        function dibujarOverlayVisual() {
+            overlay.innerHTML = '';
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const pos = pdfToCanvasCoords(box);
+                const cajaVisual = document.createElement('div');
+                cajaVisual.className = 'absolute border border-indigo-500 bg-indigo-500/30 rounded text-[9px] text-indigo-900 font-bold px-1 flex items-center justify-between';
+                cajaVisual.style.left = `${pos.left}px`;
+                cajaVisual.style.top = `${pos.top}px`;
+                cajaVisual.style.width = `${pos.width}px`;
+                cajaVisual.style.height = `${pos.height}px`;
+                cajaVisual.textContent = campo;
+                overlay.appendChild(cajaVisual);
+            }
+        }
+
+        // Permitir editar el JSON manualmente y actualizar el overlay en tiempo real ("Human-in-the-Loop")
+        jsonOutput.addEventListener('input', (e) => {
+            try {
+                const parsed = JSON.parse(e.target.value);
+                coordenadasMap = parsed;
+                dibujarOverlayVisual();
+            } catch (err) {
+                // Ignorar errores de sintaxis mientras el usuario escribe
+            }
+        });
+
+        btnGuardar.addEventListener('click', async () => {
+            const schoolName = prompt("Introduce el nombre exacto de la escuela:");
+            if (!schoolName) return;
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
+                    method: 'POST',
+                    headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+                    body: JSON.stringify({
+                        school_name: schoolName,
+                        pdf_filename: 'admin.pdf',
+                        coordinates_json: coordenadasMap
+                    })
+                });
+
+                if (response.ok) {
+                    alert("✅ ¡Plantilla autodetectada y guardada con éxito en Supabase!");
+                } else {
+                    const err = await response.text();
+                    alert("❌ Error al guardar: " + err);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error de red al conectar con Supabase.");
+            }
+        });
+    </script>
+</body>
+</html>
