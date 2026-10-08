@@ -1,6 +1,6 @@
 import { SUPABASE_URL, headers } from './config.js';
 
-export async function generarVista PreviaImpresionDirecta(contenedorId, usuarioId, registroId) {
+export async function generarVistaPreviaImpresionDirecta(contenedorId, usuarioId, registroId) {
     const contenedor = document.getElementById(contenedorId);
     if (!contenedor) return;
 
