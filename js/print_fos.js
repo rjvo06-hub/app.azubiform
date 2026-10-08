@@ -38,7 +38,7 @@ export async function inicializarVistaPreviaSemanasFos(contenedorId, usuarioId) 
     let pdfPageViewport = null;
 
     try {
-        // 1. Obtener los datos del usuario para conocer su 'schul_name'
+        // 1. Obtener los datos del usuario para conocer su 'school_name'
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioId}&select=*`, {
             headers: headers
         });
@@ -47,19 +47,19 @@ export async function inicializarVistaPreviaSemanasFos(contenedorId, usuarioId) 
             alert("❌ Usuario no encontrado.");
             return;
         }
-        const schulName = usuarios[0].schul_name;
-        if (!schulName) {
-            alert("❌ El usuario no tiene asignado un 'schul_name'.");
+        const schoolName = usuarios[0].school_name;
+        if (!schoolName) {
+            alert("❌ El usuario no tiene asignado un 'school_name'.");
             return;
         }
 
-        // 2. Obtener la plantilla de la escuela usando 'schul_name'
-        const resTemplate = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?school_name=eq.${encodeURIComponent(schulName)}&select=*`, {
+        // 2. Obtener la plantilla de la escuela usando 'school_name'
+        const resTemplate = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?school_name=eq.${encodeURIComponent(schoolName)}&select=*`, {
             headers: headers
         });
         const templates = await resTemplate.json();
         if (!templates || templates.length === 0) {
-            alert(`❌ No se encontró la plantilla para la escuela: ${schulName}`);
+            alert(`❌ No se encontró la plantilla para la escuela: ${schoolName}`);
             return;
         }
         globalPlantilla = templates[0];
@@ -78,9 +78,8 @@ export async function inicializarVistaPreviaSemanasFos(contenedorId, usuarioId) 
         // Poblar el selector de semanas
         selectSemana.innerHTML = '';
         globalRegistros.forEach((reg, index) => {
-            const opt = document.option ? document.createElement('option') : document.createElement('option');
+            const opt = document.createElement('option');
             opt.value = reg.id;
-            // Muestra la semana o fecha del registro (ajusta la etiqueta según las columnas de tu tabla)
             opt.textContent = `Woche / ID: ${reg.semana || reg.id || (index + 1)} (${new Date(reg.created_at || Date.now()).toLocaleDateString()})`;
             selectSemana.appendChild(opt);
         });
@@ -131,7 +130,6 @@ export async function inicializarVistaPreviaSemanasFos(contenedorId, usuarioId) 
             elTexto.style.width = `${width}px`;
             elTexto.style.height = `${height}px`;
             
-            // Si el campo existe lo muestra; si falta, queda en blanco respetando el espacio exacto
             elTexto.textContent = datosSemana[key] !== undefined && datosSemana[key] !== null ? datosSemana[key] : '';
 
             overlay.appendChild(elTexto);
@@ -139,5 +137,4 @@ export async function inicializarVistaPreviaSemanasFos(contenedorId, usuarioId) 
     }
 }
 
-// Exponer globalmente si es requerido por el HTML principal
 window.inicializarVistaPreviaSemanasFos = inicializarVistaPreviaSemanasFos;
