@@ -121,7 +121,6 @@
                         <option value="fos">FOS (Fachoberschule)</option>
                     </select>
                 </div>
-                <!-- CONTENEDOR OCULTO INICIALMENTE HASTA QUE SE ELIJA EL PROGRAMA -->
                 <div id="contenedorFachrichtung" class="hidden">
                     <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Fachrichtung / Beruf</label>
                     <select id="regAusbildung" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
@@ -484,14 +483,14 @@
         import { inicializarGeneradorCodigos } from './js/admin.js';
         import { inicializarLectorYAnalizadorPdf } from './js/pdf-extractor.js';
         import { inicializarVistaPreviaSemanasFos } from './js/print_fos.js';
+        import { SUPABASE_URL, headers } from './js/config.js';
 
         let pdfManagerInicializado = false;
-        let fosPreviewInicializado = false;
 
         window.abrirModalPdfManager = function() {
             document.getElementById('modalPdfManager').classList.remove('hidden');
             if (!pdfManagerInicializado) {
-                inicializarLectorYAnalizadorPdf('contenedorPdfManagerApp', window.supabaseClient || null);
+                inicializarLectorYAnalizadorPdf('contenedorPdfManagerApp');
                 pdfManagerInicializado = true;
             }
         };
@@ -502,26 +501,30 @@
 
         window.abrirModalFosPreview = function() {
             document.getElementById('modalFosPreview').classList.remove('hidden');
-            // Cargar usuarios FOS en el selector del modal y arrancar con el primero seleccionado
-            cargarUsuariosFosModal();
+            cargarTodosLosUsuariosFos();
         };
 
         window.cerrarModalFosPreview = function() {
             document.getElementById('modalFosPreview').classList.add('hidden');
         };
 
-        async function cargarUsuariosFosModal() {
+        async function cargarTodosLosUsuariosFos() {
             const selectUsr = document.getElementById('selectUsuarioFosModal');
+            selectUsr.innerHTML = `<option value="">Benutzer werden geladen...</option>`;
+
             try {
-                const response = await fetch(`${window.SUPABASE_URL || ''}/rest/v1/usuarios?select=id,nombre,email,ausbildung`, {
-                    headers: window.SUPABASE_HEADERS || {}
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, {
+                    headers: headers
                 });
-                // Si tienes cargados los headers de config.js, los usará. Si no, ajusta según tu entorno.
                 const usuarios = await response.json();
-                const fosUsuarios = usuarios.filter(u => u.ausbildung && u.ausbildung.toLowerCase().includes('fos'));
+
+                const fosUsuarios = usuarios.filter(u => {
+                    const ausbildungVal = (u.ausbildung || '').toLowerCase();
+                    return ausbildungVal.includes('fos');
+                });
                 
                 selectUsr.innerHTML = '';
-                if (fosUsuarios.length === 0) {
+                if (!fosUsuarios || fosUsuarios.length === 0) {
                     selectUsr.innerHTML = `<option value="">Keine FOS-Benutzer gefunden</option>`;
                     return;
                 }
@@ -529,20 +532,22 @@
                 fosUsuarios.forEach(u => {
                     const opt = document.createElement('option');
                     opt.value = u.id;
-                    opt.textContent = u.nombre || u.email;
+                    opt.textContent = `${u.nombre || u.email} (${u.schul_name || 'Keine Schule'})`;
                     selectUsr.appendChild(opt);
                 });
 
-                // Inicializar con el primer usuario seleccionado
                 if (fosUsuarios.length > 0) {
                     inicializarVistaPreviaSemanasFos('contenedorFosPreviewApp', fosUsuarios[0].id);
                 }
 
                 selectUsr.onchange = (e) => {
-                    inicializarVistaPreviaSemanasFos('contenedorFosPreviewApp', e.target.value);
+                    if (e.target.value) {
+                        inicializarVistaPreviaSemanasFos('contenedorFosPreviewApp', e.target.value);
+                    }
                 };
             } catch (err) {
-                console.error("Error al cargar usuarios FOS:", err);
+                console.error("Error al cargar la lista de usuarios FOS:", err);
+                selectUsr.innerHTML = `<option value="">Fehler beim Laden der Benutzer</option>`;
             }
         }
 
