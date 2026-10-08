@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapeador Visual Clásico FOS - Azubiform</title>
+    <title>Mapeador Inteligente FOS - Azubiform</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js -->
@@ -17,7 +17,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">🎯 Mapeador Visual Clásico (Dibujo Libre)</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">🎯 Mapeador Inteligente (Lectura de PDF + Dibujo Libre)</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -33,23 +33,22 @@
                 </div>
             </div>
 
-            <!-- Panel Derecho: Gestión de Campos y Coordenadas -->
+            <!-- Panel Derecho: Textos detectados y mapeo -->
             <div class="bg-white p-4 rounded-xl shadow-sm space-y-4 flex flex-col h-[800px]">
-                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Definición de Campos</h2>
+                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Asignación de Campos</h2>
                 
                 <div class="space-y-3">
                     <div>
-                        <label class="text-[11px] font-semibold text-gray-700">Sección:</label>
-                        <select id="seccionSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
-                            <option value="membrete">📋 Membrete (Cabecera / Datos Generales)</option>
-                            <option value="cuerpo">📝 Cuerpo (Actividades y Horas)</option>
+                        <label class="text-[11px] font-semibold text-gray-700">1. Textos detectados en este PDF:</label>
+                        <select id="detectedLabelsSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
+                            <option value="">-- Sube un PDF primero --</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="text-[11px] font-semibold text-gray-700">Nombre del Campo:</label>
-                        <input type="text" id="campoInput" placeholder="Ej: schueler, klasse, montag..." class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
-                        <p class="text-[10px] text-gray-500 mt-1">Escribe el nombre, haz clic y arrastra sobre el PDF para marcar el recuadro.</p>
+                        <label class="text-[11px] font-semibold text-gray-700">2. Nombre del campo a mapear:</label>
+                        <input type="text" id="campoInput" placeholder="Selecciona arriba o escribe..." class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
+                        <p class="text-[10px] text-gray-500 mt-1">Haz clic y arrastra sobre el PDF para marcar el recuadro de ese campo.</p>
                     </div>
                 </div>
 
@@ -74,7 +73,7 @@
         const canvas = document.getElementById('pdfCanvas');
         const container = document.getElementById('canvasContainer');
         const drawingOverlay = document.getElementById('drawingOverlay');
-        const seccionSelect = document.getElementById('seccionSelect');
+        const detectedLabelsSelect = document.getElementById('detectedLabelsSelect');
         const campoInput = document.getElementById('campoInput');
         const listaCoordenadas = document.getElementById('listaCoordenadas');
         const jsonOutput = document.getElementById('jsonOutput');
@@ -83,10 +82,7 @@
         let pdfDoc = null;
         let pageViewport = null;
         let scale = 1.5;
-        let coordenadasMap = {
-            membrete: {},
-            cuerpo: {}
-        };
+        let coordenadasMap = {};
         
         let isDrawing = false;
         let startX = 0, startY = 0;
@@ -103,6 +99,7 @@
                     const loadingTask = pdfjsLib.getDocument({ data: typedarray });
                     pdfDoc = await loadingTask.promise;
                     await renderPage(1);
+                    await extraerTextosPDF(pdfDoc);
                 } catch (err) {
                     console.error("Error al cargar el PDF:", err);
                     alert("❌ No se pudo cargar el archivo PDF.");
@@ -121,6 +118,29 @@
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
         }
+
+        async function extraerTextosPDF(pdf) {
+            const page = await pdf.getPage(1);
+            const textContent = await page.getTextContent();
+            
+            detectedLabelsSelect.innerHTML = '<option value="">-- Selecciona una etiqueta leída --</option>';
+            
+            const textosUnicos = [...new Set(textContent.items.map(item => item.str.trim()).filter(t => t.length > 1))]
+                .sort();
+
+            textosUnicos.forEach(texto => {
+                const opt = document.createElement('option');
+                opt.value = texto.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                opt.textContent = texto;
+                detectedLabelsSelect.appendChild(opt);
+            });
+        }
+
+        detectedLabelsSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                campoInput.value = e.target.value;
+            }
+        });
 
         container.addEventListener('mousedown', (e) => {
             if (!pdfDoc) return;
@@ -174,10 +194,9 @@
             const pdfY1 = (pageViewport.height - canvasY2) / scale;
             const pdfY2 = (pageViewport.height - canvasY1) / scale;
 
-            const seccion = seccionSelect.value;
-            const campoActual = campoInput.value.trim() || `campo_${Object.keys(coordenadasMap[seccion]).length + 1}`;
+            const campoActual = campoInput.value.trim() || `campo_${Object.keys(coordenadasMap).length + 1}`;
             
-            coordenadasMap[seccion][campoActual] = {
+            coordenadasMap[campoActual] = {
                 x1: Math.round(pdfX1 * 10) / 10,
                 y1: Math.round(pdfY1 * 10) / 10,
                 x2: Math.round(pdfX2 * 10) / 10,
@@ -190,7 +209,7 @@
             cajaFija.style.top = `${canvasY1}px`;
             cajaFija.style.width = `${canvasX2 - canvasX1}px`;
             cajaFija.style.height = `${canvasY2 - canvasY1}px`;
-            cajaFija.textContent = `${seccion}:${campoActual}`;
+            cajaFija.textContent = campoActual;
             drawingOverlay.appendChild(cajaFija);
 
             if (currentRect) currentRect.remove();
@@ -202,25 +221,22 @@
             listaCoordenadas.innerHTML = '';
             jsonOutput.value = JSON.stringify(coordenadasMap, null, 2);
 
-            for (const [seccion, campos] of Object.entries(coordenadasMap)) {
-                for (const [campo, box] of Object.entries(campos)) {
-                    const item = document.createElement('div');
-                    item.className = 'bg-white p-2 rounded border border-gray-200 text-xs flex justify-between items-center shadow-xs';
-                    item.innerHTML = `
-                        <div>
-                            <span class="text-[10px] uppercase font-bold text-gray-400">[${seccion}]</span>
-                            <span class="font-bold text-indigo-900">${campo}</span>
-                            <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
-                        </div>
-                        <button class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1" onclick="window.eliminarCampo('${seccion}', '${campo}')">🗑️</button>
-                    `;
-                    listaCoordenadas.appendChild(item);
-                }
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const item = document.createElement('div');
+                item.className = 'bg-white p-2 rounded border border-gray-200 text-xs flex justify-between items-center shadow-xs';
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-indigo-900">${campo}</span>
+                        <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
+                    </div>
+                    <button class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1" onclick="window.eliminarCampo('${campo}')">🗑️</button>
+                `;
+                listaCoordenadas.appendChild(item);
             }
         }
 
-        window.eliminarCampo = function(seccion, campo) {
-            delete coordenadasMap[seccion][campo];
+        window.eliminarCampo = function(campo) {
+            delete coordenadasMap[campo];
             actualizarUI();
         };
 
