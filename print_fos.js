@@ -19,7 +19,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             </div>
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg text-xs">
-                <p class="text-indigo-800">Ajustando contenedores para aprovechar todo el espacio del formato FOS.</p>
+                <p class="text-indigo-800">Mapeando actividades en las descripciones diarias y separando campos del PDF.</p>
             </div>
 
             <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-900 flex justify-center p-2 max-h-[700px]">
@@ -165,12 +165,9 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         const scale = 1.5;
         const left = box.x1 * scale;
         const canvasTop = pdfPageHeight - (box.y2 * scale);
-        
-        // Ampliamos dinámicamente el ancho del contenedor para que abarque todo el espacio disponible de la celda
-        const anchoAmpliado = Math.max((box.x2 - box.x1) * scale, 380); 
-        const altoAmpliado = Math.max((box.y2 - box.y1) * scale, 55);
-
-        return { left, top: canvasTop, width: anchoAmpliado, height: altoAmpliado };
+        const width = (box.x2 - box.x1) * scale;
+        const height = (box.y2 - box.y1) * scale;
+        return { left, top: canvasTop, width, height };
     }
 
     function renderizarVistaPreviaSemana(semKey, coordenadas) {
@@ -182,33 +179,27 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
             const pos = pdfToCanvasCoords(box);
             const elTexto = document.createElement('div');
-            
-            // Añadimos clases para permitir saltos de línea automáticos (whitespace-pre-wrap y text-xs)
-            elTexto.className = 'absolute text-[11px] text-black font-sans p-1 bg-white/80 border border-indigo-300/80 rounded shadow-sm whitespace-pre-wrap leading-tight';
+            elTexto.className = 'absolute text-[10px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/60 border border-indigo-300/60 rounded';
             elTexto.style.left = `${pos.left}px`;
             elTexto.style.top = `${pos.top}px`;
             elTexto.style.width = `${pos.width}px`;
-            elTexto.style.minHeight = `${pos.height}px`;
+            elTexto.style.height = `${pos.height}px`;
             
             const lowerKey = key.toLowerCase();
             let textoAsignado = '';
 
+            // Solo inyectamos el texto si la clave de la coordenada corresponde a la descripción (evitando duplicar en columnas de horas)
             if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
                 if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                    textoAsignado = datosSemana.lunes.join('\n• ');
-                    if (datosSemana.lunes.length > 0) textoAsignado = '• ' + textoAsignado;
+                    textoAsignado = datosSemana.lunes.join(' • ');
                 } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                    textoAsignado = datosSemana.dienstag.join('\n• ');
-                    if (datosSemana.dienstag.length > 0) textoAsignado = '• ' + textoAsignado;
+                    textoAsignado = datosSemana.dienstag.join(' • ');
                 } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                    textoAsignado = datosSemana.mittwoch.join('\n• ');
-                    if (datosSemana.mittwoch.length > 0) textoAsignado = '• ' + textoAsignado;
+                    textoAsignado = datosSemana.mittwoch.join(' • ');
                 } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                    textoAsignado = datosSemana.donnerstag.join('\n• ');
-                    if (datosSemana.donnerstag.length > 0) textoAsignado = '• ' + textoAsignado;
+                    textoAsignado = datosSemana.donnerstag.join(' • ');
                 } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                    textoAsignado = datosSemana.freitag.join('\n• ');
-                    if (datosSemana.freitag.length > 0) textoAsignado = '• ' + textoAsignado;
+                    textoAsignado = datosSemana.freitag.join(' • ');
                 }
             }
 
