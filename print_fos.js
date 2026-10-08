@@ -70,6 +70,9 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         }
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
+        
+        // Imprimir las claves de las coordenadas en la consola para revisarlas
+        console.log("📍 Coordenadas JSON de la plantilla:", coordenadas);
 
         // 3. Obtener registros diarios del usuario 93
         let resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${idPrueba}&select=*`, {
@@ -93,7 +96,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         globalRegistros.forEach((reg) => {
             const opt = document.createElement('option');
             opt.value = reg.id;
-            // Mostramos la fecha del registro o la semana para identificarlo fácilmente
             const fechaStr = reg.fecha ? new Date(reg.fecha).toLocaleDateString() : 'Sin fecha';
             opt.textContent = `ID: ${reg.id} - ${reg.nombre_actividad ? reg.nombre_actividad.substring(0, 30) + '...' : 'Actividad'} (${fechaStr})`;
             selectSemana.appendChild(opt);
@@ -114,7 +116,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
         await pagina.render({ canvasContext: context, viewport: pdfPageViewport }).promise;
 
-        // Renderizar por defecto el primer registro disponible
         renderizarVistaPreviaSemana(globalRegistros[0].id, coordenadas);
 
         selectSemana.addEventListener('change', (e) => {
@@ -138,6 +139,9 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     function renderizarVistaPreviaSemana(registroId, coordenadas) {
         overlay.innerHTML = '';
         const datosSemana = globalRegistros.find(r => r.id == registroId) || {};
+        
+        // Imprimir los datos del registro seleccionado en la consola
+        console.log("📄 Datos del registro seleccionado:", datosSemana);
 
         for (const [key, box] of Object.entries(coordenadas)) {
             if (!box) continue;
@@ -151,6 +155,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             elTexto.style.width = `${pos.width}px`;
             elTexto.style.height = `${pos.height}px`;
             
+            // Si el registro tiene una propiedad que coincide con la clave de la coordenada, la pinta
             elTexto.textContent = datosSemana[key] !== undefined && datosSemana[key] !== null ? datosSemana[key] : '';
 
             overlay.appendChild(elTexto);
