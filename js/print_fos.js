@@ -1,212 +1,143 @@
 import { SUPABASE_URL, headers } from './config.js';
 
-let fechaActualFOS = null;
-let usuarioActualFOS = null;
+export async function inicializarVistaPreviaSemanasFos(contenedorId, usuarioId) {
+    const contenedor = document.getElementById(contenedorId);
+    if (!contenedor) return;
 
-export function inicializarImpresionFOS() {
-    console.log("Módulo print_fos.js inicializado correctamente.");
-    
-    window.cerrarModalFOS = function() {
-        const modal = document.getElementById('modalImpresionFOS');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    window.cambiarSemanaFOS = function(deltaSemanas) {
-        if (!fechaActualFOS || !usuarioActualFOS) return;
-        
-        let fecha = new Date(fechaActualFOS);
-        fecha.setDate(fecha.getDate() + (deltaSemanas * 7));
-        fechaActualFOS = fecha.toISOString().split('T')[0];
-        
-        print_fos(usuarioActualFOS, fechaActualFOS);
-    };
-}
-
-export async function print_fos(nombreUsuario, fechaInicioSemana) {
-    try {
-        usuarioActualFOS = nombreUsuario;
-        
-        if (!fechaInicioSemana) {
-            const hoy = new Date();
-            const dia = hoy.getDay();
-            const diff = hoy.getDate() - dia + (dia === 0 ? -6 : 1);
-            const lunes = new Date(hoy.setDate(diff));
-            fechaInicioSemana = lunes.toISOString().split('T')[0];
-        }
-        fechaActualFOS = fechaInicioSemana;
-
-        // 1. Obtener datos del usuario
-        const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
-            method: 'GET',
-            headers: headers
-        });
-
-        if (!resUsuario.ok) throw new Error("Fehler beim Laden der Benutzerdaten.");
-        const usuarios = await resUsuario.json();
-
-        if (!usuarios || usuarios.length === 0) {
-            alert("❌ Benutzer in der Datenbank nicht gefunden.");
-            return;
-        }
-
-        const usuarioActual = usuarios[0];
-        const schoolName = usuarioActual.school_name;
-        const tipoAusbildung = usuarioActual.ausbildung || '';
-
-        if (!schoolName) {
-            alert("❌ Dem Benutzer ist keine Schule (school_name) zugeordnet.");
-            return;
-        }
-
-        // 2. Calcular fin de semana
-        let dLunes = new Date(fechaInicioSemana);
-        let dDomingo = new Date(dLunes);
-        dDomingo.setDate(dDomingo.getDate() + 6);
-        const fechaFinSemana = dDomingo.toISOString().split('T')[0];
-
-        // 3. Obtener actividades de la semana
-        let urlActividades = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicioSemana}&fecha=lte.${fechaFinSemana}&select=*`;
-        
-        if (tipoAusbildung) {
-            urlActividades += `&ausbildung=ilike.${encodeURIComponent('%' + tipoAusbildung + '%')}`;
-        }
-
-        const resActividades = await fetch(urlActividades, {
-            method: 'GET',
-            headers: headers
-        });
-        
-        if (!resActividades.ok) throw new Error("Fehler beim Laden der Aktivitäten.");
-        const actividades = await resActividades.json();
-
-        // 4. Buscar plantilla y coordenadas en 'school_templates'
-        let plantillaActiva = null;
-        const resPlantilla = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(schoolName)}&select=*`, {
-            method: 'GET',
-            headers: headers
-        });
-        
-        if (resPlantilla.ok) {
-            const plantillas = await resPlantilla.json();
-            if (plantillas && plantillas.length > 0) plantillaActiva = plantillas[0];
-        }
-
-        if (!plantillaActiva) {
-            const resPlantillaAlt = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?school_name=eq.${encodeURIComponent(schoolName)}&select=*`, {
-                method: 'GET',
-                headers: headers
-            });
-            if (resPlantillaAlt.ok) {
-                const plantillasAlt = await resPlantillaAlt.json();
-                if (plantillasAlt && plantillasAlt.length > 0) plantillaActiva = plantillasAlt[0];
-            }
-        }
-
-        const coordenadas = plantillaActiva ? (plantillaActiva.coordinates_json || {}) : {};
-        
-        // 🔍 VALIDACIÓN EN CONSOLA: Ver qué coordenadas exactas devolvió Supabase
-        console.log("=== SUPABASE TEMPLATE COORDENADAS ===", coordenadas);
-
-        // 5. Configurar vista previa en el modal
-        const previewContainer = document.getElementById('fosPreviewContainer');
-        const modalFOS = document.getElementById('modalImpresionFOS');
-        const lblInfo = document.getElementById('lblFosInfoUsuario');
-
-        if (!previewContainer || !modalFOS) {
-            alert("❌ Vorschau-Container nicht im HTML gefunden.");
-            return;
-        }
-
-        if (lblInfo) {
-            lblInfo.textContent = `Woche: ${fechaInicioSemana} bis ${fechaFinSemana} (${actividades.length} Einträge)`;
-        }
-
-        previewContainer.innerHTML = `
-            <div id="wrapperCanvasFOS" class="relative inline-block shadow-2xl bg-white">
-                <canvas id="pdfCanvasFOS" class="block"></canvas>
-                <div id="overlayCamposFOS" class="absolute inset-0 pointer-events-none"></div>
+    contenedor.innerHTML = `
+        <div class="space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-200 pb-3">
+                <h3 class="text-xs font-bold text-indigo-900 uppercase">📄 Vorschau des Ausbildungsnachweises (Wochenauswahl)</h3>
+                <div class="flex items-center space-x-2 text-xs">
+                    <label class="font-bold text-gray-700">Woche wählen:</label>
+                    <select id="selectSemanaFos" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                        <option value="">Lade Wochen...</option>
+                    </select>
+                </div>
             </div>
-        `;
 
-        modalFOS.classList.remove('hidden');
+            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg text-xs">
+                <p class="text-indigo-800">Wähle eine Woche aus, um die Vorschau mit den gespeicherten Koordinaten zu generieren. Fehlende Daten bleiben leer, behalten aber ihren exakten Platz.</p>
+            </div>
 
-        // Cargar y pintar la página del PDF usando PDF.js con una escala limpia (ej. 1.0 o 1.5)
-        const loadingTask = pdfjsLib.getDocument('./admin.pdf');
-        const pdfDoc = await loadingTask.promise;
-        const page = await pdfDoc.getPage(1);
-        
-        const canvas = document.getElementById('pdfCanvasFOS');
-        const context = canvas.getContext('2d');
-        const renderScale = 1.5; // Escala de renderizado para nitidez
-        const viewport = page.getViewport({ scale: renderScale });
+            <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-900 flex justify-center p-2 max-h-[700px]">
+                <div class="relative inline-block" id="previewWrapper">
+                    <canvas id="previewCanvas" class="block shadow-lg"></canvas>
+                    <div id="previewOverlay" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+        </div>
+    `;
 
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+    const selectSemana = contenedor.querySelector('#selectSemanaFos');
+    const canvas = contenedor.querySelector('#previewCanvas');
+    const overlay = contenedor.querySelector('#previewOverlay');
 
-        // Forzar un tamaño CSS exacto para que coincida proporcionalmente con el viewport
-        canvas.style.width = `${viewport.width / renderScale}px`;
-        canvas.style.height = `${viewport.height / renderScale}px`;
+    let globalPlantilla = null;
+    let globalRegistros = [];
+    let pdfPageViewport = null;
 
-        await page.render({
-            canvasContext: context,
-            viewport: viewport
-        }).promise;
-
-        const overlay = document.getElementById('overlayCamposFOS');
-        
-        // Factor de escala real entre el espacio del PDF original y los píxeles visuales del canvas en pantalla
-        const scaleFactor = (viewport.width / renderScale) / 595.27; // 595.27 es el ancho estándar en puntos de un A4
-
-        // 6. Pintar el nombre del usuario validando la estructura de coordenadas
-        if (coordenadas.nombre) {
-            const coordNombre = coordenadas.nombre;
-            const x = (coordNombre.x1 !== undefined ? coordNombre.x1 : (coordNombre.x || 0)) * scaleFactor;
-            const y = (coordNombre.y1 !== undefined ? coordNombre.y1 : (coordNombre.y || 0)) * scaleFactor;
-
-            const divNombre = document.createElement('div');
-            divNombre.className = "absolute text-black font-sans text-xs font-semibold whitespace-nowrap bg-yellow-200/50 px-1"; // Fondo translúcido para ubicarlo visualmente
-            divNombre.style.left = `${x}px`;
-            divNombre.style.top = `${y}px`;
-            divNombre.textContent = nombreUsuario;
-            overlay.appendChild(divNombre);
-            console.log("Nombre pintado en:", x, y);
-        } else {
-            console.warn("⚠️ La clave 'nombre' no existe en coordinates_json.");
+    try {
+        // 1. Obtener los datos del usuario para conocer su 'schul_name'
+        const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioId}&select=*`, {
+            headers: headers
+        });
+        const usuarios = await resUsuario.json();
+        if (!usuarios || usuarios.length === 0) {
+            alert("❌ Usuario no encontrado.");
+            return;
+        }
+        const schulName = usuarios[0].schul_name;
+        if (!schulName) {
+            alert("❌ El usuario no tiene asignado un 'schul_name'.");
+            return;
         }
 
-        // 7. Distribuir las actividades por día usando las claves de coordenadas guardadas
-        actividades.forEach((act, index) => {
-            const possibleKeys = [`m${index + 1}`, `actividad_${index + 1}`, `linea_${index + 1}`, `actividad`];
-            let coord = null;
+        // 2. Obtener la plantilla de la escuela usando 'schul_name'
+        const resTemplate = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?school_name=eq.${encodeURIComponent(schulName)}&select=*`, {
+            headers: headers
+        });
+        const templates = await resTemplate.json();
+        if (!templates || templates.length === 0) {
+            alert(`❌ No se encontró la plantilla para la escuela: ${schulName}`);
+            return;
+        }
+        globalPlantilla = templates[0];
 
-            for (const key of possibleKeys) {
-                if (coordenadas[key]) {
-                    coord = coordenadas[key];
-                    break;
-                }
-            }
+        // 3. Obtener todos los registros diarios (semanas) de este usuario
+        const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?user_id=eq.${usuarioId}&select=*`, {
+            headers: headers
+        });
+        globalRegistros = await resRegistros.json();
 
-            const divAct = document.createElement('div');
-            divAct.className = "absolute text-black font-sans text-xs whitespace-nowrap overflow-hidden bg-blue-200/40 px-1"; // Fondo translúcido para validar
+        if (!globalRegistros || globalRegistros.length === 0) {
+            selectSemana.innerHTML = `<option value="">Keine Wochen gefunden</option>`;
+            return;
+        }
 
-            if (coord) {
-                const x = (coord.x1 !== undefined ? coord.x1 : (coord.x || 100)) * scaleFactor;
-                const y = ((coord.y1 !== undefined ? coord.y1 : (coord.y || 150)) + (index * 16)) * scaleFactor;
+        // Poblar el selector de semanas
+        selectSemana.innerHTML = '';
+        globalRegistros.forEach((reg, index) => {
+            const opt = document.option ? document.createElement('option') : document.createElement('option');
+            opt.value = reg.id;
+            // Muestra la semana o fecha del registro (ajusta la etiqueta según las columnas de tu tabla)
+            opt.textContent = `Woche / ID: ${reg.semana || reg.id || (index + 1)} (${new Date(reg.created_at || Date.now()).toLocaleDateString()})`;
+            selectSemana.appendChild(opt);
+        });
 
-                divAct.style.left = `${x}px`;
-                divAct.style.top = `${y}px`;
-            } else {
-                // Coordenada por defecto si la clave no se encuentra en la BD
-                divAct.style.left = `${120 * scaleFactor}px`;
-                divAct.style.top = `${(200 + (index * 22)) * scaleFactor}px`;
-            }
+        // Cargar PDF base con PDF.js
+        const loadingTask = pdfjsLib.getDocument(globalPlantilla.pdf_filename ? `./${globalPlantilla.pdf_filename}` : './admin.pdf');
+        const pdfDoc = await loadingTask.promise;
+        const pagina = await pdfDoc.getPage(1);
 
-            divAct.textContent = act.nombre_actividad || '';
-            overlay.appendChild(divAct);
+        const scale = 1.5;
+        pdfPageViewport = pagina.getViewport({ scale });
+        const context = canvas.getContext('2d');
+        canvas.height = pdfPageViewport.height;
+        canvas.width = pdfPageViewport.width;
+
+        await pagina.render({ canvasContext: context, viewport: pdfPageViewport }).promise;
+
+        // Renderizar la primera semana por defecto
+        renderizarVistaPreviaSemana(globalRegistros[0].id);
+
+        // Evento al cambiar de semana en el selector
+        selectSemana.addEventListener('change', (e) => {
+            renderizarVistaPreviaSemana(e.target.value);
         });
 
     } catch (err) {
-        console.error("Fehler bei print_fos:", err);
-        alert("❌ Fehler: " + err.message);
+        console.error("Error al inicializar la vista previa de Foz:", err);
+        alert("❌ Ocurrió un error al cargar los datos.");
+    }
+
+    function renderizarVistaPreviaSemana(registroId) {
+        overlay.innerHTML = '';
+        const datosSemana = globalRegistros.find(r => r.id == registroId) || {};
+        const coordenadas = globalPlantilla.coordinates_json || {};
+
+        for (const [key, box] of Object.entries(coordenadas)) {
+            if (!box) continue;
+
+            const left = box.x1 * 1.5;
+            const top = pdfPageViewport.height - (box.y2 * 1.5);
+            const width = (box.x2 - box.x1) * 1.5;
+            const height = (box.y2 - box.y1) * 1.5;
+
+            const elTexto = document.createElement('div');
+            elTexto.className = 'absolute text-[10px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/50 border border-indigo-200/40 rounded';
+            elTexto.style.left = `${left}px`;
+            elTexto.style.top = `${top}px`;
+            elTexto.style.width = `${width}px`;
+            elTexto.style.height = `${height}px`;
+            
+            // Si el campo existe lo muestra; si falta, queda en blanco respetando el espacio exacto
+            elTexto.textContent = datosSemana[key] !== undefined && datosSemana[key] !== null ? datosSemana[key] : '';
+
+            overlay.appendChild(elTexto);
+        }
     }
 }
+
+// Exponer globalmente si es requerido por el HTML principal
+window.inicializarVistaPreviaSemanasFos = inicializarVistaPreviaSemanasFos;
