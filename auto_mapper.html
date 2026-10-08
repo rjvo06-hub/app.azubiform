@@ -38,7 +38,7 @@
             <div class="bg-white p-4 rounded-xl shadow-sm space-y-4 flex flex-col h-[800px]">
                 <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Coordenadas Autodetectadas</h2>
                 
-                <p class="text-[11px] text-gray-500">El sistema ha escaneado el documento en busca de etiquetas clave. Puedes revisar el JSON resultante y ajustar valores manualmente si es necesario.</p>
+                <p class="text-[11px] text-gray-500">El sistema ha escaneado el documento ajustando las escalas del eje PDF. Puedes revisar el JSON resultante y ajustar valores si es necesario.</p>
 
                 <!-- Lista de campos detectados -->
                 <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50" id="listaCoordenadas">
@@ -71,6 +71,7 @@
         let textItemsList = [];
         let coordenadasMap = {};
         let pdfPageHeight = 0;
+        let pdfPageWidth = 0;
 
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -90,19 +91,18 @@
             const page = await pdfDoc.getPage(num);
             pageViewport = page.getViewport({ scale });
             pdfPageHeight = pageViewport.height;
+            pdfPageWidth = pageViewport.width;
 
             const context = canvas.getContext('2d');
             canvas.height = pdfPageHeight;
-            canvas.width = pageViewport.width;
+            canvas.width = pdfPageWidth;
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
 
-            // Extraer elementos de texto con sus posiciones exactas del PDF
             const textContent = await page.getTextContent();
             textItemsList = textContent.items;
         }
 
-        // Función inteligente de Auto-Detección basada en anclas de texto
         btnAutoDetectar.addEventListener('click', () => {
             if (!textItemsList.length) {
                 alert("⚠️ Primero debes cargar un archivo PDF.");
@@ -111,52 +111,27 @@
 
             coordenadasMap = {};
 
-            // 1. Buscar anclas comunes en formularios FOS
-            const anclas = {
-                "montag": ["montag"],
-                "dienstag": ["dienstag"],
-                "mittwoch": ["mittwoch"],
-                "donnerstag": ["donnerstag"],
-                "freitag": ["freitag"],
-                "schueler": ["schüler/schüler", "schüler"],
-                "klasse": ["klasse"],
-                "woche_vom": ["wochenbericht", "vom"]
-            };
-
+            // Mapeo inteligente basado en las posiciones de texto detectadas en el PDF
             textItemsList.forEach(item => {
                 const textoLower = item.str.toLowerCase().trim();
+                const x = item.transform[4]; // Coordenada X real del PDF
+                const y = item.transform[5]; // Coordenada Y real del PDF (desde abajo)
 
-                for (const [campo, keywords] of Object.entries(anclas)) {
-                    if (keywords.some(kw => textoLower.includes(kw))) {
-                        // El transform de PDF.js da [scaleX, skewY, skewX, scaleY, x, y]
-                        const x = item.transform[4];
-                        const y = item.transform[5];
-
-                        // A partir de la posición de la etiqueta, calculamos inteligentemente el espacio de escritura a la derecha o debajo
-                        if (["montag", "dienstag", "mittwoch", "donnerstag", "freitag"].includes(campo)) {
-                            // Asignamos una caja estándar que abarque el espacio de actividades para ese día
-                            coordenadasMap[campo] = {
-                                x1: Math.round((x + 100) * 10) / 10,
-                                y1: Math.round((y - 5) * 10) / 10,
-                                x2: Math.round((x + 420) * 10) / 10,
-                                y2: Math.round((y + 25) * 10) / 10
-                            };
-                        } else if (campo === "schueler") {
-                            coordenadasMap["schueler"] = {
-                                x1: Math.round((x + 10) * 10) / 10,
-                                y1: Math.round((y - 25) * 10) / 10,
-                                x2: Math.round((x + 250) * 10) / 10,
-                                y2: Math.round((y - 2) * 10) / 10
-                            };
-                        } else if (campo === "klasse") {
-                            coordenadasMap["klasse"] = {
-                                x1: Math.round((x + 10) * 10) / 10,
-                                y1: Math.round((y - 25) * 10) / 10,
-                                x2: Math.round((x + 150) * 10) / 10,
-                                y2: Math.round((y - 2) * 10) / 10
-                            };
-                        }
-                    }
+                // Detectar días de la semana y asignar el recuadro correspondiente a la derecha
+                if (textoLower === 'montag') {
+                    coordenadasMap['montag'] = { x1: 110, y1: y - 10, x2: 430, y2: y + 25 };
+                } else if (textoLower === 'dienstag') {
+                    coordenadasMap['dienstag'] = { x1: 110, y1: y - 10, x2: 430, y2: y + 25 };
+                } else if (textoLower === 'mittwoch') {
+                    coordenadasMap['mittwoch'] = { x1: 110, y1: y - 10, x2: 430, y2: y + 25 };
+                } else if (textoLower === 'donnerstag') {
+                    coordenadasMap['donnerstag'] = { x1: 110, y1: y - 10, x2: 430, y2: y + 25 };
+                } else if (textoLower === 'freitag') {
+                    coordenadasMap['freitag'] = { x1: 110, y1: y - 10, x2: 430, y2: y + 25 };
+                } else if (textoLower.includes('schülerin') || textoLower.includes('schüler')) {
+                    coordenadasMap['schueler'] = { x1: x, y1: y - 25, x2: x + 250, y2: y - 2 };
+                } else if (textoLower === 'klasse') {
+                    coordenadasMap['klasse'] = { x1: x, y1: y - 25, x2: x + 150, y2: y - 2 };
                 }
             });
 
@@ -182,11 +157,13 @@
         }
 
         function pdfToCanvasCoords(box) {
-            const left = box.x1 * scale;
-            const canvasTop = pdfPageHeight - (box.y2 * scale);
-            const width = (box.x2 - box.x1) * scale;
-            const height = (box.y2 - box.y1) * scale;
-            return { left, top: canvasTop, width, height };
+            const scaleFactor = 1.5;
+            const left = box.x1 * scaleFactor;
+            // Corrección matemática exacta del eje Y del PDF al Canvas web
+            const top = pdfPageHeight - (box.y2 * scaleFactor);
+            const width = (box.x2 - box.x1) * scaleFactor;
+            const height = (box.y2 - box.y1) * scaleFactor;
+            return { left, top, width, height };
         }
 
         function dibujarOverlayVisual() {
@@ -204,15 +181,12 @@
             }
         }
 
-        // Permitir editar el JSON manualmente y actualizar el overlay en tiempo real ("Human-in-the-Loop")
         jsonOutput.addEventListener('input', (e) => {
             try {
                 const parsed = JSON.parse(e.target.value);
                 coordenadasMap = parsed;
                 dibujarOverlayVisual();
-            } catch (err) {
-                // Ignorar errores de sintaxis mientras el usuario escribe
-            }
+            } catch (err) {}
         });
 
         btnGuardar.addEventListener('click', async () => {
