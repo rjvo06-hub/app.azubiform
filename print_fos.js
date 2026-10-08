@@ -1,4 +1,4 @@
-import { SUPABASE_URL, headers } from './config.js';
+import { SUPABASE_URL, headers } from './js/config.js';
 
 export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     const contenedor = document.getElementById(contenedorId);
