@@ -19,7 +19,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             </div>
 
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg text-xs">
-                <p class="text-indigo-800">Agrupando actividades semanales de Lunes a Viernes sobre el PDF base.</p>
+                <p class="text-indigo-800">Mapeando actividades en las descripciones diarias y separando campos del PDF.</p>
             </div>
 
             <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-900 flex justify-center p-2 max-h-[700px]">
@@ -41,21 +41,21 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let pdfPageHeight = 0;
 
     try {
-        // 1. Obtener datos del usuario para extraer su nombre exacto ("Katharina Schwarz")
+        // 1. Obtener datos del usuario
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${idPrueba}&select=*`, {
             headers: headers
         });
         const usuarios = await resUsuario.json();
         if (!usuarios || usuarios.length === 0) {
-            alert(`❌ Usuario con ID ${idPrueba} no encontrado.`);
+            alert(`❌ Usuario con ID ${idPrueba} nicht gefunden.`);
             return;
         }
         const usuarioData = usuarios[0];
         const schoolName = usuarioData.school_name;
-        const nombreUsuario = usuarioData.nombre; // "Katharina Schwarz"
+        const nombreUsuario = usuarioData.nombre;
 
         if (!schoolName) {
-            alert("❌ El usuario no tiene un 'school_name' asignado.");
+            alert("❌ Der Benutzer hat keinen 'school_name' zugewiesen.");
             return;
         }
 
@@ -65,13 +65,13 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         });
         const templates = await resTemplate.json();
         if (!templates || templates.length === 0) {
-            alert(`❌ No se encontró la plantilla para la escuela: ${schoolName}`);
+            alert(`❌ Keine Vorlage für die Schule gefunden: ${schoolName}`);
             return;
         }
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
 
-        // 3. Obtener registros diarios filtrando por el nombre exacto de la usuaria en la columna 'usuario'
+        // 3. Obtener registros diarios
         const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
             headers: headers
         });
@@ -82,7 +82,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             return;
         }
 
-        // 4. Agrupar los registros por semana basada en la fecha de cada actividad
+        // 4. Agrupar registros por semana
         semanasAgrupadas = agruparRegistrosPorSemana(registrosRaw);
 
         const llavesSemanas = Object.keys(semanasAgrupadas);
@@ -114,7 +114,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
         await pagina.render({ canvasContext: context, viewport: pdfPageViewport }).promise;
 
-        // Renderizar por defecto la primera semana agrupada
         renderizarVistaPreviaSemana(llavesSemanas[0], coordenadas);
 
         selectSemana.addEventListener('change', (e) => {
@@ -122,8 +121,8 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         });
 
     } catch (err) {
-        console.error("Error al inicializar la vista previa:", err);
-        alert("❌ Ocurrió un error al cargar la vista previa.");
+        console.error("Fehler beim Laden der Vorschau:", err);
+        alert("❌ Ein Fehler ist aufgetreten.");
     }
 
     function agruparRegistrosPorSemana(registros) {
@@ -132,7 +131,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             if (!reg.fecha) return;
             const fechaObj = new Date(reg.fecha);
             
-            // Calcular el lunes de esa semana
             const diaSemana = fechaObj.getDay();
             const diff = fechaObj.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
             const lunes = new Date(new Date(fechaObj).setDate(diff));
@@ -188,20 +186,24 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             elTexto.style.height = `${pos.height}px`;
             
             const lowerKey = key.toLowerCase();
-            let textoDia = '';
-            if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                textoDia = datosSemana.lunes.join(' • ');
-            } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                textoDia = datosSemana.dienstag.join(' • ');
-            } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                textoDia = datosSemana.mittwoch.join(' • ');
-            } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                textoDia = datosSemana.donnerstag.join(' • ');
-            } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                textoDia = datosSemana.freitag.join(' • ');
+            let textoAsignado = '';
+
+            // Solo inyectamos el texto si la clave de la coordenada corresponde a la descripción (evitando duplicar en columnas de horas)
+            if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                    textoAsignado = datosSemana.lunes.join(' • ');
+                } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                    textoAsignado = datosSemana.dienstag.join(' • ');
+                } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                    textoAsignado = datosSemana.mittwoch.join(' • ');
+                } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                    textoAsignado = datosSemana.donnerstag.join(' • ');
+                } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                    textoAsignado = datosSemana.freitag.join(' • ');
+                }
             }
 
-            elTexto.textContent = textoDia;
+            elTexto.textContent = textoAsignado;
             overlay.appendChild(elTexto);
         }
     }
