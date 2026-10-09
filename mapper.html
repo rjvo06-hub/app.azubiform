@@ -12,7 +12,7 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <style>
-        /* Esquinas reducidas y limpias basadas en tu código exacto */
+        /* Esquinas reducidas y limpias para evitar sobreposiciones en móvil */
         .resize-handle {
             position: absolute;
             background: #ffffff;
@@ -62,7 +62,7 @@
                 <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Configuración de Campos</h2>
                 
                 <div class="space-y-2">
-                    <!-- Opción Nueva: Cargar Plantilla Existente desde Supabase -->
+                    <!-- Cargar Plantilla Existente desde Supabase -->
                     <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-200 space-y-1">
                         <label class="text-[10px] font-semibold text-indigo-900">📂 Cargar plantilla guardada:</label>
                         <div class="flex space-x-1">
@@ -90,7 +90,7 @@
                             <option value="montag_stunden">Montag - Stunden</option>
                             <option value="dienstag_stunden">Dienstag - Stunden</option>
                             <option value="mittwoch_stunden">Mittwoch - Stunden</option>
-                            <option value="donnerstag_stunden">Dienstag - Stunden</option>
+                            <option value="donnerstag_stunden">Donnerstag - Stunden</option>
                             <option value="freitag_stunden">Freitag - Stunden</option>
                         </select>
                     </div>
@@ -193,7 +193,7 @@
         async function cargarListaPlantillas() {
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
-                    headers: headers
+                    headers: { ...headers, 'Range': '0-999' }
                 });
                 if (response.ok) {
                     const data = await response.json();
@@ -221,14 +221,14 @@
 
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${fileIdentifier}&select=coordinates_json`, {
-                    headers: headers
+                    headers: { ...headers, 'Range': '0-999' }
                 });
+                
                 if (response.ok) {
                     const data = await response.json();
                     if (data.length > 0 && data[0].coordinates_json) {
                         coordenadasMap = data[0].coordinates_json;
 
-                        // Asegurar que si hay campos personalizados nuevos que no estaban en el select, se añadan
                         for (const campo of Object.keys(coordenadasMap)) {
                             const existe = Array.from(campoSelect.options).some(opt => opt.value === campo);
                             if (!existe) {
@@ -250,10 +250,13 @@
                     } else {
                         alert("⚠️ No se encontraron coordenadas para esta plantilla.");
                     }
+                } else {
+                    const errText = await response.text();
+                    alert("❌ Error del servidor: " + errText);
                 }
             } catch (err) {
                 console.error(err);
-                alert("❌ Error al conectar con Supabase para cargar.");
+                alert("❌ Error de red al conectar con Supabase para cargar.");
             }
         });
 
@@ -562,7 +565,7 @@
 
                 if (response.ok) {
                     alert("✅ ¡Guardado con éxito en Supabase!");
-                    cargarListaPlantillas(); // Actualizar la lista desplegable por si es nueva
+                    cargarListaPlantillas();
                 } else {
                     const err = await response.text();
                     alert("❌ Error: " + err);
