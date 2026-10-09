@@ -68,9 +68,9 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Imprimir / Guardar PDF -->
-                    <button id="btnImprimirPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
-                        <span>🖨️ Imprimir / Guardar PDF</span>
+                    <!-- Botón de Descargar Reporte -->
+                    <button id="btnDescargarPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
+                        <span>📥 Descargar Reporte FOS</span>
                     </button>
                 </div>
 
@@ -94,7 +94,7 @@
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
         const btnGenerarVista = document.getElementById('btnGenerarVista');
-        const btnImprimirPdf = document.getElementById('btnImprimirPdf');
+        const btnDescargarPdf = document.getElementById('btnDescargarPdf');
         const estadoInfo = document.getElementById('estadoInfo');
 
         let pdfDoc = null;
@@ -265,23 +265,20 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Solución robusta: Fusionamos el canvas y los textos en una sola imagen y abrimos la vista de impresión/guardado
-        btnImprimirPdf.addEventListener('click', () => {
+        // Fusión directa en canvas y descarga automática del reporte como imagen/PDF
+        btnDescargarPdf.addEventListener('click', () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
 
-            // Creamos un canvas temporal de alta resolución combinando el PDF y el overlay de texto
             const printCanvas = document.createElement('canvas');
             printCanvas.width = canvas.width;
             printCanvas.height = canvas.height;
             const ctx = printCanvas.getContext('2d');
 
-            // 1. Dibujamos el PDF base
             ctx.drawImage(canvas, 0, 0);
 
-            // 2. Dibujamos cada caja de texto encima con precisión exacta
             const boxes = drawingOverlay.querySelectorAll('div[style]');
             boxes.forEach(box => {
                 const style = box.style;
@@ -290,58 +287,37 @@
                 const width = parseFloat(style.width);
                 const height = parseFloat(style.height);
 
-                // Fondo blanco de la celda para tapar el PDF subyacente limpio
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                 ctx.fillRect(left, top, width, height);
 
-                // Extraemos las actividades o texto del div
                 const textoContenido = box.innerText || '';
                 const lineas = textoContenido.split('\n').filter(l => l.trim() !== '');
 
                 ctx.fillStyle = 'black';
                 
                 if (box.classList.contains('flex-col')) {
-                    // Texto de días de semana con viñetas
                     let currentY = top + 8;
                     ctx.font = '5px sans-serif';
                     lineas.forEach(linea => {
                         ctx.fillText(linea, left + 3, currentY);
-                        currentY += 7; // interlineado
+                        currentY += 7;
                     });
                 } else {
-                    // Campos normales (ej. Nombre de alumno)
                     ctx.font = '8px sans-serif';
                     ctx.fillText(textoContenido, left + 3, top + (height / 2) + 3);
                 }
             });
 
-            // Convertimos el canvas resultante en una imagen para imprimir
+            // Creamos un enlace de descarga directa infalible para móviles y escritorio
             const dataUrl = printCanvas.toDataURL('image/png');
-            const ventanaImpresion = window.open('', '_blank');
-            if (!ventanaImpresion) {
-                alert("⚠️ Por favor, permite las ventanas emergentes (pop-ups) para imprimir.");
-                return;
-            }
-
-            ventanaImpresion.document.write(`
-                <html>
-                    <head>
-                        <title>Reporte FOS - Imprimir / Guardar</title>
-                        <style>
-                            body { margin: 0; padding: 0; background: white; text-align: center; }
-                            img { width: 100%; height: auto; display: block; margin: 0 auto; }
-                            @media print {
-                                body { margin: 0; }
-                                img { width: 100%; max-width: 100%; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <img src="${dataUrl}" onload="window.print(); window.close();" />
-                    </body>
-                </html>
-            `);
-            ventanaImpresion.document.close();
+            const enlace = document.createElement('a');
+            enlace.href = dataUrl;
+            enlace.download = `Reporte_FOS_${selectUsuario.value || 'usuario'}.png`;
+            document.body.appendChild(enlace);
+            enlace.click();
+            document.body.removeChild(enlace);
+            
+            estadoInfo.textContent = "📥 ¡Reporte descargado con éxito!";
         });
 
         function redibujarDatos(datosSemana) {
