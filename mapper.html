@@ -41,7 +41,7 @@
     <div class="max-w-7xl mx-auto space-y-4">
         <!-- Cabecera -->
         <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">📱 Mapeador Visual FOS (Móvil & Tablet)</h1>
+            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">📱 Mapeador Visual FOS (Carga & Edición)</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow transition whitespace-nowrap">💾 Guardar</button>
@@ -62,6 +62,17 @@
                 <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Configuración de Campos</h2>
                 
                 <div class="space-y-2">
+                    <!-- Opción Nueva: Cargar Plantilla Existente desde Supabase -->
+                    <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-indigo-900">📂 Cargar plantilla guardada:</label>
+                        <div class="flex space-x-1">
+                            <select id="selectPlantillasGuardadas" class="w-full p-1 border border-indigo-300 rounded text-xs bg-white">
+                                <option value="">-- Selecciona una escuela --</option>
+                            </select>
+                            <button id="btnCargarPlantilla" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2.5 py-1 rounded">📥 Cargar</button>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="text-[11px] font-semibold text-gray-700">Seleccionar Campo:</label>
                         <select id="campoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
@@ -79,14 +90,14 @@
                             <option value="montag_stunden">Montag - Stunden</option>
                             <option value="dienstag_stunden">Dienstag - Stunden</option>
                             <option value="mittwoch_stunden">Mittwoch - Stunden</option>
-                            <option value="donnerstag_stunden">Donnerstag - Stunden</option>
+                            <option value="donnerstag_stunden">Dienstag - Stunden</option>
                             <option value="freitag_stunden">Freitag - Stunden</option>
                         </select>
                     </div>
 
                     <!-- Añadir campo personalizado -->
                     <div class="bg-gray-50 p-2 rounded-lg border border-gray-200 space-y-1">
-                        <label class="text-[10px] font-semibold text-gray-700">Añadir campo nuevo:</label>
+                        <label class="text-[10px] font-semibold text-gray-700">Añadir campo nuevo (si se te olvidó):</label>
                         <div class="flex space-x-1">
                             <input type="text" id="nuevoCampoInput" placeholder="Nombre..." class="w-full p-1 border border-gray-300 rounded text-xs bg-white">
                             <button id="btnAgregarCampo" class="bg-emerald-600 text-white text-xs px-2.5 py-1 rounded">➕</button>
@@ -97,7 +108,7 @@
                         📌 Toca dos puntos en el PDF para crear la caja.
                     </div>
 
-                    <!-- Controles Táctiles de Movimiento (Reemplazo táctil de las flechas del teclado) -->
+                    <!-- Controles Táctiles de Movimiento -->
                     <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 space-y-1">
                         <label class="text-[10px] font-bold text-slate-700 uppercase block text-center">🕹️ Ajuste Fino Táctil (Campo Activo)</label>
                         <div class="grid grid-cols-3 gap-1 max-w-[160px] mx-auto">
@@ -112,14 +123,14 @@
                 </div>
 
                 <!-- Lista de campos guardados -->
-                <div class="h-36 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50" id="listaCoordenadas">
+                <div class="h-32 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50" id="listaCoordenadas">
                     <p class="text-[11px] text-gray-400 text-center mt-4">No hay coordenadas capturadas aún.</p>
                 </div>
 
                 <!-- JSON Exportado -->
                 <div class="space-y-1">
                     <label class="text-[11px] font-semibold text-gray-700">JSON:</label>
-                    <textarea id="jsonOutput" readonly class="w-full h-16 p-1.5 text-[9px] font-mono bg-gray-900 text-green-400 rounded-lg border border-gray-700 focus:outline-none"></textarea>
+                    <textarea id="jsonOutput" readonly class="w-full h-14 p-1.5 text-[9px] font-mono bg-gray-900 text-green-400 rounded-lg border border-gray-700 focus:outline-none"></textarea>
                 </div>
             </div>
         </div>
@@ -148,6 +159,8 @@
         const campoSelect = document.getElementById('campoSelect');
         const nuevoCampoInput = document.getElementById('nuevoCampoInput');
         const btnAgregarCampo = document.getElementById('btnAgregarCampo');
+        const selectPlantillasGuardadas = document.getElementById('selectPlantillasGuardadas');
+        const btnCargarPlantilla = document.getElementById('btnCargarPlantilla');
         const estadoModo = document.getElementById('estadoModo');
         const listaCoordenadas = document.getElementById('listaCoordenadas');
         const jsonOutput = document.getElementById('jsonOutput');
@@ -160,7 +173,7 @@
 
         let pdfDoc = null;
         let pageViewport = null;
-        let scale = 1.2; // Escala optimizada para pantallas móviles
+        let scale = 1.2;
         let coordenadasMap = {};
         let campoSeleccionadoActivo = null;
         let campoPendienteDuplicar = null;
@@ -175,6 +188,74 @@
             modalCampoSelect.innerHTML = campoSelect.innerHTML;
         }
         inicializarModalSelect();
+
+        // Cargar lista de plantillas disponibles en Supabase al iniciar
+        async function cargarListaPlantillas() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
+                    headers: headers
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    selectPlantillasGuardadas.innerHTML = '<option value="">-- Selecciona una escuela --</option>';
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.file_identifier;
+                        opt.textContent = item.school_name;
+                        selectPlantillasGuardadas.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error al obtener plantillas:", err);
+            }
+        }
+        cargarListaPlantillas();
+
+        // Botón para descargar y cargar las coordenadas de la escuela seleccionada
+        btnCargarPlantilla.addEventListener('click', async () => {
+            const fileIdentifier = selectPlantillasGuardadas.value;
+            if (!fileIdentifier) {
+                alert("⚠️ Selecciona una escuela primero.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${fileIdentifier}&select=coordinates_json`, {
+                    headers: headers
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.length > 0 && data[0].coordinates_json) {
+                        coordenadasMap = data[0].coordinates_json;
+
+                        // Asegurar que si hay campos personalizados nuevos que no estaban en el select, se añadan
+                        for (const campo of Object.keys(coordenadasMap)) {
+                            const existe = Array.from(campoSelect.options).some(opt => opt.value === campo);
+                            if (!existe) {
+                                const opt = document.createElement('option');
+                                opt.value = campo;
+                                opt.textContent = `${campo} (Cargado)`;
+                                campoSelect.appendChild(opt);
+
+                                const optModal = document.createElement('option');
+                                optModal.value = campo;
+                                optModal.textContent = `${campo} (Cargado)`;
+                                modalCampoSelect.appendChild(optModal);
+                            }
+                        }
+
+                        actualizarUI();
+                        redibujarTodasLasCajas();
+                        alert("✅ ¡Coordenadas cargadas con éxito! Ya puedes revisarlas o modificar el campo que faltaba.");
+                    } else {
+                        alert("⚠️ No se encontraron coordenadas para esta plantilla.");
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al conectar con Supabase para cargar.");
+            }
+        });
 
         btnAgregarCampo.addEventListener('click', () => {
             const val = nuevoCampoInput.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -225,7 +306,6 @@
             redibujarTodasLasCajas();
         }
 
-        // --- SOPORTE TÁCTIL PARA CREACIÓN POR PUNTOS ---
         container.addEventListener('click', (e) => {
             if (!pdfDoc) return;
             if (isResizing || isMoving) return;
@@ -273,7 +353,6 @@
             }
         });
 
-        // --- MOVIMIENTO Y REDIMENSIONAMIENTO TÁCTIL ---
         window.addEventListener('pointermove', (e) => {
             if (!isResizing && !isMoving) return;
 
@@ -335,7 +414,6 @@
             resizeHandleType = null;
         });
 
-        // Botones Táctiles de Movimiento
         function moverActivo(dx, dy) {
             if (!campoSeleccionadoActivo || !coordenadasMap[campoSeleccionadoActivo]) return;
             const box = coordenadasMap[campoSeleccionadoActivo];
@@ -484,6 +562,7 @@
 
                 if (response.ok) {
                     alert("✅ ¡Guardado con éxito en Supabase!");
+                    cargarListaPlantillas(); // Actualizar la lista desplegable por si es nueva
                 } else {
                     const err = await response.text();
                     alert("❌ Error: " + err);
