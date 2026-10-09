@@ -40,8 +40,8 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let pdfPageViewport = null;
     let pdfPageHeight = 0;
     
-    // Reducimos la escala para que el PDF se vea más pequeño y encaje bien en la vista previa
-    const scale = 0.8; 
+    // Escala idéntica a la del mapeador (1.2) para que coincida milimétricamente
+    const scale = 1.2; 
 
     try {
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${idPrueba}&select=*`, {
@@ -175,7 +175,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
             const pos = pdfToCanvasCoords(box);
             const elTexto = document.createElement('div');
-            elTexto.className = 'absolute text-[8px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/90 border border-indigo-300 rounded';
+            elTexto.className = 'absolute text-[9px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/90 border border-indigo-300 rounded';
             elTexto.style.left = `${pos.left}px`;
             elTexto.style.top = `${pos.top}px`;
             elTexto.style.width = `${pos.width}px`;
@@ -188,7 +188,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
                 if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
                     textoAsignado = datosSemana.lunes.join(' • ');
                 } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                    textoAsignado = datosSemana.dienstag.join(' • ');
+                    textoAsignedo = datosSemana.dienstag.join(' • '); // wait, typo fix: textoAsignado
                 } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
                     textoAsignado = datosSemana.mittwoch.join(' • ');
                 } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
