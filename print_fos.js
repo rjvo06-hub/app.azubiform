@@ -18,8 +18,16 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
                 </div>
             </div>
 
+            <!-- Selector de archivo PDF igual que en el mapeador -->
+            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <div class="flex items-center space-x-2 w-full">
+                    <label class="text-[11px] font-bold text-indigo-900 whitespace-nowrap">📁 Cargar PDF base:</label>
+                    <input type="file" id="pdfFilePreview" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-600 file:text-white w-full">
+                </div>
+            </div>
+
             <div class="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg text-xs">
-                <p class="text-indigo-800">Mapeando actividades en las descripciones diarias y separando campos del PDF.</p>
+                <p class="text-indigo-800">Selecciona el PDF de la escuela para alinear las cajas perfectamente.</p>
             </div>
 
             <div class="relative overflow-auto border border-gray-300 rounded-lg bg-gray-900 flex justify-center p-2 max-h-[700px]">
@@ -32,6 +40,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     `;
 
     const selectSemana = contenedor.querySelector('#selectSemanaFos');
+    const fileInputPreview = contenedor.querySelector('#pdfFilePreview');
     const canvas = contenedor.querySelector('#previewCanvas');
     const overlay = contenedor.querySelector('#previewOverlay');
 
@@ -39,6 +48,8 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let semanasAgrupadas = {};
     let pdfPageViewport = null;
     let pdfPageHeight = 0;
+    let pdfDocGlobal = null;
+    let coordenadasGlobales = {};
     
     // Escala idéntica a la del mapeador (1.2)
     const scale = 1.2; 
@@ -70,7 +81,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             return;
         }
         globalPlantilla = templates[0];
-        const coordenadas = globalPlantilla.coordinates_json || {};
+        coordenadasGlobales = globalPlantilla.coordinates_json || {};
 
         const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
             headers: headers
@@ -98,10 +109,35 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             selectSemana.appendChild(opt);
         });
 
-        const loadingTask = pdfjsLib.getDocument('./admin.pdf');
-        const pdfDoc = await loadingTask.promise;
-        const pagina = await pdfDoc.getPage(1);
+        // Evento para cargar el PDF seleccionado por el usuario (misma lógica que el mapeador)
+        fileInputPreview.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                const loadingTask = pdfjsLib.getDocument(typedarray);
+                pdfDocGlobal = await loadingTask.promise;
+                await renderizarPaginaPdf(1);
+                renderizarVistaPreviaSemana(selectSemana.value || llavesSemanas[0]);
+            };
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        selectSemana.addEventListener('change', (e) => {
+            if (pdfDocGlobal) {
+                renderizarVistaPreviaSemana(e.target.value);
+            }
+        });
+
+    } catch (err) {
+        console.error("Fehler beim Laden der Vorschau:", err);
+        alert("❌ Ein Fehler ist aufgetreten.");
+    }
+
+    async function renderizarPaginaPdf(num) {
+        const pagina = await pdfDocGlobal.getPage(num);
         pdfPageViewport = pagina.getViewport({ scale });
         pdfPageHeight = pdfPageViewport.height;
 
@@ -110,16 +146,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         canvas.width = pdfPageViewport.width;
 
         await pagina.render({ canvasContext: context, viewport: pdfPageViewport }).promise;
-
-        renderizarVistaPreviaSemana(llavesSemanas[0], coordenadas);
-
-        selectSemana.addEventListener('change', (e) => {
-            renderizarVistaPreviaSemana(e.target.value, coordenadas);
-        });
-
-    } catch (err) {
-        console.error("Fehler beim Laden der Vorschau:", err);
-        alert("❌ Ein Fehler ist aufgetreten.");
     }
 
     function agruparRegistrosPorSemana(registros) {
@@ -166,11 +192,11 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         return { left, top, width, height };
     }
 
-    function renderizarVistaPreviaSemana(semKey, coordenadas) {
+    function renderizarVistaPreviaSemana(semKey) {
         overlay.innerHTML = '';
         const datosSemana = semanasAgrupadas[semKey] || {};
 
-        for (const [key, box] of Object.entries(coordenadas)) {
+        for (const [key, box] of Object.entries(coordenadasGlobales)) {
             if (!box) continue;
 
             const pos = pdfToCanvasCoords(box);
