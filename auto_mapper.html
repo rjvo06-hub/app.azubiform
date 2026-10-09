@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vista Previa Unificada FOS - Azubiform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <!-- html2canvas y jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
+
+    <div class="max-w-7xl mx-auto space-y-4">
+        <!-- Cabecera -->
+        <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">📄 Vista Previa Unificada FOS con Datos</h1>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
+                <input type="file" id="pdfFile" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Panel Izquierdo: Lienzo del PDF maximizado sin scroll interno -->
+            <div id="previewWrapper" class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center items-center overflow-visible relative border border-gray-300">
+                <div class="relative inline-block" id="canvasContainer">
+                    <canvas id="pdfCanvas" class="block shadow-lg max-w-full h-auto"></canvas>
+                    <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+
+            <!-- Panel Derecho: Controles de Plantilla y Usuario -->
+            <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col">
+                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Controles de Visualización</h2>
+                
+                <div class="space-y-3">
+                    <!-- Cargar Plantilla de Coordenadas -->
+                    <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-indigo-900">📂 1. Cargar plantilla de coordenadas:</label>
+                        <div class="flex space-x-1">
+                            <select id="selectPlantillasGuardadas" class="w-full p-1 border border-indigo-300 rounded text-xs bg-white">
+                                <option value="">-- Selecciona una escuela --</option>
+                            </select>
+                            <button id="btnCargarPlantilla" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2.5 py-1 rounded">📥 Cargar</button>
+                        </div>
+                    </div>
+
+                    <!-- Seleccionar Usuario -->
+                    <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-emerald-900">👤 2. Seleccionar usuario:</label>
+                        <select id="selectUsuario" class="w-full p-1 border border-emerald-300 rounded text-xs bg-white">
+                            <option value="">-- Selecciona un usuario --</option>
+                        </select>
+                    </div>
+
+                    <!-- Seleccionar Semana -->
+                    <div class="bg-amber-50 p-2 rounded-lg border border-amber-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-amber-900">📅 3. Seleccionar semana:</label>
+                        <select id="selectSemana" class="w-full p-1 border border-amber-300 rounded text-xs bg-white">
+                            <option value="">-- Primero carga usuario --</option>
+                        </select>
+                    </div>
+
+                    <button id="btnGenerarVista" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
+                        ⚡ Pintar Datos en el PDF
+                    </button>
+
+                    <!-- Botón de Descarga Unificada Fiel -->
+                    <button id="btnGenerarPdfDirecto" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
+                        <span>📥 Descargar PDF Exacto de la Vista Previa</span>
+                    </button>
+                </div>
+
+                <!-- Estado -->
+                <div id="estadoInfo" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center mt-auto">
+                    📌 Carga un PDF y selecciona los datos.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { SUPABASE_URL, headers } from './js/config.js';
+
+        const fileInput = document.getElementById('pdfFile');
+        const canvas = document.getElementById('pdfCanvas');
+        const container = document.getElementById('canvasContainer');
+        const previewWrapper = document.getElementById('previewWrapper');
+        const drawingOverlay = document.getElementById('drawingOverlay');
+        const selectPlantillasGuardadas = document.getElementById('selectPlantillasGuardadas');
+        const btnCargarPlantilla = document.getElementById('btnCargarPlantilla');
+        const selectUsuario = document.getElementById('selectUsuario');
+        const selectSemana = document.getElementById('selectSemana');
+        const btnGenerarVista = document.getElementById('btnGenerarVista');
+        const btnGenerarPdfDirecto = document.getElementById('btnGenerarPdfDirecto');
+        const estadoInfo = document.getElementById('estadoInfo');
+
+        let pdfDoc = null;
+        let pageViewport = null;
+        let scale = 1.0; // Escala adaptativa inicial
+        let coordenadasMap = {};
+        let semanasAgrupadas = {};
+        let registrosGlobales = [];
+
+        async function cargarListaPlantillas() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    selectPlantillasGuardadas.innerHTML = '<option value="">-- Selecciona una escuela --</option>';
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.file_identifier;
+                        opt.textContent = item.school_name;
+                        selectPlantillasGuardadas.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error al obtener plantillas:", err);
+            }
+        }
+
+        async function cargarListaUsuarios() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id,nombre`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    selectUsuario.innerHTML = '<option value="">-- Selecciona un usuario --</option>';
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.nombre;
+                        opt.textContent = item.nombre;
+                        selectUsuario.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error al obtener usuarios:", err);
+            }
+        }
+
+        cargarListaPlantillas();
+        cargarListaUsuarios();
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                const loadingTask = pdfjsLib.getDocument(typedarray);
+                pdfDoc = await loadingTask.promise;
+                await renderPage(1);
+                estadoInfo.textContent = "✅ PDF cargado correctamente.";
+            };
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        async function renderPage(num) {
+            const page = await pdfDoc.getPage(num);
+            
+            // Calculamos la escala óptima para que la hoja entre completa en el ancho disponible de la pantalla
+            const unscaledViewport = page.getViewport({ scale: 1.0 });
+            const availableWidth = previewWrapper.clientWidth - 32; // Margen interno
+            scale = availableWidth / unscaledViewport.width;
+            
+            pageViewport = page.getViewport({ scale });
+
+            const context = canvas.getContext('2d');
+            canvas.height = pageViewport.height;
+            canvas.width = pageViewport.width;
+
+            await page.render({ canvasContext: context, viewport: pageViewport }).promise;
+            if (Object.keys(coordenadasMap).length > 0) {
+                redibujarDatos([]);
+            }
+        }
+
+        btnCargarPlantilla.addEventListener('click', async () => {
+            const fileIdentifier = selectPlantillasGuardadas.value;
+            if (!fileIdentifier) return alert("⚠️ Selecciona una escuela.");
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(fileIdentifier)}&select=coordinates_json`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.length > 0 && data[0].coordinates_json) {
+                        coordenadasMap = data[0].coordinates_json;
+                        alert("✅ Coordenadas cargadas con éxito.");
+                    } else {
+                        alert("⚠️ No hay coordenadas guardadas.");
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al cargar coordenadas.");
+            }
+        });
+
+        selectUsuario.addEventListener('change', async (e) => {
+            const nombreUsuario = e.target.value;
+            if (!nombreUsuario) return;
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    registrosGlobales = await response.json();
+                    semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
+
+                    selectSemana.innerHTML = '<option value="">-- Selecciona una semana --</option>';
+                    Object.keys(semanasAgrupadas).forEach(sem => {
+                        const opt = document.createElement('option');
+                        opt.value = sem;
+                        opt.textContent = `Woche: ${sem}`;
+                        selectSemana.appendChild(opt);
+                    });
+                    alert(`✅ Registros cargados para ${nombreUsuario}`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al cargar registros del usuario.");
+            }
+        });
+
+        function agruparRegistrosPorSemana(registros) {
+            const semanas = {};
+            registros.forEach(reg => {
+                if (!reg.fecha) return;
+                const fechaObj = new Date(reg.fecha);
+                const diaSemana = fechaObj.getDay();
+                const diff = fechaObj.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+                const lunes = new Date(new Date(fechaObj).setDate(diff));
+                const viernes = new Date(lunes);
+                viernes.setDate(lunes.getDate() + 4);
+
+                const claveSemana = `${lunes.toLocaleDateString()} bis ${viernes.toLocaleDateString()}`;
+
+                if (!semanas[claveSemana]) {
+                    semanas[claveSemana] = { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
+                }
+
+                const d = new Date(reg.fecha).getDay();
+                const texto = reg.nombre_actividad || '';
+
+                if (d === 1) semanas[claveSemana].lunes.push(texto);
+                else if (d === 2) semanas[claveSemana].dienstag.push(texto);
+                else if (d === 3) semanas[claveSemana].mittwoch.push(texto);
+                else if (d === 4) semanas[claveSemana].donnerstag.push(texto);
+                else if (d === 5) semanas[claveSemana].freitag.push(texto);
+            });
+            return semanas;
+        }
+
+        btnGenerarVista.addEventListener('click', () => {
+            if (!pdfDoc) return alert("⚠️ Carga primero el archivo PDF base.");
+            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
+            const semSeleccionada = selectSemana.value;
+            if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
+
+            redibujarDatos(semanasAgrupadas[semSeleccionada]);
+            estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
+        });
+
+        // Captura fiel en bloque unificado completo garantizando que toda la hoja esté visible al capturar
+        btnGenerarPdfDirecto.addEventListener('click', async () => {
+            if (!pdfDoc) {
+                alert("⚠️ Primero debes pintar los datos en el PDF.");
+                return;
+            }
+
+            estadoInfo.textContent = "🔄 Generando PDF exacto de la vista previa...";
+
+            try {
+                // Eliminamos cualquier restricción visual temporalmente para capturar la hoja íntegra
+                previewWrapper.style.overflow = 'visible';
+
+                const capturedCanvas = await html2canvas(canvasContainer, {
+                    scale: 2, // Alta definición
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    windowWidth: canvasContainer.scrollWidth,
+                    windowHeight: canvasContainer.scrollHeight
+                });
+
+                previewWrapper.style.overflow = 'auto';
+
+                const imgData = capturedCanvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                
+                const pdf = new jsPDF({
+                    orientation: capturedCanvas.width > capturedCanvas.height ? 'landscape' : 'portrait',
+                    unit: 'px',
+                    format: [capturedCanvas.width, capturedCanvas.height]
+                });
+
+                pdf.addImage(imgData, 'PNG', 0, 0, capturedCanvas.width, capturedCanvas.height);
+                
+                const nombreUsuario = selectUsuario.value || 'Reporte';
+                pdf.save(`Wochenbericht_${nombreUsuario}.pdf`);
+
+                estadoInfo.textContent = "✅ ¡PDF exacto descargado con éxito!";
+            } catch (err) {
+                console.error(err);
+                alert("❌ Ocurrió un error al generar el archivo PDF.");
+                estadoInfo.textContent = "⚠️ Error en la generación del PDF.";
+            }
+        });
+
+        function redibujarDatos(datosSemana) {
+            if (!pageViewport) return;
+            drawingOverlay.innerHTML = '';
+
+            let fontSizeGlobal = 5; 
+            const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
+
+            let alturaDisponibleBox = 40; 
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                if (['montag', 'lunes'].some(d => campo.toLowerCase().includes(d))) {
+                    alturaDisponibleBox = (box.y2 - box.y1) * scale;
+                    break;
+                }
+            }
+
+            diasSemanaKeys.forEach(dia => {
+                const lista = datosSemana[dia] || [];
+                const numLineas = lista.length;
+                if (numLineas === 0) return;
+
+                let testSize = fontSizeGlobal;
+                while (testSize > 3.5) {
+                    const alturaEstimada = numLineas * (testSize * 1.15 + 1.5);
+                    if (alturaEstimada <= (alturaDisponibleBox - 3)) {
+                        break; 
+                    }
+                    testSize -= 0.5; 
+                }
+
+                if (testSize < fontSizeGlobal) {
+                    fontSizeGlobal = testSize;
+                }
+            });
+
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const left = box.x1 * scale;
+                const top = pageViewport.height - (box.y2 * scale);
+                const width = (box.x2 - box.x1) * scale;
+                const height = (box.y2 - box.y1) * scale;
+
+                const cajaVisual = document.createElement('div');
+                
+                const lowerKey = campo.toLowerCase();
+                let textoAsignado = '';
+                let listaActividades = [];
+
+                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                        listaActividades = datosSemana.lunes || [];
+                    } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                        listaActividades = datosSemana.dienstag || [];
+                    } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                        listaActividades = datosSemana.mittwoch || [];
+                    } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                        listaActividades = datosSemana.donnerstag || [];
+                    } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                        listaActividades = datosSemana.freitag || [];
+                    } else if (lowerKey.includes('schueler')) {
+                        textoAsignado = selectUsuario.value;
+                    }
+                }
+
+                const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
+
+                if (esDiaSemana) {
+                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1.5px;">• ${act}</div>`).join('');
+                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
+                } else {
+                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-0.5 bg-transparent z-10 flex items-center`;
+                    cajaVisual.textContent = textoAsignado;
+                }
+
+                cajaVisual.style.left = `${left}px`;
+                cajaVisual.style.top = `${top}px`;
+                cajaVisual.style.width = `${width}px`;
+                cajaVisual.style.height = `${height}px`;
+
+                drawingOverlay.appendChild(cajaVisual);
+            }
+        }
+    </script>
+</body>
+</html>
