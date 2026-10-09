@@ -11,7 +11,7 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <!-- html2canvas y jsPDF para exportar a PDF directo -->
+    <!-- html2canvas y jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -268,40 +268,66 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Generación y descarga directa de PDF mediante jsPDF y html2canvas sin pasar por la impresión del navegador
+        // Captura completa combinando el canvas base del PDF y el overlay de textos sin cortes
         btnGenerarPdfDirecto.addEventListener('click', async () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
 
-            estadoInfo.textContent = "🔄 Generando archivo PDF...";
+            estadoInfo.textContent = "🔄 Generando archivo PDF completo...";
 
             try {
-                const canvasContainer = document.getElementById('canvasContainer');
-                const capturedCanvas = await html2canvas(canvasContainer, {
-                    scale: 3, // Alta calidad
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff'
+                // Creamos un canvas temporal con el tamaño real completo de la página PDF
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = canvas.width;
+                exportCanvas.height = canvas.height;
+                const exportCtx = exportCanvas.getContext('2d');
+
+                // 1. Dibujamos el PDF base completo
+                exportCtx.drawImage(canvas, 0, 0);
+
+                // 2. Renderizamos los textos directamente sobre el canvas exportado con absoluta precisión
+                const boxes = drawingOverlay.querySelectorAll('div[style]');
+                boxes.forEach(box => {
+                    const style = box.style;
+                    const left = parseFloat(style.left);
+                    const top = parseFloat(style.top);
+                    
+                    const textoContenido = box.innerText || '';
+                    const lineas = textoContenido.split('\n').filter(l => l.trim() !== '');
+
+                    exportCtx.fillStyle = 'black';
+                    
+                    if (box.classList.contains('flex-col')) {
+                        let currentY = top + 8;
+                        exportCtx.font = '5px sans-serif';
+                        lineas.forEach(linea => {
+                            exportCtx.fillText(linea, left + 3, currentY);
+                            currentY += 7;
+                        });
+                    } else {
+                        exportCtx.font = '8px sans-serif';
+                        exportCtx.fillText(textoContenido, left + 3, top + 10);
+                    }
                 });
 
-                const imgData = capturedCanvas.toDataURL('image/png');
+                const imgData = exportCanvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
                 
-                // Creamos el PDF en formato A4 adaptado exactamente a las proporciones de la captura
+                // Generamos el PDF con las dimensiones exactas de la página completa
                 const pdf = new jsPDF({
-                    orientation: capturedCanvas.width > capturedCanvas.height ? 'landscape' : 'portrait',
+                    orientation: exportCanvas.width > exportCanvas.height ? 'landscape' : 'portrait',
                     unit: 'px',
-                    format: [capturedCanvas.width, capturedCanvas.height]
+                    format: [exportCanvas.width, exportCanvas.height]
                 });
 
-                pdf.addImage(imgData, 'PNG', 0, 0, capturedCanvas.width, capturedCanvas.height);
+                pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
                 
                 const nombreUsuario = selectUsuario.value || 'Reporte';
                 pdf.save(`Wochenbericht_${nombreUsuario}.pdf`);
 
-                estadoInfo.textContent = "✅ ¡PDF descargado con éxito!";
+                estadoInfo.textContent = "✅ ¡PDF completo descargado con éxito!";
             } catch (err) {
                 console.error(err);
                 alert("❌ Ocurrió un error al generar el archivo PDF.");
