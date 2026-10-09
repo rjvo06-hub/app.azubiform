@@ -263,9 +263,8 @@
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
-            // 1. PASO PREVIO: Analizamos toda la semana para encontrar el tamaño de letra unificado necesario
-            let fontSizeGlobal = 6; // Tamaño base por defecto
-            const diasKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'montag'];
+            // 1. Análisis global de la semana para unificar el tamaño de letra (aumentado para aprovechar el espacio)
+            let fontSizeGlobal = 7.5; // Tamaño base más legible y grande
             
             ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].forEach(dia => {
                 const lista = datosSemana[dia] || [];
@@ -273,20 +272,19 @@
                 const totalCaracteres = textoUnido.length;
                 const cantidadLineas = lista.length;
 
-                let fontSizeDia = 6;
-                if (totalCaracteres > 180 || cantidadLineas > 3) {
-                    fontSizeDia = 4;
+                let fontSizeDia = 7.5;
+                if (totalCaracteres > 180 || cantidadLineas > 4) {
+                    fontSizeDia = 5.5;
                 } else if (totalCaracteres > 100 || cantidadLineas > 2) {
-                    fontSizeDia = 4.8;
+                    fontSizeDia = 6.5;
                 }
 
-                // Nos quedamos con el tamaño más pequeño necesario entre todos los días de la semana
                 if (fontSizeDia < fontSizeGlobal) {
                     fontSizeGlobal = fontSizeDia;
                 }
             });
 
-            // 2. RENDERIZADO: Aplicamos ese mismo fontSizeGlobal unificado a todos los días de la semana
+            // 2. Renderizado unificado
             for (const [campo, box] of Object.entries(coordenadasMap)) {
                 const left = box.x1 * scale;
                 const top = pageViewport.height - (box.y2 * scale);
@@ -318,10 +316,13 @@
                 const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
 
                 if (esDiaSemana) {
-                    textoAsignado = listaActividades.join('\n');
-                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans whitespace-pre-line overflow-hidden px-0.5 py-0.5 bg-white/95 border border-indigo-300 rounded z-10 flex flex-col justify-start`;
+                    // Cada actividad con su viñeta y un pequeño margen inferior para separar los ítems
+                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 3px;">• ${act}</div>`).join('');
+                    
+                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.25] text-black font-sans overflow-hidden px-1 py-0.5 bg-white/95 border border-indigo-300 rounded z-10 flex flex-col justify-start`;
                 } else {
                     cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white/95 border border-indigo-300 rounded z-10 flex items-center`;
+                    cajaVisual.textContent = textoAsignado;
                 }
 
                 cajaVisual.style.left = `${left}px`;
@@ -329,7 +330,6 @@
                 cajaVisual.style.width = `${width}px`;
                 cajaVisual.style.height = `${height}px`;
 
-                cajaVisual.textContent = textoAsignado;
                 drawingOverlay.appendChild(cajaVisual);
             }
         }
