@@ -27,7 +27,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Panel Izquierdo: Vista previa totalmente visible sin restricciones -->
+            <!-- Panel Izquierdo: Vista previa -->
             <div id="previewWrapper" class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center items-center overflow-visible relative border border-gray-300">
                 <div class="relative inline-block" id="canvasContainer">
                     <canvas id="pdfCanvas" class="block shadow-lg max-w-full h-auto"></canvas>
@@ -35,7 +35,7 @@
                 </div>
             </div>
 
-            <!-- Panel Derecho: Controles de Plantilla y Usuario -->
+            <!-- Panel Derecho: Controles -->
             <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col">
                 <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Controles de Visualización</h2>
                 
@@ -276,7 +276,7 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura directa utilizando el tamaño de fuente fijo exacto
+        // Captura directa utilizando el tamaño de fuente inteligente y equilibrado
         btnGenerarPdfDirecto.addEventListener('click', async () => {
             if (!pdfDoc || !ultimaSemanaDatos) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
@@ -320,9 +320,36 @@
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
-            // Tamaño fijo constante y legible para las actividades (sin reducción automática)
-            const fontSizeFijo = 5.5; 
+            // Tamaño equilibrado y profesional que evita desbordamientos
+            let fontSizeGlobal = 4.5; 
             const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
+
+            let alturaDisponibleBox = 40; 
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                if (['montag', 'lunes'].some(d => campo.toLowerCase().includes(d))) {
+                    alturaDisponibleBox = (box.y2 - box.y1) * scale;
+                    break;
+                }
+            }
+
+            diasSemanaKeys.forEach(dia => {
+                const lista = datosSemana[dia] || [];
+                const numLineas = lista.length;
+                if (numLineas === 0) return;
+
+                let testSize = fontSizeGlobal;
+                while (testSize > 3.0) {
+                    const alturaEstimada = numLineas * (testSize * 1.15 + 1.5);
+                    if (alturaEstimada <= (alturaDisponibleBox - 2)) {
+                        break; 
+                    }
+                    testSize -= 0.3; 
+                }
+
+                if (testSize < fontSizeGlobal) {
+                    fontSizeGlobal = testSize;
+                }
+            });
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
                 const left = box.x1 * scale;
@@ -344,6 +371,7 @@
                     } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
                         listaActividades = datosSemana.mittwoch || [];
                     } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                        listaActividades = datosSemana.dienstag || []; // Corregido por seguridad, usa stag abajo
                         listaActividades = datosSemana.donnerstag || [];
                     } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
                         listaActividades = datosSemana.freitag || [];
@@ -355,10 +383,10 @@
                 const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
 
                 if (esDiaSemana) {
-                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 2px;">• ${act}</div>`).join('');
-                    cajaVisual.className = `absolute text-[${fontSizeFijo}px] leading-[1.15] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
+                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1px;">• ${act}</div>`).join('');
+                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
                 } else {
-                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-0.5 bg-transparent z-10 flex items-center`;
+                    cajaVisual.className = `absolute text-[7px] text-black font-sans overflow-hidden px-0.5 bg-transparent z-10 flex items-center`;
                     cajaVisual.textContent = textoAsignado;
                 }
 
