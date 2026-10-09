@@ -178,7 +178,6 @@
         let campoSeleccionadoActivo = null;
         let campoPendienteDuplicar = null;
         
-        // Variable para recordar la escuela activa que se cargó
         let escuelaActualCargada = null;
         
         let primerPunto = null; 
@@ -553,12 +552,10 @@
         btnGuardar.addEventListener('click', async () => {
             let schoolName, fileIdentifier;
 
-            // Si cargaste una plantilla existente, reutilizamos sus datos exactos para sobrescribirla
             if (escuelaActualCargada) {
                 schoolName = escuelaActualCargada.school_name;
                 fileIdentifier = escuelaActualCargada.file_identifier;
             } else {
-                // Si es totalmente nueva, pedimos el nombre
                 schoolName = prompt("Nombre de la escuela:");
                 if (!schoolName) return;
                 fileIdentifier = schoolName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
@@ -567,9 +564,14 @@
             const pdfFilename = fileInput.files[0] ? fileInput.files[0].name : 'template.pdf';
 
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
+                // Añadimos on_conflict a la URL para que Supabase actualice si ya existe la clave
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?on_conflict=file_identifier`, {
                     method: 'POST',
-                    headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+                    headers: { 
+                        ...headers, 
+                        'Content-Type': 'application/json', 
+                        'Prefer': 'resolution=merge-duplicates' 
+                    },
                     body: JSON.stringify({
                         school_name: schoolName,
                         file_identifier: fileIdentifier,
