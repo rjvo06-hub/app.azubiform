@@ -11,6 +11,30 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
+    <style>
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #canvasContainer, #canvasContainer * {
+                visibility: visible !important;
+            }
+            body {
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #canvasContainer {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
@@ -68,9 +92,9 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Descargar Reporte -->
-                    <button id="btnDescargarPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
-                        <span>📥 Descargar Reporte FOS</span>
+                    <!-- Botón de Imprimir / Guardar PDF -->
+                    <button id="btnImprimirPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
+                        <span>🖨️ Imprimir / Guardar PDF</span>
                     </button>
                 </div>
 
@@ -94,7 +118,7 @@
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
         const btnGenerarVista = document.getElementById('btnGenerarVista');
-        const btnDescargarPdf = document.getElementById('btnDescargarPdf');
+        const btnImprimirPdf = document.getElementById('btnImprimirPdf');
         const estadoInfo = document.getElementById('estadoInfo');
 
         let pdfDoc = null;
@@ -265,59 +289,12 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Fusión directa en canvas y descarga automática del reporte como imagen/PDF
-        btnDescargarPdf.addEventListener('click', () => {
+        btnImprimirPdf.addEventListener('click', () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
-
-            const printCanvas = document.createElement('canvas');
-            printCanvas.width = canvas.width;
-            printCanvas.height = canvas.height;
-            const ctx = printCanvas.getContext('2d');
-
-            ctx.drawImage(canvas, 0, 0);
-
-            const boxes = drawingOverlay.querySelectorAll('div[style]');
-            boxes.forEach(box => {
-                const style = box.style;
-                const left = parseFloat(style.left);
-                const top = parseFloat(style.top);
-                const width = parseFloat(style.width);
-                const height = parseFloat(style.height);
-
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.fillRect(left, top, width, height);
-
-                const textoContenido = box.innerText || '';
-                const lineas = textoContenido.split('\n').filter(l => l.trim() !== '');
-
-                ctx.fillStyle = 'black';
-                
-                if (box.classList.contains('flex-col')) {
-                    let currentY = top + 8;
-                    ctx.font = '5px sans-serif';
-                    lineas.forEach(linea => {
-                        ctx.fillText(linea, left + 3, currentY);
-                        currentY += 7;
-                    });
-                } else {
-                    ctx.font = '8px sans-serif';
-                    ctx.fillText(textoContenido, left + 3, top + (height / 2) + 3);
-                }
-            });
-
-            // Creamos un enlace de descarga directa infalible para móviles y escritorio
-            const dataUrl = printCanvas.toDataURL('image/png');
-            const enlace = document.createElement('a');
-            enlace.href = dataUrl;
-            enlace.download = `Reporte_FOS_${selectUsuario.value || 'usuario'}.png`;
-            document.body.appendChild(enlace);
-            enlace.click();
-            document.body.removeChild(enlace);
-            
-            estadoInfo.textContent = "📥 ¡Reporte descargado con éxito!";
+            window.print();
         });
 
         function redibujarDatos(datosSemana) {
