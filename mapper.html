@@ -91,6 +91,7 @@
                             <option value="mittwoch_stunden">Mittwoch - Stunden</option>
                             <option value="donnerstag_stunden">Donnerstag - Stunden</option>
                             <option value="freitag_stunden">Freitag - Stunden</option>
+                            <option value="gesamtstunden">Gesamtstunden (Total)</option>
                         </select>
                     </div>
 
@@ -151,11 +152,6 @@
     <script type="module">
         import { SUPABASE_URL, headers } from './js/config.js';
 
-        // Comprobación de seguridad para detectar si config.js cargó bien
-        if (!SUPABASE_URL || !headers) {
-            alert("⚠️ Error crítico: No se pudieron cargar las credenciales de Supabase desde './js/config.js'. Revisa la ruta del archivo.");
-        }
-
         const fileInput = document.getElementById('pdfFile');
         const canvas = document.getElementById('pdfCanvas');
         const container = document.getElementById('canvasContainer');
@@ -182,6 +178,9 @@
         let campoSeleccionadoActivo = null;
         let campoPendienteDuplicar = null;
         
+        // Variable para recordar la escuela activa que se cargó
+        let escuelaActualCargada = null;
+        
         let primerPunto = null; 
         let isResizing = false;
         let isMoving = false;
@@ -207,11 +206,9 @@
                         opt.textContent = item.school_name;
                         selectPlantillasGuardadas.appendChild(opt);
                     });
-                } else {
-                    console.error("Error al listar plantillas:", await response.text());
                 }
             } catch (err) {
-                console.error("Error de red al obtener plantillas:", err);
+                console.error("Error al obtener plantillas:", err);
             }
         }
         cargarListaPlantillas();
@@ -224,7 +221,7 @@
             }
 
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(fileIdentifier)}&select=coordinates_json`, {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(fileIdentifier)}&select=school_name,file_identifier,coordinates_json`, {
                     headers: { ...headers, 'Range': '0-999' }
                 });
                 
@@ -232,6 +229,10 @@
                     const data = await response.json();
                     if (data.length > 0 && data[0].coordinates_json) {
                         coordenadasMap = data[0].coordinates_json;
+                        escuelaActualCargada = {
+                            school_name: data[0].school_name,
+                            file_identifier: data[0].file_identifier
+                        };
 
                         for (const campo of Object.keys(coordenadasMap)) {
                             const existe = Array.from(campoSelect.options).some(opt => opt.value === campo);
@@ -250,7 +251,7 @@
 
                         actualizarUI();
                         if (pdfDoc) redibujarTodasLasCajas();
-                        alert("✅ ¡Coordenadas cargadas con éxito!");
+                        alert(`✅ Plantilla de "${escuelaActualCargada.school_name}" cargada con éxito.`);
                     } else {
                         alert("⚠️ No se encontraron coordenadas para esta plantilla.");
                     }
@@ -260,7 +261,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                alert("❌ Error de red al conectar con Supabase para cargar. Verifica tu conexión o las políticas RLS.");
+                alert("❌ Error de red al conectar con Supabase para cargar.");
             }
         });
 
@@ -550,10 +551,19 @@
         };
 
         btnGuardar.addEventListener('click', async () => {
-            const schoolName = prompt("Nombre de la escuela:");
-            if (!schoolName) return;
+            let schoolName, fileIdentifier;
 
-            const fileIdentifier = schoolName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
+            // Si cargaste una plantilla existente, reutilizamos sus datos exactos para sobrescribirla
+            if (escuelaActualCargada) {
+                schoolName = escuelaActualCargada.school_name;
+                fileIdentifier = escuelaActualCargada.file_identifier;
+            } else {
+                // Si es totalmente nueva, pedimos el nombre
+                schoolName = prompt("Nombre de la escuela:");
+                if (!schoolName) return;
+                fileIdentifier = schoolName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
+            }
+
             const pdfFilename = fileInput.files[0] ? fileInput.files[0].name : 'template.pdf';
 
             try {
@@ -569,7 +579,7 @@
                 });
 
                 if (response.ok) {
-                    alert("✅ ¡Guardado con éxito en Supabase!");
+                    alert(`✅ ¡Plantilla de "${schoolName}" actualizada y guardada con éxito en Supabase!`);
                     cargarListaPlantillas();
                 } else {
                     const err = await response.text();
