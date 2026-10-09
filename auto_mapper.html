@@ -268,7 +268,7 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura completa combinando el canvas base del PDF y el overlay de textos sin cortes
+        // Captura fiel y directa de la vista previa exacta usando html2canvas sobre el contenedor completo
         btnGenerarPdfDirecto.addEventListener('click', async () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
@@ -278,51 +278,34 @@
             estadoInfo.textContent = "🔄 Generando archivo PDF completo...";
 
             try {
-                // Creamos un canvas temporal con el tamaño real completo de la página PDF
-                const exportCanvas = document.createElement('canvas');
-                exportCanvas.width = canvas.width;
-                exportCanvas.height = canvas.height;
-                const exportCtx = exportCanvas.getContext('2d');
+                const canvasContainer = document.getElementById('canvasContainer');
+                
+                // Forzamos temporalmente la altura total sin scroll para que html2canvas capture todo sin cortes
+                const originalMaxHeight = canvasContainer.style.maxHeight;
+                canvasContainer.style.maxHeight = 'none';
 
-                // 1. Dibujamos el PDF base completo
-                exportCtx.drawImage(canvas, 0, 0);
-
-                // 2. Renderizamos los textos directamente sobre el canvas exportado con absoluta precisión
-                const boxes = drawingOverlay.querySelectorAll('div[style]');
-                boxes.forEach(box => {
-                    const style = box.style;
-                    const left = parseFloat(style.left);
-                    const top = parseFloat(style.top);
-                    
-                    const textoContenido = box.innerText || '';
-                    const lineas = textoContenido.split('\n').filter(l => l.trim() !== '');
-
-                    exportCtx.fillStyle = 'black';
-                    
-                    if (box.classList.contains('flex-col')) {
-                        let currentY = top + 8;
-                        exportCtx.font = '5px sans-serif';
-                        lineas.forEach(linea => {
-                            exportCtx.fillText(linea, left + 3, currentY);
-                            currentY += 7;
-                        });
-                    } else {
-                        exportCtx.font = '8px sans-serif';
-                        exportCtx.fillText(textoContenido, left + 3, top + 10);
-                    }
+                const capturedCanvas = await html2canvas(canvasContainer, {
+                    scale: 3, // Máxima nitidez
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    windowWidth: canvasContainer.scrollWidth,
+                    windowHeight: canvasContainer.scrollHeight
                 });
 
-                const imgData = exportCanvas.toDataURL('image/png');
+                canvasContainer.style.maxHeight = originalMaxHeight;
+
+                const imgData = capturedCanvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
                 
-                // Generamos el PDF con las dimensiones exactas de la página completa
+                // Creamos el PDF con las proporciones exactas de la captura completa
                 const pdf = new jsPDF({
-                    orientation: exportCanvas.width > exportCanvas.height ? 'landscape' : 'portrait',
+                    orientation: capturedCanvas.width > capturedCanvas.height ? 'landscape' : 'portrait',
                     unit: 'px',
-                    format: [exportCanvas.width, exportCanvas.height]
+                    format: [capturedCanvas.width, capturedCanvas.height]
                 });
 
-                pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
+                pdf.addImage(imgData, 'PNG', 0, 0, capturedCanvas.width, capturedCanvas.height);
                 
                 const nombreUsuario = selectUsuario.value || 'Reporte';
                 pdf.save(`Wochenbericht_${nombreUsuario}.pdf`);
