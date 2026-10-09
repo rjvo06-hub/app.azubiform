@@ -27,7 +27,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Panel Izquierdo: Lienzo del PDF maximizado sin scroll interno -->
+            <!-- Panel Izquierdo: Vista previa totalmente visible sin restricciones -->
             <div id="previewWrapper" class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center items-center overflow-visible relative border border-gray-300">
                 <div class="relative inline-block" id="canvasContainer">
                     <canvas id="pdfCanvas" class="block shadow-lg max-w-full h-auto"></canvas>
@@ -71,7 +71,7 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Descarga Unificada Fiel -->
+                    <!-- Botón de Descarga Fiel Unificada -->
                     <button id="btnGenerarPdfDirecto" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
                         <span>📥 Descargar PDF Exacto de la Vista Previa</span>
                     </button>
@@ -103,10 +103,11 @@
 
         let pdfDoc = null;
         let pageViewport = null;
-        let scale = 1.0; // Escala adaptativa inicial
+        let scale = 1.0;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
         let registrosGlobales = [];
+        let ultimaSemanaDatos = null;
 
         async function cargarListaPlantillas() {
             try {
@@ -168,10 +169,9 @@
 
         async function renderPage(num) {
             const page = await pdfDoc.getPage(num);
-            
-            // Calculamos la escala óptima para que la hoja entre completa en el ancho disponible de la pantalla
             const unscaledViewport = page.getViewport({ scale: 1.0 });
-            const availableWidth = previewWrapper.clientWidth - 32; // Margen interno
+            
+            const availableWidth = previewWrapper.clientWidth - 32;
             scale = availableWidth / unscaledViewport.width;
             
             pageViewport = page.getViewport({ scale });
@@ -181,8 +181,8 @@
             canvas.width = pageViewport.width;
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
-            if (Object.keys(coordenadasMap).length > 0) {
-                redibujarDatos([]);
+            if (Object.keys(coordenadasMap).length > 0 && ultimaSemanaDatos) {
+                redibujarDatos(ultimaSemanaDatos);
             }
         }
 
@@ -271,34 +271,28 @@
             const semSeleccionada = selectSemana.value;
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
-            redibujarDatos(semanasAgrupadas[semSeleccionada]);
+            ultimaSemanaDatos = semanasAgrupadas[semSeleccionada];
+            redibujarDatos(ultimaSemanaDatos);
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura fiel en bloque unificado completo garantizando que toda la hoja esté visible al capturar
+        // Captura directa utilizando el tamaño de fuente fijo exacto
         btnGenerarPdfDirecto.addEventListener('click', async () => {
-            if (!pdfDoc) {
+            if (!pdfDoc || !ultimaSemanaDatos) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
 
-            estadoInfo.textContent = "🔄 Generando PDF exacto de la vista previa...";
+            estadoInfo.textContent = "🔄 Generando PDF exacto...";
 
             try {
-                // Eliminamos cualquier restricción visual temporalmente para capturar la hoja íntegra
-                previewWrapper.style.overflow = 'visible';
-
                 const capturedCanvas = await html2canvas(canvasContainer, {
-                    scale: 2, // Alta definición
+                    scale: 2,
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: '#ffffff',
-                    logging: false,
-                    windowWidth: canvasContainer.scrollWidth,
-                    windowHeight: canvasContainer.scrollHeight
+                    logging: false
                 });
-
-                previewWrapper.style.overflow = 'auto';
 
                 const imgData = capturedCanvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
@@ -326,35 +320,9 @@
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
-            let fontSizeGlobal = 5; 
+            // Tamaño fijo constante y legible para las actividades (sin reducción automática)
+            const fontSizeFijo = 5.5; 
             const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
-
-            let alturaDisponibleBox = 40; 
-            for (const [campo, box] of Object.entries(coordenadasMap)) {
-                if (['montag', 'lunes'].some(d => campo.toLowerCase().includes(d))) {
-                    alturaDisponibleBox = (box.y2 - box.y1) * scale;
-                    break;
-                }
-            }
-
-            diasSemanaKeys.forEach(dia => {
-                const lista = datosSemana[dia] || [];
-                const numLineas = lista.length;
-                if (numLineas === 0) return;
-
-                let testSize = fontSizeGlobal;
-                while (testSize > 3.5) {
-                    const alturaEstimada = numLineas * (testSize * 1.15 + 1.5);
-                    if (alturaEstimada <= (alturaDisponibleBox - 3)) {
-                        break; 
-                    }
-                    testSize -= 0.5; 
-                }
-
-                if (testSize < fontSizeGlobal) {
-                    fontSizeGlobal = testSize;
-                }
-            });
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
                 const left = box.x1 * scale;
@@ -387,8 +355,8 @@
                 const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
 
                 if (esDiaSemana) {
-                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1.5px;">• ${act}</div>`).join('');
-                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
+                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 2px;">• ${act}</div>`).join('');
+                    cajaVisual.className = `absolute text-[${fontSizeFijo}px] leading-[1.15] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
                 } else {
                     cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-0.5 bg-transparent z-10 flex items-center`;
                     cajaVisual.textContent = textoAsignado;
