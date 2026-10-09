@@ -263,28 +263,38 @@
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
-            // 1. Análisis global de la semana para unificar el tamaño de letra (aumentado para aprovechar el espacio)
-            let fontSizeGlobal = 7.5; // Tamaño base más legible y grande
-            
-            ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].forEach(dia => {
-                const lista = datosSemana[dia] || [];
-                const textoUnido = lista.join('\n');
-                const totalCaracteres = textoUnido.length;
-                const cantidadLineas = lista.length;
+            // 1. Tamaño inicial unificado más equilibrado (6.5px) y validación de espacio real
+            let fontSizeGlobal = 6.5; 
+            const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
 
-                let fontSizeDia = 7.5;
-                if (totalCaracteres > 180 || cantidadLineas > 4) {
-                    fontSizeDia = 5.5;
-                } else if (totalCaracteres > 100 || cantidadLineas > 2) {
-                    fontSizeDia = 6.5;
+            let alturaDisponibleBox = 40; 
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                if (['montag', 'lunes'].some(d => campo.toLowerCase().includes(d))) {
+                    alturaDisponibleBox = (box.y2 - box.y1) * scale;
+                    break;
+                }
+            }
+
+            diasSemanaKeys.forEach(dia => {
+                const lista = datosSemana[dia] || [];
+                const numLineas = lista.length;
+                if (numLineas === 0) return;
+
+                let testSize = fontSizeGlobal;
+                while (testSize > 4) {
+                    const alturaEstimada = numLineas * (testSize * 1.25 + 2);
+                    if (alturaEstimada <= (alturaDisponibleBox - 4)) {
+                        break; 
+                    }
+                    testSize -= 0.5; 
                 }
 
-                if (fontSizeDia < fontSizeGlobal) {
-                    fontSizeGlobal = fontSizeDia;
+                if (testSize < fontSizeGlobal) {
+                    fontSizeGlobal = testSize;
                 }
             });
 
-            // 2. Renderizado unificado
+            // 2. Renderizado unificado aplicando el tamaño global resultante a todos los días
             for (const [campo, box] of Object.entries(coordenadasMap)) {
                 const left = box.x1 * scale;
                 const top = pageViewport.height - (box.y2 * scale);
@@ -316,10 +326,8 @@
                 const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
 
                 if (esDiaSemana) {
-                    // Cada actividad con su viñeta y un pequeño margen inferior para separar los ítems
-                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 3px;">• ${act}</div>`).join('');
-                    
-                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.25] text-black font-sans overflow-hidden px-1 py-0.5 bg-white/95 border border-indigo-300 rounded z-10 flex flex-col justify-start`;
+                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 2px;">• ${act}</div>`).join('');
+                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.2] text-black font-sans overflow-hidden px-1 py-0.5 bg-white/95 border border-indigo-300 rounded z-10 flex flex-col justify-start`;
                 } else {
                     cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white/95 border border-indigo-300 rounded z-10 flex items-center`;
                     cajaVisual.textContent = textoAsignado;
