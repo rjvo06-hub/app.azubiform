@@ -40,7 +40,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let pdfPageViewport = null;
     let pdfPageHeight = 0;
     
-    // Escala idéntica a la del mapeador (1.2) para que coincida milimétricamente
+    // Escala idéntica a la del mapeador (1.2)
     const scale = 1.2; 
 
     try {
@@ -188,7 +188,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
                 if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
                     textoAsignado = datosSemana.lunes.join(' • ');
                 } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                    textoAsignedo = datosSemana.dienstag.join(' • '); // wait, typo fix: textoAsignado
+                    textoAsignado = datosSemana.dienstag.join(' • ');
                 } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
                     textoAsignado = datosSemana.mittwoch.join(' • ');
                 } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
