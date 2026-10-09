@@ -16,20 +16,23 @@
             position: absolute;
             background: #ffffff;
             border: 2px solid #dc2626;
-            width: 12px;
-            height: 12px;
-            z-index: 50;
+            width: 10px;
+            height: 10px;
+            z-index: 60;
             pointer-events: auto !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
-        .handle-nw { top: -6px; left: -6px; cursor: nwse-resize !important; }
-        .handle-ne { top: -6px; right: -6px; cursor: nesw-resize !important; }
-        .handle-se { bottom: -6px; right: -6px; cursor: nwse-resize !important; }
-        .handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize !important; }
-        .handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
-        .handle-s  { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
-        .handle-w  { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize !important; }
-        .handle-e  { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize !important; }
+        .handle-nw { top: -5px; left: -5px; cursor: nwse-resize !important; }
+        .handle-ne { top: -5px; right: -5px; cursor: nesw-resize !important; }
+        .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize !important; }
+        .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize !important; }
+        .handle-n  { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
+        .handle-s  { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
+        .handle-w  { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize !important; }
+        .handle-e  { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize !important; }
+        
+        .caja-mapeada {
+            cursor: move;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-6">
@@ -37,7 +40,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual Pro (Redimensionar y Mover)</h1>
+            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual (Creación por Puntos & Campos Nuevos)</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -57,32 +60,46 @@
             <div class="bg-white p-4 rounded-xl shadow-sm space-y-4 flex flex-col h-[800px]">
                 <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Campos Mapeados</h2>
                 
-                <div class="space-y-2">
-                    <label class="text-xs font-semibold text-gray-700">Nombre del Campo:</label>
-                    <select id="campoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
-                        <!-- Datos Generales del Membrete -->
-                        <option value="schueler">Schüler / Schülerin (Nombre del alumno)</option>
-                        <option value="klasse">Klasse (Clase)</option>
-                        <option value="wochenbericht_nr">Wochenbericht Nr. (Número de reporte)</option>
-                        <option value="betreuende_lehrkraft">Betreuende Lehrkraft (Profesor tutor)</option>
-                        <option value="ausbildungsrichtung">Ausbildungsrichtung (Especialidad)</option>
-                        <option value="ausbildungsstaette">Ausbildungsstätte (Empresa de prácticas)</option>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-700">Seleccionar Campo:</label>
+                        <select id="campoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
+                            <!-- Datos Generales del Membrete -->
+                            <option value="schueler">Schüler / Schülerin (Nombre del alumno)</option>
+                            <option value="klasse">Klasse (Clase)</option>
+                            <option value="wochenbericht_nr">Wochenbericht Nr. (Número de reporte)</option>
+                            <option value="betreuende_lehrkraft">Betreuende Lehrkraft (Profesor tutor)</option>
+                            <option value="ausbildungsrichtung">Ausbildungsrichtung (Especialidad)</option>
+                            <option value="ausbildungsstaette">Ausbildungsstätte (Empresa de prácticas)</option>
 
-                        <!-- Cuerpo: Actividades de la semana -->
-                        <option value="montag">Montag (Actividades Lunes)</option>
-                        <option value="dienstag">Dienstag (Actividades Martes)</option>
-                        <option value="mittwoch">Mittwoch (Actividades Miércoles)</option>
-                        <option value="donnerstag">Donnerstag (Actividades Jueves)</option>
-                        <option value="freitag">Freitag (Actividades Viernes)</option>
+                            <!-- Cuerpo: Actividades de la semana -->
+                            <option value="montag">Montag (Actividades Lunes)</option>
+                            <option value="dienstag">Dienstag (Actividades Martes)</option>
+                            <option value="mittwoch">Mittwoch (Actividades Miércoles)</option>
+                            <option value="donnerstag">Donnerstag (Actividades Jueves)</option>
+                            <option value="freitag">Freitag (Actividades Viernes)</option>
 
-                        <!-- Cuerpo: Horas de la semana -->
-                        <option value="montag_stunden">Montag - Stunden (Horas Lunes)</option>
-                        <option value="dienstag_stunden">Dienstag - Stunden (Horas Martes)</option>
-                        <option value="mittwoch_stunden">Mittwoch - Stunden (Horas Miércoles)</option>
-                        <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
-                        <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
-                    </select>
-                    <p class="text-[11px] text-gray-500">Selecciona un cuadro, pasa el cursor por los tiradores rojos de las esquinas/bordes para cambiar su tamaño, o arrástralo desde el centro.</p>
+                            <!-- Cuerpo: Horas de la semana -->
+                            <option value="montag_stunden">Montag - Stunden (Horas Lunes)</option>
+                            <option value="dienstag_stunden">Dienstag - Stunden (Horas Martes)</option>
+                            <option value="mittwoch_stunden">Mittwoch - Stunden (Horas Miércoles)</option>
+                            <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
+                            <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
+                        </select>
+                    </div>
+
+                    <!-- Opción nueva: Agregar campo nuevo manualmente -->
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-200 space-y-1">
+                        <label class="text-[11px] font-semibold text-gray-700">¿Falta un campo en la lista?</label>
+                        <div class="flex space-x-1">
+                            <input type="text" id="nuevoCampoInput" placeholder="Nombre del nuevo campo (ej: unterschrift)..." class="w-full p-1.5 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-indigo-500">
+                            <button id="btnAgregarCampo" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition whitespace-nowrap">➕ Añadir</button>
+                        </div>
+                    </div>
+
+                    <div id="estadoModo" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200">
+                        📌 Modo: Haz clic en el primer punto y luego en el segundo para crear el campo seleccionado.
+                    </div>
                 </div>
 
                 <!-- Lista de campos guardados -->
@@ -121,6 +138,9 @@
         const container = document.getElementById('canvasContainer');
         const drawingOverlay = document.getElementById('drawingOverlay');
         const campoSelect = document.getElementById('campoSelect');
+        const nuevoCampoInput = document.getElementById('nuevoCampoInput');
+        const btnAgregarCampo = document.getElementById('btnAgregarCampo');
+        const estadoModo = document.getElementById('estadoModo');
         const listaCoordenadas = document.getElementById('listaCoordenadas');
         const jsonOutput = document.getElementById('jsonOutput');
         const btnGuardar = document.getElementById('btnGuardarSupabase');
@@ -137,17 +157,54 @@
         let campoSeleccionadoActivo = null;
         let campoPendienteDuplicar = null;
         
-        let isDrawing = false;
+        let primerPunto = null; 
         let isResizing = false;
         let isMoving = false;
         let resizeHandleType = null;
         let startX = 0, startY = 0;
-        let currentRect = null;
 
         function inicializarModalSelect() {
             modalCampoSelect.innerHTML = campoSelect.innerHTML;
         }
         inicializarModalSelect();
+
+        // Lógica para agregar un campo nuevo manualmente
+        btnAgregarCampo.addEventListener('click', () => {
+            const val = nuevoCampoInput.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+            if (!val) {
+                alert("❌ Escribe un nombre válido para el nuevo campo.");
+                return;
+            }
+
+            // Verificar si ya existe en el select principal
+            const existe = Array.from(campoSelect.options).some(opt => opt.value === val);
+            if (existe) {
+                alert("⚠️ Este campo ya existe en la lista.");
+                return;
+            }
+
+            // Crear la opción y añadirla a ambos desplegables
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = `${val} (Personalizado)`;
+            campoSelect.appendChild(opt);
+
+            const optModal = document.createElement('option');
+            optModal.value = val;
+            optModal.textContent = `${val} (Personalizado)`;
+            modalCampoSelect.appendChild(optModal);
+
+            // Seleccionar automáticamente el nuevo campo creado
+            campoSelect.value = val;
+            primerPunto = null;
+            estadoModo.textContent = `📌 Campo "${val}" añadido. Haz clic en el primer punto y luego en el segundo para ubicarlo.`;
+            nuevoCampoInput.value = '';
+        });
+
+        campoSelect.addEventListener('change', () => {
+            primerPunto = null;
+            estadoModo.textContent = `📌 Modo: Haz clic en el primer punto y luego en el segundo para "${campoSelect.value}".`;
+        });
 
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -175,38 +232,63 @@
             redibujarTodasLasCajas();
         }
 
-        container.addEventListener('mousedown', (e) => {
+        // --- SISTEMA DE CREACIÓN POR DOS PUNTOS ---
+        container.addEventListener('click', (e) => {
             if (!pdfDoc) return;
             if (isResizing || isMoving) return;
 
-            if (!e.target.classList.contains('caja-mapeada') && !e.target.classList.contains('resize-handle')) {
-                const rect = canvas.getBoundingClientRect();
-                startX = e.clientX - rect.left;
-                startY = e.clientY - rect.top;
-                isDrawing = true;
+            if (e.target.classList.contains('caja-mapeada') || e.target.classList.contains('resize-handle')) {
+                return;
+            }
 
-                currentRect = document.createElement('div');
-                currentRect.className = 'absolute border-2 border-indigo-600 bg-indigo-500/20 rounded pointer-events-none';
-                currentRect.style.left = `${startX}px`;
-                currentRect.style.top = `${startY}px`;
-                drawingOverlay.appendChild(currentRect);
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            if (!primerPunto) {
+                primerPunto = { x: clickX, y: clickY };
+                estadoModo.textContent = `📍 Primer punto fijado. Haz clic en el segundo punto (esquina opuesta) para completar "${campoSelect.value}".`;
+            } else {
+                const segundoPunto = { x: clickX, y: clickY };
+
+                const canvasX1 = Math.min(primerPunto.x, segundoPunto.x);
+                const canvasX2 = Math.max(primerPunto.x, segundoPunto.x);
+                const canvasY1 = Math.min(primerPunto.y, segundoPunto.y);
+                const canvasY2 = Math.max(primerPunto.y, segundoPunto.y);
+
+                if ((canvasX2 - canvasX1) > 5 && (canvasY2 - canvasY1) > 5) {
+                    const pdfX1 = canvasX1 / scale;
+                    const pdfX2 = canvasX2 / scale;
+                    const pdfY1 = (pageViewport.height - canvasY2) / scale;
+                    const pdfY2 = (pageViewport.height - canvasY1) / scale;
+
+                    const campoActual = campoSelect.value;
+                    coordenadasMap[campoActual] = {
+                        x1: Math.round(pdfX1 * 10) / 10,
+                        y1: Math.round(pdfY1 * 10) / 10,
+                        x2: Math.round(pdfX2 * 10) / 10,
+                        y2: Math.round(pdfY2 * 10) / 10
+                    };
+
+                    campoSeleccionadoActivo = campoActual;
+                    actualizarUI();
+                    redibujarTodasLasCajas();
+                }
+
+                primerPunto = null;
+                estadoModo.textContent = `📌 Modo: Haz clic en el primer punto y luego en el segundo para crear el campo seleccionado.`;
             }
         });
 
+        // --- SISTEMA DE MOVIMIENTO Y REDIMENSIONAMIENTO ---
         container.addEventListener('mousemove', (e) => {
+            if (!isResizing && !isMoving) return;
+
             const rect = canvas.getBoundingClientRect();
             const currentX = e.clientX - rect.left;
             const currentY = e.clientY - rect.top;
 
-            if (isDrawing && currentRect) {
-                const width = currentX - startX;
-                const height = currentY - startY;
-
-                currentRect.style.width = `${Math.abs(width)}px`;
-                currentRect.style.height = `${Math.abs(height)}px`;
-                currentRect.style.left = `${width < 0 ? currentX : startX}px`;
-                currentRect.style.top = `${height < 0 ? currentY : startY}px`;
-            } else if (isResizing && campoSeleccionadoActivo) {
+            if (isResizing && campoSeleccionadoActivo) {
                 const box = coordenadasMap[campoSeleccionadoActivo];
                 if (!box) return;
 
@@ -254,51 +336,11 @@
             }
         });
 
-        window.addEventListener('mouseup', (e) => {
-            if (isDrawing) {
-                isDrawing = false;
-                if (!currentRect) return;
-
-                const rect = canvas.getBoundingClientRect();
-                const endX = e.clientX - rect.left;
-                const endY = e.clientY - rect.top;
-
-                const canvasX1 = Math.min(startX, endX);
-                const canvasX2 = Math.max(startX, endX);
-                const canvasY1 = Math.min(startY, endY);
-                const canvasY2 = Math.max(startY, endY);
-
-                if ((canvasX2 - canvasX1) < 5 || (canvasY2 - canvasY1) < 5) {
-                    currentRect.remove();
-                    currentRect = null;
-                    return;
-                }
-
-                const pdfX1 = canvasX1 / scale;
-                const pdfX2 = canvasX2 / scale;
-                const pdfY1 = (pageViewport.height - canvasY2) / scale;
-                const pdfY2 = (pageViewport.height - canvasY1) / scale;
-
-                const campoActual = campoSelect.value;
-                coordenadasMap[campoActual] = {
-                    x1: Math.round(pdfX1 * 10) / 10,
-                    y1: Math.round(pdfY1 * 10) / 10,
-                    x2: Math.round(pdfX2 * 10) / 10,
-                    y2: Math.round(pdfY2 * 10) / 10
-                };
-
-                currentRect.remove();
-                currentRect = null;
-                campoSeleccionadoActivo = campoActual;
-                actualizarUI();
-                redibujarTodasLasCajas();
-            }
-
+        window.addEventListener('mouseup', () => {
             if (isResizing) {
                 isResizing = false;
                 resizeHandleType = null;
             }
-
             if (isMoving) {
                 isMoving = false;
             }
@@ -384,7 +426,6 @@
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
                 cajaVisual.style.height = `${height}px`;
-                cajaVisual.style.cursor = 'move';
                 cajaVisual.style.pointerEvents = 'auto';
                 cajaVisual.textContent = campo;
 
@@ -457,13 +498,17 @@
             const schoolName = prompt("Introduce el nombre exacto de la escuela (ej. Berufliche Oberschule Holzkirchen):");
             if (!schoolName) return;
 
+            const fileIdentifier = schoolName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
+            const pdfFilename = fileInput.files[0] ? fileInput.files[0].name : 'template.pdf';
+
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
                     method: 'POST',
                     headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
                     body: JSON.stringify({
                         school_name: schoolName,
-                        pdf_filename: 'admin.pdf',
+                        file_identifier: fileIdentifier,
+                        pdf_filename: pdfFilename,
                         coordinates_json: coordenadasMap
                     })
                 });
