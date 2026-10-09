@@ -12,6 +12,25 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <style>
+        /* Tiradores ultra pequeños y limpios para que no se sobrepongan */
+        .resize-handle {
+            position: absolute;
+            background: #ffffff;
+            border: 1.5px solid #dc2626;
+            width: 6px;
+            height: 6px;
+            z-index: 60;
+            touch-action: none;
+        }
+        .handle-nw { top: -3px; left: -3px; cursor: nwse-resize; }
+        .handle-ne { top: -3px; right: -3px; cursor: nesw-resize; }
+        .handle-se { bottom: -3px; right: -3px; cursor: nwse-resize; }
+        .handle-sw { bottom: -3px; left: -3px; cursor: nesw-resize; }
+        .handle-n  { top: -3px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .handle-s  { bottom: -3px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .handle-w  { top: 50%; left: -3px; transform: translateY(-50%); cursor: ew-resize; }
+        .handle-e  { top: 50%; right: -3px; transform: translateY(-50%); cursor: ew-resize; }
+        
         .caja-mapeada {
             touch-action: none;
         }
@@ -22,7 +41,7 @@
     <div class="max-w-7xl mx-auto space-y-4">
         <!-- Cabecera -->
         <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">📱 Mapeador Visual FOS (Estética Limpia)</h1>
+            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">📱 Mapeador Visual FOS (Estable & Pro)</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow transition whitespace-nowrap">💾 Guardar</button>
@@ -158,7 +177,9 @@
         let campoPendienteDuplicar = null;
         
         let primerPunto = null; 
+        let isResizing = false;
         let isMoving = false;
+        let resizeHandleType = null;
         let startX = 0, startY = 0;
 
         function inicializarModalSelect() {
@@ -217,9 +238,11 @@
 
         container.addEventListener('click', (e) => {
             if (!pdfDoc) return;
-            if (isMoving) return;
+            if (isResizing || isMoving) return;
 
-            if (e.target.classList.contains('caja-mapeada')) return;
+            if (e.target.classList.contains('caja-mapeada') || e.target.classList.contains('resize-handle')) {
+                return;
+            }
 
             const rect = canvas.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
@@ -261,32 +284,65 @@
         });
 
         window.addEventListener('pointermove', (e) => {
-            if (!isMoving || !campoSeleccionadoActivo) return;
-            const box = coordenadasMap[campoSeleccionadoActivo];
-            if (!box) return;
+            if (!isResizing && !isMoving) return;
 
             const rect = canvas.getBoundingClientRect();
             const currentX = e.clientX - rect.left;
             const currentY = e.clientY - rect.top;
 
-            const dx = currentX - startX;
-            const dy = currentY - startY;
-            startX = currentX;
-            startY = currentY;
+            if (isResizing && campoSeleccionadoActivo) {
+                const box = coordenadasMap[campoSeleccionadoActivo];
+                if (!box) return;
 
-            const deltaPdfX = dx / scale;
-            const deltaPdfY = -dy / scale;
+                let canvasX1 = box.x1 * scale;
+                let canvasX2 = box.x2 * scale;
+                let canvasY1 = pageViewport.height - (box.y2 * scale);
+                let canvasY2 = pageViewport.height - (box.y1 * scale);
 
-            box.x1 = Math.round((box.x1 + deltaPdfX) * 10) / 10;
-            box.x2 = Math.round((box.x2 + deltaPdfX) * 10) / 10;
-            box.y1 = Math.round((box.y1 + deltaPdfY) * 10) / 10;
-            box.y2 = Math.round((box.y2 + deltaPdfY) * 10) / 10;
+                const dx = currentX - startX;
+                const dy = currentY - startY;
+                startX = currentX;
+                startY = currentY;
 
-            actualizarUI();
-            redibujarTodasLasCajas();
+                if (resizeHandleType.includes('w')) canvasX1 += dx;
+                if (resizeHandleType.includes('e')) canvasX2 += dx;
+                if (resizeHandleType.includes('n')) canvasY1 += dy;
+                if (resizeHandleType.includes('s')) canvasY2 += dy;
+
+                box.x1 = Math.round((Math.min(canvasX1, canvasX2) / scale) * 10) / 10;
+                box.x2 = Math.round((Math.max(canvasX1, canvasX2) / scale) * 10) / 10;
+                box.y1 = Math.round(((pageViewport.height - Math.max(canvasY1, canvasY2)) / scale) * 10) / 10;
+                box.y2 = Math.round(((pageViewport.height - Math.min(canvasY1, canvasY2)) / scale) * 10) / 10;
+
+                actualizarUI();
+                redibujarTodasLasCajas();
+            } else if (isMoving && campoSeleccionadoActivo) {
+                const box = coordenadasMap[campoSeleccionadoActivo];
+                if (!box) return;
+
+                const dx = currentX - startX;
+                const dy = currentY - startY;
+                startX = currentX;
+                startY = currentY;
+
+                const deltaPdfX = dx / scale;
+                const deltaPdfY = -dy / scale;
+
+                box.x1 = Math.round((box.x1 + deltaPdfX) * 10) / 10;
+                box.x2 = Math.round((box.x2 + deltaPdfX) * 10) / 10;
+                box.y1 = Math.round((box.y1 + deltaPdfY) * 10) / 10;
+                box.y2 = Math.round((box.y2 + deltaPdfY) * 10) / 10;
+
+                actualizarUI();
+                redibujarTodasLasCajas();
+            }
         });
 
-        window.addEventListener('pointerup', () => { isMoving = false; });
+        window.addEventListener('pointerup', () => {
+            isResizing = false;
+            isMoving = false;
+            resizeHandleType = null;
+        });
 
         function moverActivo(dx, dy) {
             if (!campoSeleccionadoActivo || !coordenadasMap[campoSeleccionadoActivo]) return;
@@ -379,7 +435,7 @@
                 const cajaVisual = document.createElement('div');
                 const esActivo = campo === campoSeleccionadoActivo;
                 
-                cajaVisual.className = `caja-mapeada absolute rounded-full text-[10px] font-bold px-2 flex items-center justify-between transition shadow-sm ${esActivo ? 'border-2 border-indigo-600 bg-indigo-500/40 text-indigo-950 ring-2 ring-indigo-400 z-20' : 'border border-indigo-500 bg-indigo-500/25 text-indigo-900 z-10'}`;
+                cajaVisual.className = `caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between transition ${esActivo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 ring-2 ring-red-400 z-20' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 z-10'}`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
@@ -398,6 +454,24 @@
                     startX = e.clientX - rect.left;
                     startY = e.clientY - rect.top;
                 };
+
+                // Si es el campo activo, inyectar los tiradores de 6px proporcionales y limpios
+                if (esActivo) {
+                    const handles = ['nw', 'ne', 'se', 'sw', 'n', 's', 'w', 'e'];
+                    handles.forEach(h => {
+                        const handle = document.createElement('div');
+                        handle.className = `resize-handle handle-${h}`;
+                        handle.onpointerdown = (ev) => {
+                            ev.stopPropagation();
+                            isResizing = true;
+                            resizeHandleType = h;
+                            const rect = canvas.getBoundingClientRect();
+                            startX = ev.clientX - rect.left;
+                            startY = ev.clientY - rect.top;
+                        };
+                        cajaVisual.appendChild(handle);
+                    });
+                }
 
                 drawingOverlay.appendChild(cajaVisual);
             }
