@@ -11,8 +11,9 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <!-- html2canvas -->
+    <!-- html2canvas y jsPDF para exportar a PDF directo -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
@@ -70,9 +71,9 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Imprimir / Guardar PDF -->
-                    <button id="btnImprimirPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
-                        <span>🖨️ Imprimir / Guardar PDF</span>
+                    <!-- Botón de Generar y Descargar PDF -->
+                    <button id="btnGenerarPdfDirecto" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
+                        <span>📥 Descargar PDF del Reporte</span>
                     </button>
                 </div>
 
@@ -96,7 +97,7 @@
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
         const btnGenerarVista = document.getElementById('btnGenerarVista');
-        const btnImprimirPdf = document.getElementById('btnImprimirPdf');
+        const btnGenerarPdfDirecto = document.getElementById('btnGenerarPdfDirecto');
         const estadoInfo = document.getElementById('estadoInfo');
 
         let pdfDoc = null;
@@ -267,56 +268,44 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura exacta con html2canvas sin fondos blancos ni recuadros
-        btnImprimirPdf.addEventListener('click', async () => {
+        // Generación y descarga directa de PDF mediante jsPDF y html2canvas sin pasar por la impresión del navegador
+        btnGenerarPdfDirecto.addEventListener('click', async () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
 
-            estadoInfo.textContent = "🔄 Preparando documento para imprimir...";
+            estadoInfo.textContent = "🔄 Generando archivo PDF...";
 
             try {
                 const canvasContainer = document.getElementById('canvasContainer');
                 const capturedCanvas = await html2canvas(canvasContainer, {
-                    scale: 2,
+                    scale: 3, // Alta calidad
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: '#ffffff'
                 });
 
-                const dataUrl = capturedCanvas.toDataURL('image/png');
-                const ventanaImpresion = window.open('', '_blank');
+                const imgData = capturedCanvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
                 
-                if (!ventanaImpresion) {
-                    alert("⚠️ Por favor, permite las ventanas emergentes (pop-ups) para imprimir.");
-                    return;
-                }
+                // Creamos el PDF en formato A4 adaptado exactamente a las proporciones de la captura
+                const pdf = new jsPDF({
+                    orientation: capturedCanvas.width > capturedCanvas.height ? 'landscape' : 'portrait',
+                    unit: 'px',
+                    format: [capturedCanvas.width, capturedCanvas.height]
+                });
 
-                ventanaImpresion.document.write(`
-                    <html>
-                        <head>
-                            <title>Reporte FOS - Imprimir</title>
-                            <style>
-                                body { margin: 0; padding: 0; background: white; display: flex; justify-content: center; align-items: center; }
-                                img { width: 100%; height: auto; max-width: 100%; display: block; }
-                                @media print {
-                                    body { margin: 0; }
-                                    img { width: 100%; max-width: 100%; }
-                                }
-                            </style>
-                        </head>
-                        <body>
-                            <img src="${dataUrl}" onload="window.print();" />
-                        </body>
-                    </html>
-                `);
-                ventanaImpresion.document.close();
-                estadoInfo.textContent = "✅ ¡Listo para imprimir o guardar!";
+                pdf.addImage(imgData, 'PNG', 0, 0, capturedCanvas.width, capturedCanvas.height);
+                
+                const nombreUsuario = selectUsuario.value || 'Reporte';
+                pdf.save(`Wochenbericht_${nombreUsuario}.pdf`);
+
+                estadoInfo.textContent = "✅ ¡PDF descargado con éxito!";
             } catch (err) {
                 console.error(err);
-                alert("❌ Error al generar la captura para impresión.");
-                estadoInfo.textContent = "⚠️ Error en la generación.";
+                alert("❌ Ocurrió un error al generar el archivo PDF.");
+                estadoInfo.textContent = "⚠️ Error en la generación del PDF.";
             }
         });
 
@@ -384,7 +373,6 @@
 
                 const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
 
-                // Todos los campos usan fondo transparente y sin bordes para no mostrar ningún recuadro
                 if (esDiaSemana) {
                     cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1.5px;">• ${act}</div>`).join('');
                     cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
