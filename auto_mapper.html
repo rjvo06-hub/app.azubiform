@@ -263,8 +263,8 @@
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
-            // 1. Tamaño inicial unificado más equilibrado (6.5px) y validación de espacio real
-            let fontSizeGlobal = 6.5; 
+            // 1. Tamaño inicial compacto unificado (5px) con validación automática de altura real
+            let fontSizeGlobal = 5; 
             const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
 
             let alturaDisponibleBox = 40; 
@@ -281,9 +281,9 @@
                 if (numLineas === 0) return;
 
                 let testSize = fontSizeGlobal;
-                while (testSize > 4) {
-                    const alturaEstimada = numLineas * (testSize * 1.25 + 2);
-                    if (alturaEstimada <= (alturaDisponibleBox - 4)) {
+                while (testSize > 3.5) {
+                    const alturaEstimada = numLineas * (testSize * 1.15 + 1.5);
+                    if (alturaEstimada <= (alturaDisponibleBox - 3)) {
                         break; 
                     }
                     testSize -= 0.5; 
@@ -326,8 +326,8 @@
                 const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
 
                 if (esDiaSemana) {
-                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 2px;">• ${act}</div>`).join('');
-                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.2] text-black font-sans overflow-hidden px-1 py-0.5 bg-white/95 border border-indigo-300 rounded z-10 flex flex-col justify-start`;
+                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1.5px;">• ${act}</div>`).join('');
+                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-1 py-0.5 bg-white/95 border border-indigo-300 rounded z-10 flex flex-col justify-start`;
                 } else {
                     cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white/95 border border-indigo-300 rounded z-10 flex items-center`;
                     cajaVisual.textContent = textoAsignado;
