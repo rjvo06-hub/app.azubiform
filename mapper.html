@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapeador Visual Profesional FOS - Azubiform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mapeador Visual Mobile - Azubiform</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js -->
@@ -16,116 +16,123 @@
             position: absolute;
             background: #ffffff;
             border: 2px solid #dc2626;
-            width: 10px;
-            height: 10px;
+            width: 16px;
+            height: 16px;
             z-index: 60;
-            pointer-events: auto !important;
+            touch-action: none;
         }
-        .handle-nw { top: -5px; left: -5px; cursor: nwse-resize !important; }
-        .handle-ne { top: -5px; right: -5px; cursor: nesw-resize !important; }
-        .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize !important; }
-        .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize !important; }
-        .handle-n  { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
-        .handle-s  { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
-        .handle-w  { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize !important; }
-        .handle-e  { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize !important; }
+        .handle-nw { top: -8px; left: -8px; }
+        .handle-ne { top: -8px; right: -8px; }
+        .handle-se { bottom: -8px; right: -8px; }
+        .handle-sw { bottom: -8px; left: -8px; }
+        .handle-n  { top: -8px; left: 50%; transform: translateX(-50%); }
+        .handle-s  { bottom: -8px; left: 50%; transform: translateX(-50%); }
+        .handle-w  { top: 50%; left: -8px; transform: translateY(-50%); }
+        .handle-e  { top: 50%; right: -8px; transform: translateY(-50%); }
         
         .caja-mapeada {
-            cursor: move;
+            touch-action: none;
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen p-6">
+<body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
-    <div class="max-w-7xl mx-auto space-y-6">
+    <div class="max-w-7xl mx-auto space-y-4">
         <!-- Cabecera -->
-        <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual (Creación por Puntos & Campos Nuevos)</h1>
-            <div class="flex items-center space-x-3">
-                <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
+        <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">📱 Mapeador Visual FOS (Móvil & Tablet)</h1>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
+                <input type="file" id="pdfFile" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+                <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow transition whitespace-nowrap">💾 Guardar</button>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Panel Izquierdo: Lienzo del PDF -->
-            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-4 flex justify-center overflow-auto max-h-[800px] relative border border-gray-300">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Panel Izquierdo: Lienzo del PDF (Adaptado para scroll táctil) -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center overflow-auto max-h-[60vh] lg:max-h-[800px] relative border border-gray-300">
                 <div class="relative inline-block cursor-crosshair" id="canvasContainer">
-                    <canvas id="pdfCanvas" class="block shadow-lg"></canvas>
+                    <canvas id="pdfCanvas" class="block shadow-lg max-w-full"></canvas>
                     <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
 
-            <!-- Panel Derecho: Gestión de Campos y Coordenadas -->
-            <div class="bg-white p-4 rounded-xl shadow-sm space-y-4 flex flex-col h-[800px]">
-                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Campos Mapeados</h2>
+            <!-- Panel Derecho: Gestión de Campos, Controles Táctiles y Coordenadas -->
+            <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col">
+                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Configuración de Campos</h2>
                 
-                <div class="space-y-3">
+                <div class="space-y-2">
                     <div>
-                        <label class="text-xs font-semibold text-gray-700">Seleccionar Campo:</label>
+                        <label class="text-[11px] font-semibold text-gray-700">Seleccionar Campo:</label>
                         <select id="campoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 mt-1">
-                            <!-- Datos Generales del Membrete -->
-                            <option value="schueler">Schüler / Schülerin (Nombre del alumno)</option>
-                            <option value="klasse">Klasse (Clase)</option>
-                            <option value="wochenbericht_nr">Wochenbericht Nr. (Número de reporte)</option>
-                            <option value="betreuende_lehrkraft">Betreuende Lehrkraft (Profesor tutor)</option>
-                            <option value="ausbildungsrichtung">Ausbildungsrichtung (Especialidad)</option>
-                            <option value="ausbildungsstaette">Ausbildungsstätte (Empresa de prácticas)</option>
-
-                            <!-- Cuerpo: Actividades de la semana -->
-                            <option value="montag">Montag (Actividades Lunes)</option>
-                            <option value="dienstag">Dienstag (Actividades Martes)</option>
-                            <option value="mittwoch">Mittwoch (Actividades Miércoles)</option>
-                            <option value="donnerstag">Donnerstag (Actividades Jueves)</option>
-                            <option value="freitag">Freitag (Actividades Viernes)</option>
-
-                            <!-- Cuerpo: Horas de la semana -->
-                            <option value="montag_stunden">Montag - Stunden (Horas Lunes)</option>
-                            <option value="dienstag_stunden">Dienstag - Stunden (Horas Martes)</option>
-                            <option value="mittwoch_stunden">Mittwoch - Stunden (Horas Miércoles)</option>
-                            <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
-                            <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
+                            <option value="schueler">Schüler / Schülerin</option>
+                            <option value="klasse">Klasse</option>
+                            <option value="wochenbericht_nr">Wochenbericht Nr.</option>
+                            <option value="betreuende_lehrkraft">Betreuende Lehrkraft</option>
+                            <option value="ausbildungsrichtung">Ausbildungsrichtung</option>
+                            <option value="ausbildungsstaette">Ausbildungsstätte</option>
+                            <option value="montag">Montag</option>
+                            <option value="dienstag">Dienstag</option>
+                            <option value="mittwoch">Mittwoch</option>
+                            <option value="donnerstag">Donnerstag</option>
+                            <option value="freitag">Freitag</option>
+                            <option value="montag_stunden">Montag - Stunden</option>
+                            <option value="dienstag_stunden">Dienstag - Stunden</option>
+                            <option value="mittwoch_stunden">Mittwoch - Stunden</option>
+                            <option value="donnerstag_stunden">Donnerstag - Stunden</option>
+                            <option value="freitag_stunden">Freitag - Stunden</option>
                         </select>
                     </div>
 
-                    <!-- Opción nueva: Agregar campo nuevo manualmente -->
+                    <!-- Añadir campo personalizado -->
                     <div class="bg-gray-50 p-2 rounded-lg border border-gray-200 space-y-1">
-                        <label class="text-[11px] font-semibold text-gray-700">¿Falta un campo en la lista?</label>
+                        <label class="text-[10px] font-semibold text-gray-700">Añadir campo nuevo:</label>
                         <div class="flex space-x-1">
-                            <input type="text" id="nuevoCampoInput" placeholder="Nombre del nuevo campo (ej: unterschrift)..." class="w-full p-1.5 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-indigo-500">
-                            <button id="btnAgregarCampo" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition whitespace-nowrap">➕ Añadir</button>
+                            <input type="text" id="nuevoCampoInput" placeholder="Nombre..." class="w-full p-1 border border-gray-300 rounded text-xs bg-white">
+                            <button id="btnAgregarCampo" class="bg-emerald-600 text-white text-xs px-2.5 py-1 rounded">➕</button>
                         </div>
                     </div>
 
-                    <div id="estadoModo" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200">
-                        📌 Modo: Haz clic en el primer punto y luego en el segundo para crear el campo seleccionado.
+                    <div id="estadoModo" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
+                        📌 Toca dos puntos en el PDF para crear la caja.
+                    </div>
+
+                    <!-- Controles Táctiles de Movimiento (Reemplazo táctil de las flechas del teclado) -->
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 space-y-1">
+                        <label class="text-[10px] font-bold text-slate-700 uppercase block text-center">🕹️ Ajuste Fino Táctil (Campo Activo)</label>
+                        <div class="grid grid-cols-3 gap-1 max-w-[160px] mx-auto">
+                            <div></div>
+                            <button id="btnMoverArriba" class="bg-slate-200 hover:bg-slate-300 py-1.5 rounded text-xs font-bold">⬆️</button>
+                            <div></div>
+                            <button id="btnMoverIzquierda" class="bg-slate-200 hover:bg-slate-300 py-1.5 rounded text-xs font-bold">⬅️</button>
+                            <button id="btnMoverAbajo" class="bg-slate-200 hover:bg-slate-300 py-1.5 rounded text-xs font-bold">⬇️</button>
+                            <button id="btnMoverDerecha" class="bg-slate-200 hover:bg-slate-300 py-1.5 rounded text-xs font-bold">➡️</button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Lista de campos guardados -->
-                <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50" id="listaCoordenadas">
+                <div class="h-36 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50" id="listaCoordenadas">
                     <p class="text-[11px] text-gray-400 text-center mt-4">No hay coordenadas capturadas aún.</p>
                 </div>
 
                 <!-- JSON Exportado -->
                 <div class="space-y-1">
-                    <label class="text-xs font-semibold text-gray-700">JSON de Coordenadas:</label>
-                    <textarea id="jsonOutput" readonly class="w-full h-28 p-2 text-[10px] font-mono bg-gray-900 text-green-400 rounded-lg border border-gray-700 focus:outline-none"></textarea>
+                    <label class="text-[11px] font-semibold text-gray-700">JSON:</label>
+                    <textarea id="jsonOutput" readonly class="w-full h-16 p-1.5 text-[9px] font-mono bg-gray-900 text-green-400 rounded-lg border border-gray-700 focus:outline-none"></textarea>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal para seleccionar nombre al duplicar -->
-    <div id="duplicateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-white p-5 rounded-xl shadow-xl w-96 space-y-4">
+    <!-- Modal para duplicar -->
+    <div id="duplicateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-sm space-y-3">
             <h3 class="text-xs font-bold text-indigo-900 uppercase">📋 Duplicar Campo</h3>
-            <p class="text-[11px] text-gray-600">Selecciona el nombre que tendrá este campo duplicado:</p>
-            <select id="modalCampoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
+            <select id="modalCampoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white">
             </select>
             <div class="flex justify-end space-x-2 pt-2">
-                <button id="modalBtnCancelar" class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition">Cancelar</button>
-                <button id="modalBtnConfirmar" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition">Duplicar y Seleccionar</button>
+                <button id="modalBtnCancelar" class="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-lg">Cancelar</button>
+                <button id="modalBtnConfirmar" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg">Duplicar</button>
             </div>
         </div>
     </div>
@@ -152,7 +159,7 @@
 
         let pdfDoc = null;
         let pageViewport = null;
-        let scale = 1.5;
+        let scale = 1.2; // Escala optimizada para pantallas móviles
         let coordenadasMap = {};
         let campoSeleccionadoActivo = null;
         let campoPendienteDuplicar = null;
@@ -168,22 +175,13 @@
         }
         inicializarModalSelect();
 
-        // Lógica para agregar un campo nuevo manualmente
         btnAgregarCampo.addEventListener('click', () => {
             const val = nuevoCampoInput.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
-            if (!val) {
-                alert("❌ Escribe un nombre válido para el nuevo campo.");
-                return;
-            }
+            if (!val) return alert("Escribe un nombre válido.");
 
-            // Verificar si ya existe en el select principal
             const existe = Array.from(campoSelect.options).some(opt => opt.value === val);
-            if (existe) {
-                alert("⚠️ Este campo ya existe en la lista.");
-                return;
-            }
+            if (existe) return alert("Este campo ya existe.");
 
-            // Crear la opción y añadirla a ambos desplegables
             const opt = document.createElement('option');
             opt.value = val;
             opt.textContent = `${val} (Personalizado)`;
@@ -194,16 +192,10 @@
             optModal.textContent = `${val} (Personalizado)`;
             modalCampoSelect.appendChild(optModal);
 
-            // Seleccionar automáticamente el nuevo campo creado
             campoSelect.value = val;
             primerPunto = null;
-            estadoModo.textContent = `📌 Campo "${val}" añadido. Haz clic en el primer punto y luego en el segundo para ubicarlo.`;
+            estadoModo.textContent = `📌 Campo "${val}" añadido. Toca dos puntos.`;
             nuevoCampoInput.value = '';
-        });
-
-        campoSelect.addEventListener('change', () => {
-            primerPunto = null;
-            estadoModo.textContent = `📌 Modo: Haz clic en el primer punto y luego en el segundo para "${campoSelect.value}".`;
         });
 
         fileInput.addEventListener('change', async (e) => {
@@ -232,7 +224,7 @@
             redibujarTodasLasCajas();
         }
 
-        // --- SISTEMA DE CREACIÓN POR DOS PUNTOS ---
+        // --- SOPORTE TÁCTIL PARA CREACIÓN POR PUNTOS ---
         container.addEventListener('click', (e) => {
             if (!pdfDoc) return;
             if (isResizing || isMoving) return;
@@ -247,7 +239,7 @@
 
             if (!primerPunto) {
                 primerPunto = { x: clickX, y: clickY };
-                estadoModo.textContent = `📍 Primer punto fijado. Haz clic en el segundo punto (esquina opuesta) para completar "${campoSelect.value}".`;
+                estadoModo.textContent = `📍 Primer punto fijado. Toca el segundo punto para "${campoSelect.value}".`;
             } else {
                 const segundoPunto = { x: clickX, y: clickY };
 
@@ -276,12 +268,12 @@
                 }
 
                 primerPunto = null;
-                estadoModo.textContent = `📌 Modo: Haz clic en el primer punto y luego en el segundo para crear el campo seleccionado.`;
+                estadoModo.textContent = `📌 Toca dos puntos en el PDF para crear la caja.`;
             }
         });
 
-        // --- SISTEMA DE MOVIMIENTO Y REDIMENSIONAMIENTO ---
-        container.addEventListener('mousemove', (e) => {
+        // --- MOVIMIENTO Y REDIMENSIONAMIENTO TÁCTIL ---
+        window.addEventListener('pointermove', (e) => {
             if (!isResizing && !isMoving) return;
 
             const rect = canvas.getBoundingClientRect();
@@ -336,49 +328,50 @@
             }
         });
 
-        window.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                resizeHandleType = null;
-            }
-            if (isMoving) {
-                isMoving = false;
-            }
+        window.addEventListener('pointerup', () => {
+            isResizing = false;
+            isMoving = false;
+            resizeHandleType = null;
         });
 
-        window.abrirModalDuplicar = function(campoOriginal) {
-            const boxOriginal = coordenadasMap[campoOriginal];
-            if (!boxOriginal) return;
+        // Botones Táctiles de Movimiento
+        function moverActivo(dx, dy) {
+            if (!campoSeleccionadoActivo || !coordenadasMap[campoSeleccionadoActivo]) return;
+            const box = coordenadasMap[campoSeleccionadoActivo];
+            box.x1 += dx; box.x2 += dx;
+            box.y1 += dy; box.y2 += dy;
+            actualizarUI();
+            redibujarTodasLasCajas();
+        }
 
+        document.getElementById('btnMoverArriba').onclick = () => moverActivo(0, 1);
+        document.getElementById('btnMoverAbajo').onclick = () => moverActivo(0, -1);
+        document.getElementById('btnMoverIzquierda').onclick = () => moverActivo(-1, 0);
+        document.getElementById('btnMoverDerecha').onclick = () => moverActivo(1, 0);
+
+        window.abrirModalDuplicar = function(campoOriginal) {
+            if (!coordenadasMap[campoOriginal]) return;
             campoPendienteDuplicar = campoOriginal;
             duplicateModal.classList.remove('hidden');
         };
 
-        modalBtnCancelar.onclick = () => {
-            duplicateModal.classList.add('hidden');
-            campoPendienteDuplicar = null;
-        };
-
+        modalBtnCancelar.onclick = () => duplicateModal.classList.add('hidden');
         modalBtnConfirmar.onclick = () => {
             const campoDestino = modalCampoSelect.value;
             const boxOriginal = coordenadasMap[campoPendienteDuplicar];
-
             if (boxOriginal && campoDestino) {
-                const offset = 20 / scale;
+                const offset = 15 / scale;
                 coordenadasMap[campoDestino] = {
                     x1: Math.round((boxOriginal.x1 + offset) * 10) / 10,
                     y1: boxOriginal.y1,
                     x2: Math.round((boxOriginal.x2 + offset) * 10) / 10,
                     y2: boxOriginal.y2
                 };
-
                 campoSeleccionadoActivo = campoDestino;
                 actualizarUI();
                 redibujarTodasLasCajas();
             }
-
             duplicateModal.classList.add('hidden');
-            campoPendienteDuplicar = null;
         };
 
         function actualizarUI() {
@@ -388,7 +381,7 @@
             for (const [campo, box] of Object.entries(coordenadasMap)) {
                 const item = document.createElement('div');
                 const esActivo = campo === campoSeleccionadoActivo;
-                item.className = `p-2 rounded border text-xs flex justify-between items-center cursor-pointer transition ${esActivo ? 'bg-indigo-50 border-indigo-500 shadow-xs ring-1 ring-indigo-500' : 'bg-white border-gray-200 hover:bg-gray-50'}`;
+                item.className = `p-2 rounded border text-xs flex justify-between items-center cursor-pointer transition ${esActivo ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500' : 'bg-white border-gray-200'}`;
                 
                 item.onclick = () => {
                     campoSeleccionadoActivo = campo;
@@ -398,12 +391,12 @@
 
                 item.innerHTML = `
                     <div>
-                        <span class="font-bold text-indigo-900">${campo} ${esActivo ? '⚡ (Activo)' : ''}</span>
-                        <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
+                        <span class="font-bold text-indigo-900">${campo} ${esActivo ? '⚡' : ''}</span>
+                        <div class="text-[9px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}</div>
                     </div>
                     <div class="flex items-center space-x-1">
-                        <button class="text-blue-500 hover:text-blue-700 text-xs font-bold px-1 py-1" title="Duplicar campo" onclick="event.stopPropagation(); window.abrirModalDuplicar('${campo}')">📋</button>
-                        <button class="text-red-500 hover:text-red-700 text-xs font-bold px-1 py-1" title="Eliminar campo" onclick="event.stopPropagation(); window.eliminarCampo('${campo}')">🗑️</button>
+                        <button class="text-blue-600 font-bold px-1.5 py-1 text-xs" onclick="event.stopPropagation(); window.abrirModalDuplicar('${campo}')">📋</button>
+                        <button class="text-red-600 font-bold px-1.5 py-1 text-xs" onclick="event.stopPropagation(); window.eliminarCampo('${campo}')">🗑️</button>
                     </div>
                 `;
                 listaCoordenadas.appendChild(item);
@@ -421,7 +414,7 @@
                 const cajaVisual = document.createElement('div');
                 const esActivo = campo === campoSeleccionadoActivo;
                 
-                cajaVisual.className = `caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between transition ${esActivo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 ring-2 ring-red-400 z-20' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 hover:bg-indigo-500/40 z-10'}`;
+                cajaVisual.className = `caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between transition ${esActivo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 ring-2 ring-red-400 z-20' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 z-10'}`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
@@ -429,7 +422,7 @@
                 cajaVisual.style.pointerEvents = 'auto';
                 cajaVisual.textContent = campo;
 
-                cajaVisual.onmousedown = (e) => {
+                cajaVisual.onpointerdown = (e) => {
                     e.stopPropagation();
                     campoSeleccionadoActivo = campo;
                     actualizarUI();
@@ -446,7 +439,7 @@
                     handles.forEach(h => {
                         const handle = document.createElement('div');
                         handle.className = `resize-handle handle-${h}`;
-                        handle.onmousedown = (ev) => {
+                        handle.onpointerdown = (ev) => {
                             ev.stopPropagation();
                             isResizing = true;
                             resizeHandleType = h;
@@ -462,31 +455,6 @@
             }
         }
 
-        window.addEventListener('keydown', (e) => {
-            if (!campoSeleccionadoActivo || !coordenadasMap[campoSeleccionadoActivo]) return;
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-
-            const paso = e.shiftKey ? 5 : 1;
-            const box = coordenadasMap[campoSeleccionadoActivo];
-
-            let movio = false;
-            if (e.key === 'ArrowLeft') { box.x1 -= paso; box.x2 -= paso; movio = true; }
-            if (e.key === 'ArrowRight') { box.x1 += paso; box.x2 += paso; movio = true; }
-            if (e.key === 'ArrowUp') { box.y1 += paso; box.y2 += paso; movio = true; }
-            if (e.key === 'ArrowDown') { box.y1 -= paso; box.y2 -= paso; movio = true; }
-
-            if (movio) {
-                e.preventDefault();
-                box.x1 = Math.round(box.x1 * 10) / 10;
-                box.x2 = Math.round(box.x2 * 10) / 10;
-                box.y1 = Math.round(box.y1 * 10) / 10;
-                box.y2 = Math.round(box.y2 * 10) / 10;
-
-                actualizarUI();
-                redibujarTodasLasCajas();
-            }
-        });
-
         window.eliminarCampo = function(campo) {
             delete coordenadasMap[campo];
             if (campoSeleccionadoActivo === campo) campoSeleccionadoActivo = null;
@@ -495,7 +463,7 @@
         };
 
         btnGuardar.addEventListener('click', async () => {
-            const schoolName = prompt("Introduce el nombre exacto de la escuela (ej. Berufliche Oberschule Holzkirchen):");
+            const schoolName = prompt("Nombre de la escuela:");
             if (!schoolName) return;
 
             const fileIdentifier = schoolName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
@@ -514,14 +482,14 @@
                 });
 
                 if (response.ok) {
-                    alert("✅ ¡Plantilla y coordenadas guardadas con éxito en Supabase!");
+                    alert("✅ ¡Guardado con éxito en Supabase!");
                 } else {
                     const err = await response.text();
-                    alert("❌ Error al guardar: " + err);
+                    alert("❌ Error: " + err);
                 }
             } catch (err) {
                 console.error(err);
-                alert("❌ Error de red al conectar con Supabase.");
+                alert("❌ Error de red.");
             }
         });
     </script>
