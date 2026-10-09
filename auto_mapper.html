@@ -93,12 +93,11 @@
 
         let pdfDoc = null;
         let pageViewport = null;
-        let scale = 1.2; // Escala exacta del mapeador
+        let scale = 1.2;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
         let registrosGlobales = [];
 
-        // 1. Cargar lista de plantillas disponibles
         async function cargarListaPlantillas() {
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
@@ -119,7 +118,6 @@
             }
         }
 
-        // 2. Cargar lista de usuarios
         async function cargarListaUsuarios() {
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id,nombre`, {
@@ -143,7 +141,6 @@
         cargarListaPlantillas();
         cargarListaUsuarios();
 
-        // Manejo de carga de PDF (idéntico al mapeador)
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -173,7 +170,6 @@
             }
         }
 
-        // Botón Cargar Plantilla Coordenadas
         btnCargarPlantilla.addEventListener('click', async () => {
             const fileIdentifier = selectPlantillasGuardadas.value;
             if (!fileIdentifier) return alert("⚠️ Selecciona una escuela.");
@@ -197,7 +193,6 @@
             }
         });
 
-        // Cuando cambia el usuario, cargamos sus registros diarios
         selectUsuario.addEventListener('change', async (e) => {
             const nombreUsuario = e.target.value;
             if (!nombreUsuario) return;
@@ -254,7 +249,6 @@
             return semanas;
         }
 
-        // Botón Pintar Datos
         btnGenerarVista.addEventListener('click', () => {
             if (!pdfDoc) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
@@ -265,25 +259,18 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Lógica de renderizado idéntica a la del mapeador pero inyectando los textos
         function redibujarDatos(datosSemana) {
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
-                // Misma fórmula exacta del mapeador visual
                 const left = box.x1 * scale;
                 const top = pageViewport.height - (box.y2 * scale);
                 const width = (box.x2 - box.x1) * scale;
                 const height = (box.y2 - box.y1) * scale;
 
                 const cajaVisual = document.createElement('div');
-                cajaVisual.className = `absolute text-[9px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/90 border border-indigo-400 rounded z-10`;
-                cajaVisual.style.left = `${left}px`;
-                cajaVisual.style.top = `${top}px`;
-                cajaVisual.style.width = `${width}px`;
-                cajaVisual.style.height = `${height}px`;
-
+                
                 const lowerKey = campo.toLowerCase();
                 let textoAsignado = '';
 
@@ -302,6 +289,19 @@
                         textoAsignado = selectUsuario.value;
                     }
                 }
+
+                const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
+
+                if (esDiaSemana) {
+                    cajaVisual.className = `absolute text-[6px] leading-[1.1] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-white/95 border border-indigo-300 rounded z-10 flex flex-col justify-start`;
+                } else {
+                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white/95 border border-indigo-300 rounded z-10 flex items-center`;
+                }
+
+                cajaVisual.style.left = `${left}px`;
+                cajaVisual.style.top = `${top}px`;
+                cajaVisual.style.width = `${width}px`;
+                cajaVisual.style.height = `${height}px`;
 
                 cajaVisual.textContent = textoAsignado;
                 drawingOverlay.appendChild(cajaVisual);
