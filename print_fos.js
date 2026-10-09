@@ -118,4 +118,88 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         });
 
     } catch (err) {
-        console.error("Fehler beim Laden der Vorschau:",
+        console.error("Fehler beim Laden der Vorschau:", err);
+        alert("❌ Ein Fehler ist aufgetreten.");
+    }
+
+    function agruparRegistrosPorSemana(registros) {
+        const semanas = {};
+        registros.forEach(reg => {
+            if (!reg.fecha) return;
+            const fechaObj = new Date(reg.fecha);
+            
+            const diaSemana = fechaObj.getDay();
+            const diff = fechaObj.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+            const lunes = new Date(new Date(fechaObj).setDate(diff));
+            const viernes = new Date(lunes);
+            viernes.setDate(lunes.getDate() + 4);
+
+            const claveSemana = `${lunes.toLocaleDateString()} bis ${viernes.toLocaleDateString()}`;
+
+            if (!semanas[claveSemana]) {
+                semanas[claveSemana] = {
+                    lunes: [],
+                    dienstag: [],
+                    mittwoch: [],
+                    donnerstag: [],
+                    freitag: []
+                };
+            }
+
+            const d = new Date(reg.fecha).getDay();
+            const textoActividad = reg.nombre_actividad || '';
+
+            if (d === 1) semanas[claveSemana].lunes.push(textoActividad);
+            else if (d === 2) semanas[claveSemana].dienstag.push(textoActividad);
+            else if (d === 3) semanas[claveSemana].mittwoch.push(textoActividad);
+            else if (d === 4) semanas[claveSemana].donnerstag.push(textoActividad);
+            else if (d === 5) semanas[claveSemana].freitag.push(textoActividad);
+        });
+        return semanas;
+    }
+
+    function pdfToCanvasCoords(box) {
+        const left = box.x1 * scale;
+        const top = pdfPageHeight - (box.y1 * scale) - ((box.y2 - box.y1) * scale);
+        const width = (box.x2 - box.x1) * scale;
+        const height = (box.y2 - box.y1) * scale;
+        return { left, top, width, height };
+    }
+
+    function renderizarVistaPreviaSemana(semKey, coordenadas) {
+        overlay.innerHTML = '';
+        const datosSemana = semanasAgrupadas[semKey] || {};
+
+        for (const [key, box] of Object.entries(coordenadas)) {
+            if (!box) continue;
+
+            const pos = pdfToCanvasCoords(box);
+            const elTexto = document.createElement('div');
+            elTexto.className = 'absolute text-[9px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/90 border border-indigo-300 rounded';
+            elTexto.style.left = `${pos.left}px`;
+            elTexto.style.top = `${pos.top}px`;
+            elTexto.style.width = `${pos.width}px`;
+            elTexto.style.height = `${pos.height}px`;
+            
+            const lowerKey = key.toLowerCase();
+            let textoAsignado = '';
+
+            if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                    textoAsignado = datosSemana.lunes.join(' • ');
+                } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                    textoAsignado = datosSemana.dienstag.join(' • ');
+                } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                    textoAsignado = datosSemana.mittwoch.join(' • ');
+                } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                    textoAsignado = datosSemana.donnerstag.join(' • ');
+                } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                    textoAsignado = datosSemana.freitag.join(' • ');
+                }
+            }
+
+            elTexto.textContent = textoAsignado;
+            overlay.appendChild(elTexto);
+        }
+    }
+}
