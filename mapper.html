@@ -14,20 +14,22 @@
     <style>
         .resize-handle {
             position: absolute;
-            background: white;
-            border: 2px solid #ef4444;
-            width: 10px;
-            height: 10px;
-            z-index: 40;
+            background: #ffffff;
+            border: 2px solid #dc2626;
+            width: 12px;
+            height: 12px;
+            z-index: 50;
+            pointer-events: auto !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
-        .handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
-        .handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
-        .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
-        .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
-        .handle-n { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-        .handle-s { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-        .handle-w { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
-        .handle-e { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
+        .handle-nw { top: -6px; left: -6px; cursor: nwse-resize !important; }
+        .handle-ne { top: -6px; right: -6px; cursor: nesw-resize !important; }
+        .handle-se { bottom: -6px; right: -6px; cursor: nwse-resize !important; }
+        .handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize !important; }
+        .handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
+        .handle-s  { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize !important; }
+        .handle-w  { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize !important; }
+        .handle-e  { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize !important; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-6">
@@ -80,7 +82,7 @@
                         <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
                         <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
                     </select>
-                    <p class="text-[11px] text-gray-500">Haz clic en una caja para seleccionarla, estira desde los tiradores rojos/blancos o muévela libremente.</p>
+                    <p class="text-[11px] text-gray-500">Selecciona un cuadro, pasa el cursor por los tiradores rojos de las esquinas/bordes para cambiar su tamaño, o arrástralo desde el centro.</p>
                 </div>
 
                 <!-- Lista de campos guardados -->
@@ -377,16 +379,17 @@
                 const cajaVisual = document.createElement('div');
                 const esActivo = campo === campoSeleccionadoActivo;
                 
-                cajaVisual.className = `caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between transition ${esActivo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 ring-2 ring-red-400 z-10' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 hover:bg-indigo-500/40'}`;
+                cajaVisual.className = `caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between transition ${esActivo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 ring-2 ring-red-400 z-20' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 hover:bg-indigo-500/40 z-10'}`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
                 cajaVisual.style.height = `${height}px`;
                 cajaVisual.style.cursor = 'move';
+                cajaVisual.style.pointerEvents = 'auto';
                 cajaVisual.textContent = campo;
 
                 cajaVisual.onmousedown = (e) => {
-                    e.stopPropagation(); // Evitar que el contenedor dibuje un rectángulo nuevo
+                    e.stopPropagation();
                     campoSeleccionadoActivo = campo;
                     actualizarUI();
                     redibujarTodasLasCajas();
@@ -403,7 +406,7 @@
                         const handle = document.createElement('div');
                         handle.className = `resize-handle handle-${h}`;
                         handle.onmousedown = (ev) => {
-                            ev.stopPropagation(); // CLAVE: Evita que la caja interprete el clic como movimiento y active el redimensionamiento puro
+                            ev.stopPropagation();
                             isResizing = true;
                             resizeHandleType = h;
                             const rect = canvas.getBoundingClientRect();
