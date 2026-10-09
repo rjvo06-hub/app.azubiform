@@ -17,7 +17,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual con Ajuste Fino por Teclado</h1>
+            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual con Duplicado y Teclado</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -62,7 +62,7 @@
                         <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
                         <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
                     </select>
-                    <p class="text-[11px] text-gray-500">Haz clic y arrastra para dibujar. Selecciona un campo abajo para ajustarlo con las flechas del teclado.</p>
+                    <p class="text-[11px] text-gray-500">Dibuja con el ratón. Haz clic en un campo abajo para ajustarlo con las flechas del teclado o duplicarlo.</p>
                 </div>
 
                 <!-- Lista de campos guardados -->
@@ -95,7 +95,7 @@
         let pageViewport = null;
         let scale = 1.5;
         let coordenadasMap = {};
-        let campoSeleccionadoActivo = null; // Para control por teclado
+        let campoSeleccionadoActivo = null;
         
         let isDrawing = false;
         let startX = 0, startY = 0;
@@ -127,7 +127,6 @@
             redibujarTodasLasCajas();
         }
 
-        // Eventos de ratón para dibujar cajas
         container.addEventListener('mousedown', (e) => {
             if (!pdfDoc) return;
             const rect = canvas.getBoundingClientRect();
@@ -193,6 +192,28 @@
             redibujarTodasLasCajas();
         });
 
+        window.duplicarCampo = function(campoOriginal) {
+            const boxOriginal = coordenadasMap[campoOriginal];
+            if (!boxOriginal) return;
+
+            const nuevoNombre = prompt(`Introduce el nombre para el campo duplicado de "${campoOriginal}":`, `${campoOriginal}_copia`);
+            if (!nuevoNombre || !nuevoNombre.trim()) return;
+
+            const nombreLimpio = nuevoNombre.trim();
+            // Duplicar con un pequeño desplazamiento horizontal (+20px) para que no quede exactamente encimado
+            const offset = 20 / scale;
+            coordenadasMap[nombreLimpio] = {
+                x1: Math.round((boxOriginal.x1 + offset) * 10) / 10,
+                y1: boxOriginal.y1,
+                x2: Math.round((boxOriginal.x2 + offset) * 10) / 10,
+                y2: boxOriginal.y2
+            };
+
+            campoSeleccionadoActivo = nombreLimpio;
+            actualizarUI();
+            redibujarTodasLasCajas();
+        };
+
         function actualizarUI() {
             listaCoordenadas.innerHTML = '';
             jsonOutput.value = JSON.stringify(coordenadasMap, null, 2);
@@ -213,7 +234,10 @@
                         <span class="font-bold text-indigo-900">${campo} ${esActivo ? '⚡ (Activo)' : ''}</span>
                         <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
                     </div>
-                    <button class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1" onclick="event.stopPropagation(); window.eliminarCampo('${campo}')">🗑️</button>
+                    <div class="flex items-center space-x-1">
+                        <button class="text-blue-500 hover:text-blue-700 text-xs font-bold px-1 py-1" title="Duplicar campo" onclick="event.stopPropagation(); window.duplicarCampo('${campo}')">📋</button>
+                        <button class="text-red-500 hover:text-red-700 text-xs font-bold px-1 py-1" title="Eliminar campo" onclick="event.stopPropagation(); window.eliminarCampo('${campo}')">🗑️</button>
+                    </div>
                 `;
                 listaCoordenadas.appendChild(item);
             }
@@ -239,29 +263,21 @@
             }
         }
 
-        // Control por teclado para mover el campo seleccionado con las flechas
         window.addEventListener('keydown', (e) => {
             if (!campoSeleccionadoActivo || !coordenadasMap[campoSeleccionadoActivo]) return;
-            // No interferir si el usuario está escribiendo en inputs o textareas
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
 
-            const paso = e.shiftKey ? 5 : 1; // Mantener Shift mueve de 5 en 5 píxeles
+            const paso = e.shiftKey ? 5 : 1;
             const box = coordenadasMap[campoSeleccionadoActivo];
 
             let movio = false;
             if (e.key === 'ArrowLeft') { box.x1 -= paso; box.x2 -= paso; movio = true; }
             if (e.key === 'ArrowRight') { box.x1 += paso; box.x2 += paso; movio = true; }
-            if (e.key === 'ArrowUp') { 
-                // En coordenadas PDF, subir significa aumentar y1 e y2
-                box.y1 += paso; box.y2 += paso; movio = true; 
-            }
-            if (e.key === 'ArrowDown') { 
-                box.y1 -= paso; box.y2 -= paso; movio = true; 
-            }
+            if (e.key === 'ArrowUp') { box.y1 += paso; box.y2 += paso; movio = true; }
+            if (e.key === 'ArrowDown') { box.y1 -= paso; box.y2 -= paso; movio = true; }
 
             if (movio) {
                 e.preventDefault();
-                // Redondear a 1 decimal
                 box.x1 = Math.round(box.x1 * 10) / 10;
                 box.x2 = Math.round(box.x2 * 10) / 10;
                 box.y1 = Math.round(box.y1 * 10) / 10;
