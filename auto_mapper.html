@@ -11,30 +11,8 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <style>
-        @media print {
-            body * {
-                visibility: hidden !important;
-            }
-            #canvasContainer, #canvasContainer * {
-                visibility: visible !important;
-            }
-            body {
-                background: white !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            #canvasContainer {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                box-shadow: none !important;
-            }
-        }
-    </style>
+    <!-- html2canvas para capturar la vista previa exacta -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
@@ -92,7 +70,7 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Imprimir / Guardar PDF -->
+                    <!-- Botón de Imprimir / Guardar -->
                     <button id="btnImprimirPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
                         <span>🖨️ Imprimir / Guardar PDF</span>
                     </button>
@@ -289,12 +267,56 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        btnImprimirPdf.addEventListener('click', () => {
+        // Captura exacta mediante html2canvas de la vista previa idéntica
+        btnImprimirPdf.addEventListener('click', async () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
-            window.print();
+
+            estadoInfo.textContent = "🔄 Generando imagen para imprimir...";
+
+            try {
+                const canvasContainer = document.getElementById('canvasContainer');
+                const capturedCanvas = await html2canvas(canvasContainer, {
+                    scale: 2, // Alta resolución para nitidez perfecta
+                    useCORS: true,
+                    allowTaint: true
+                });
+
+                const dataUrl = capturedCanvas.toDataURL('image/png');
+                const ventanaImpresion = window.open('', '_blank');
+                
+                if (!ventanaImpresion) {
+                    alert("⚠️ Por favor, permite las ventanas emergentes (pop-ups) para imprimir.");
+                    return;
+                }
+
+                ventanaImpresion.document.write(`
+                    <html>
+                        <head>
+                            <title>Reporte FOS - Imprimir / Guardar</title>
+                            <style>
+                                body { margin: 0; padding: 0; background: white; display: flex; justify-content: center; align-items: center; }
+                                img { width: 100%; height: auto; max-width: 100%; display: block; }
+                                @media print {
+                                    body { margin: 0; }
+                                    img { width: 100%; max-width: 100%; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <img src="${dataUrl}" onload="window.print();" />
+                        </body>
+                    </html>
+                `);
+                ventanaImpresion.document.close();
+                estadoInfo.textContent = "✅ ¡Listo para imprimir o guardar!";
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al generar la captura para impresión.");
+                estadoInfo.textContent = "⚠️ Error en la generación.";
+            }
         });
 
         function redibujarDatos(datosSemana) {
