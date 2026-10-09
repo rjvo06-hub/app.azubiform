@@ -17,7 +17,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual de Coordenadas FOS</h1>
+            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual con Ajuste Fino por Teclado</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -41,28 +41,28 @@
                     <label class="text-xs font-semibold text-gray-700">Nombre del Campo:</label>
                     <select id="campoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
                         <!-- Datos Generales del Membrete -->
-                <option value="schueler">Schüler / Schülerin (Nombre del alumno)</option>
-    <option value="klasse">Klasse (Clase)</option>
-    <option value="wochenbericht_nr">Wochenbericht Nr. (Número de reporte)</option>
-    <option value="betreuende_lehrkraft">Betreuende Lehrkraft (Profesor tutor)</option>
-    <option value="ausbildungsrichtung">Ausbildungsrichtung (Especialidad)</option>
-    <option value="ausbildungsstaette">Ausbildungsstätte (Empresa de prácticas)</option>
+                        <option value="schueler">Schüler / Schülerin (Nombre del alumno)</option>
+                        <option value="klasse">Klasse (Clase)</option>
+                        <option value="wochenbericht_nr">Wochenbericht Nr. (Número de reporte)</option>
+                        <option value="betreuende_lehrkraft">Betreuende Lehrkraft (Profesor tutor)</option>
+                        <option value="ausbildungsrichtung">Ausbildungsrichtung (Especialidad)</option>
+                        <option value="ausbildungsstaette">Ausbildungsstätte (Empresa de prácticas)</option>
 
-    <!-- Cuerpo: Actividades de la semana -->
-    <option value="montag">Montag (Actividades Lunes)</option>
-    <option value="dienstag">Dienstag (Actividades Martes)</option>
-    <option value="mittwoch">Mittwoch (Actividades Miércoles)</option>
-    <option value="donnerstag">Donnerstag (Actividades Jueves)</option>
-    <option value="freitag">Freitag (Actividades Viernes)</option>
+                        <!-- Cuerpo: Actividades de la semana -->
+                        <option value="montag">Montag (Actividades Lunes)</option>
+                        <option value="dienstag">Dienstag (Actividades Martes)</option>
+                        <option value="mittwoch">Mittwoch (Actividades Miércoles)</option>
+                        <option value="donnerstag">Donnerstag (Actividades Jueves)</option>
+                        <option value="freitag">Freitag (Actividades Viernes)</option>
 
-    <!-- Cuerpo: Horas de la semana -->
-    <option value="montag_stunden">Montag - Stunden (Horas Lunes)</option>
-    <option value="dienstag_stunden">Dienstag - Stunden (Horas Martes)</option>
-    <option value="mittwoch_stunden">Mittwoch - Stunden (Horas Miércoles)</option>
-    <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
-    <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
+                        <!-- Cuerpo: Horas de la semana -->
+                        <option value="montag_stunden">Montag - Stunden (Horas Lunes)</option>
+                        <option value="dienstag_stunden">Dienstag - Stunden (Horas Martes)</option>
+                        <option value="mittwoch_stunden">Mittwoch - Stunden (Horas Miércoles)</option>
+                        <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
+                        <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
                     </select>
-                    <p class="text-[11px] text-gray-500">Haz clic y arrastra sobre el PDF para seleccionar el área del campo seleccionado.</p>
+                    <p class="text-[11px] text-gray-500">Haz clic y arrastra para dibujar. Selecciona un campo abajo para ajustarlo con las flechas del teclado.</p>
                 </div>
 
                 <!-- Lista de campos guardados -->
@@ -95,8 +95,8 @@
         let pageViewport = null;
         let scale = 1.5;
         let coordenadasMap = {};
+        let campoSeleccionadoActivo = null; // Para control por teclado
         
-        // Variables para dibujo por arrastre
         let isDrawing = false;
         let startX = 0, startY = 0;
         let currentRect = null;
@@ -124,6 +124,7 @@
             canvas.width = pageViewport.width;
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
+            redibujarTodasLasCajas();
         }
 
         // Eventos de ratón para dibujar cajas
@@ -164,21 +165,18 @@
             const endX = e.clientX - rect.left;
             const endY = e.clientY - rect.top;
 
-            // Calcular coordenadas en el sistema nativo del PDF (invirtiendo el eje Y)
             const canvasX1 = Math.min(startX, endX);
             const canvasX2 = Math.max(startX, endX);
             const canvasY1 = Math.min(startY, endY);
             const canvasY2 = Math.max(startY, endY);
 
-            // Evitar cajas accidentales muy pequeñas
             if ((canvasX2 - canvasX1) < 5 || (canvasY2 - canvasY1) < 5) {
-                currentRect.remove();
+                if (currentRect) currentRect.remove();
                 return;
             }
 
             const pdfX1 = canvasX1 / scale;
             const pdfX2 = canvasX2 / scale;
-            // Invertir Y del canvas al sistema de PDF
             const pdfY1 = (pageViewport.height - canvasY2) / scale;
             const pdfY2 = (pageViewport.height - canvasY1) / scale;
 
@@ -190,7 +188,9 @@
                 y2: Math.round(pdfY2 * 10) / 10
             };
 
+            campoSeleccionadoActivo = campoActual;
             actualizarUI();
+            redibujarTodasLasCajas();
         });
 
         function actualizarUI() {
@@ -199,21 +199,84 @@
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
                 const item = document.createElement('div');
-                item.className = 'bg-white p-2 rounded border border-gray-200 text-xs flex justify-between items-center shadow-xs';
+                const esActivo = campo === campoSeleccionadoActivo;
+                item.className = `p-2 rounded border text-xs flex justify-between items-center cursor-pointer transition ${esActivo ? 'bg-indigo-50 border-indigo-500 shadow-xs ring-1 ring-indigo-500' : 'bg-white border-gray-200 hover:bg-gray-50'}`;
+                
+                item.onclick = () => {
+                    campoSeleccionadoActivo = campo;
+                    actualizarUI();
+                    redibujarTodasLasCajas();
+                };
+
                 item.innerHTML = `
                     <div>
-                        <span class="font-bold text-indigo-900">${campo}</span>
+                        <span class="font-bold text-indigo-900">${campo} ${esActivo ? '⚡ (Activo)' : ''}</span>
                         <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
                     </div>
-                    <button class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1" onclick="window.eliminarCampo('${campo}')">🗑️</button>
+                    <button class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1" onclick="event.stopPropagation(); window.eliminarCampo('${campo}')">🗑️</button>
                 `;
                 listaCoordenadas.appendChild(item);
             }
         }
 
+        function redibujarTodasLasCajas() {
+            drawingOverlay.innerHTML = '';
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const left = box.x1 * scale;
+                const top = pageViewport.height - (box.y2 * scale);
+                const width = (box.x2 - box.x1) * scale;
+                const height = (box.y2 - box.y1) * scale;
+
+                const cajaVisual = document.createElement('div');
+                const esActivo = campo === campoSeleccionadoActivo;
+                cajaVisual.className = `absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-none ${esActivo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 ring-2 ring-red-400' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900'}`;
+                cajaVisual.style.left = `${left}px`;
+                cajaVisual.style.top = `${top}px`;
+                cajaVisual.style.width = `${width}px`;
+                cajaVisual.style.height = `${height}px`;
+                cajaVisual.textContent = campo;
+                drawingOverlay.appendChild(cajaVisual);
+            }
+        }
+
+        // Control por teclado para mover el campo seleccionado con las flechas
+        window.addEventListener('keydown', (e) => {
+            if (!campoSeleccionadoActivo || !coordenadasMap[campoSeleccionadoActivo]) return;
+            // No interferir si el usuario está escribiendo en inputs o textareas
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+            const paso = e.shiftKey ? 5 : 1; // Mantener Shift mueve de 5 en 5 píxeles
+            const box = coordenadasMap[campoSeleccionadoActivo];
+
+            let movio = false;
+            if (e.key === 'ArrowLeft') { box.x1 -= paso; box.x2 -= paso; movio = true; }
+            if (e.key === 'ArrowRight') { box.x1 += paso; box.x2 += paso; movio = true; }
+            if (e.key === 'ArrowUp') { 
+                // En coordenadas PDF, subir significa aumentar y1 e y2
+                box.y1 += paso; box.y2 += paso; movio = true; 
+            }
+            if (e.key === 'ArrowDown') { 
+                box.y1 -= paso; box.y2 -= paso; movio = true; 
+            }
+
+            if (movio) {
+                e.preventDefault();
+                // Redondear a 1 decimal
+                box.x1 = Math.round(box.x1 * 10) / 10;
+                box.x2 = Math.round(box.x2 * 10) / 10;
+                box.y1 = Math.round(box.y1 * 10) / 10;
+                box.y2 = Math.round(box.y2 * 10) / 10;
+
+                actualizarUI();
+                redibujarTodasLasCajas();
+            }
+        });
+
         window.eliminarCampo = function(campo) {
             delete coordenadasMap[campo];
+            if (campoSeleccionadoActivo === campo) campoSeleccionadoActivo = null;
             actualizarUI();
+            redibujarTodasLasCajas();
         };
 
         btnGuardar.addEventListener('click', async () => {
