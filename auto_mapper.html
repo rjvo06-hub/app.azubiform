@@ -11,8 +11,7 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <!-- html2canvas y jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF para exportar directamente a PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
@@ -106,6 +105,7 @@
         let coordenadasMap = {};
         let semanasAgrupadas = {};
         let registrosGlobales = [];
+        let ultimaSemanaDatos = null; // Almacenamos los datos actuales para el PDF
 
         async function cargarListaPlantillas() {
             try {
@@ -174,8 +174,8 @@
             canvas.width = pageViewport.width;
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
-            if (Object.keys(coordenadasMap).length > 0) {
-                redibujarDatos([]);
+            if (Object.keys(coordenadasMap).length > 0 && ultimaSemanaDatos) {
+                redibujarDatos(ultimaSemanaDatos);
             }
         }
 
@@ -264,48 +264,132 @@
             const semSeleccionada = selectSemana.value;
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
-            redibujarDatos(semanasAgrupadas[semSeleccionada]);
+            ultimaSemanaDatos = semanasAgrupadas[semSeleccionada];
+            redibujarDatos(ultimaSemanaDatos);
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura fiel y directa de la vista previa exacta usando html2canvas sobre el contenedor completo
+        // Generación y descarga directa del PDF usando renderizado matemático sobre el canvas
         btnGenerarPdfDirecto.addEventListener('click', async () => {
-            if (!pdfDoc) {
+            if (!pdfDoc || !ultimaSemanaDatos) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
 
-            estadoInfo.textContent = "🔄 Generando archivo PDF completo...";
+            estadoInfo.textContent = "🔄 Generando archivo PDF...";
 
             try {
-                const canvasContainer = document.getElementById('canvasContainer');
-                
-                // Forzamos temporalmente la altura total sin scroll para que html2canvas capture todo sin cortes
-                const originalMaxHeight = canvasContainer.style.maxHeight;
-                canvasContainer.style.maxHeight = 'none';
+                // Renderizamos de nuevo el PDF base a alta resolución (escala 2) para el archivo final
+                const page = await pdfDoc.getPage(1);
+                const exportScale = 2; // Alta calidad para el PDF final
+                const exportViewport = page.getViewport({ scale: exportScale });
 
-                const capturedCanvas = await html2canvas(canvasContainer, {
-                    scale: 3, // Máxima nitidez
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff',
-                    windowWidth: canvasContainer.scrollWidth,
-                    windowHeight: canvasContainer.scrollHeight
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = exportViewport.width;
+                exportCanvas.height = exportViewport.height;
+                const ctx = exportCanvas.getContext('2d');
+
+                await page.render({ canvasContext: ctx, viewport: exportViewport }).promise;
+
+                // Pintamos los datos exactamente con la misma lógica matemática escalada
+                let fontSizeGlobal = 5 * (exportScale / scale); 
+                const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
+                let alturaDisponibleBox = 40 * (exportScale / scale); 
+
+                for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    if (['montag', 'lunes'].some(d => campo.toLowerCase().includes(d))) {
+                        alturaDisponibleBox = (box.y2 - box.y1) * exportScale;
+                        break;
+                    }
+                }
+
+                diasSemanaKeys.forEach(dia => {
+                    const lista = ultimaSemanaDatos[dia] || [];
+                    const numLineas = lista.length;
+                    if (numLineas === 0) return;
+
+                    let testSize = fontSizeGlobal;
+                    while (testSize > (3.5 * (exportScale / scale))) {
+                        const alturaEstimada = numLineas * (testSize * 1.15 + 1.5);
+                        if (alturaEstimada <= (alturaDisponibleBox - 3)) {
+                            break; 
+                        }
+                        testSize -= 0.5; 
+                    }
+                    if (testSize < fontSizeGlobal) {
+                        fontSizeGlobal = testSize;
+                    }
                 });
 
-                canvasContainer.style.maxHeight = originalMaxHeight;
+                ctx.fillStyle = 'black';
+                ctx.textBaseline = 'top';
 
-                const imgData = capturedCanvas.toDataURL('image/png');
+                for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    const left = box.x1 * exportScale;
+                    const top = exportViewport.height - (box.y2 * exportScale);
+                    const width = (box.x2 - box.x1) * exportScale;
+
+                    const lowerKey = campo.toLowerCase();
+                    let textoAsignado = '';
+                    let listaActividades = [];
+
+                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                            listaActividades = ultimaSemanaDatos.lunes || [];
+                        } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                            listaActividades = ultimaSemanaDatos.dienstag || [];
+                        } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                            listaActividades = ultimaSemanaDatos.mittwoch || [];
+                        } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                            listaActividades = ultimaSemanaDatos.donnerstag || [];
+                        } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                            listaActividades = ultimaSemanaDatos.freitag || [];
+                        } else if (lowerKey.includes('schueler')) {
+                            textoAsignado = selectUsuario.value;
+                        }
+                    }
+
+                    const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
+
+                    if (esDiaSemana && listaActividades.length > 0) {
+                        ctx.font = `${fontSizeGlobal}px sans-serif`;
+                        let currentY = top + (2 * (exportScale / scale));
+                        const lineHeight = fontSizeGlobal * 1.15 + (1.5 * (exportScale / scale));
+
+                        listaActividades.forEach(act => {
+                            // Envolver texto largo según el ancho de la celda
+                            const palabras = act.split(' ');
+                            let lineaActual = '• ';
+                            
+                            palabras.forEach(palabra => {
+                                const pruebaLinea = lineaActual + palabra + ' ';
+                                if (ctx.measureText(pruebaLinea).width > (width - 4) && lineaActual !== '• ') {
+                                    ctx.fillText(lineaActual, left + (2 * (exportScale / scale)), currentY);
+                                    lineaActual = '  ' + palabra + ' ';
+                                    currentY += lineHeight;
+                                } else {
+                                    lineaActual = pruebaLinea;
+                                }
+                            });
+                            ctx.fillText(lineaActual, left + (2 * (exportScale / scale)), currentY);
+                            currentY += lineHeight;
+                        });
+                    } else if (textoAsignado) {
+                        ctx.font = `${8 * (exportScale / scale)}px sans-serif`;
+                        ctx.fillText(textoAsignado, left + (2 * (exportScale / scale)), top + (4 * (exportScale / scale)));
+                    }
+                }
+
+                const imgData = exportCanvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
                 
-                // Creamos el PDF con las proporciones exactas de la captura completa
                 const pdf = new jsPDF({
-                    orientation: capturedCanvas.width > capturedCanvas.height ? 'landscape' : 'portrait',
+                    orientation: exportCanvas.width > exportCanvas.height ? 'landscape' : 'portrait',
                     unit: 'px',
-                    format: [capturedCanvas.width, capturedCanvas.height]
+                    format: [exportCanvas.width, exportCanvas.height]
                 });
 
-                pdf.addImage(imgData, 'PNG', 0, 0, capturedCanvas.width, capturedCanvas.height);
+                pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
                 
                 const nombreUsuario = selectUsuario.value || 'Reporte';
                 pdf.save(`Wochenbericht_${nombreUsuario}.pdf`);
