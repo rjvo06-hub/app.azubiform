@@ -109,7 +109,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             selectSemana.appendChild(opt);
         });
 
-        // Evento para cargar el PDF seleccionado por el usuario (misma lógica que el mapeador)
+        // Evento para cargar el PDF seleccionado por el usuario
         fileInputPreview.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -186,7 +186,8 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
     function pdfToCanvasCoords(box) {
         const left = box.x1 * scale;
-        const top = pdfPageHeight - (box.y1 * scale) - ((box.y2 - box.y1) * scale);
+        // Fórmula corregida exactamente idéntica al mapeador para alinear el top
+        const top = pdfPageHeight - (box.y2 * scale);
         const width = (box.x2 - box.x1) * scale;
         const height = (box.y2 - box.y1) * scale;
         return { left, top, width, height };
