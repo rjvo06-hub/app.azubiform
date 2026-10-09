@@ -17,7 +17,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual con Duplicado y Teclado</h1>
+            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual con Duplicado Inteligente</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -62,7 +62,7 @@
                         <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
                         <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
                     </select>
-                    <p class="text-[11px] text-gray-500">Dibuja con el ratón. Haz clic en un campo abajo para ajustarlo con las flechas del teclado o duplicarlo.</p>
+                    <p class="text-[11px] text-gray-500">Dibuja con el ratón. Haz clic en un campo abajo para ajustarlo con el teclado o duplicarlo seleccionando su nombre existente.</p>
                 </div>
 
                 <!-- Lista de campos guardados -->
@@ -79,6 +79,21 @@
         </div>
     </div>
 
+    <!-- Modal personalizado para seleccionar el nombre al duplicar -->
+    <div id="duplicateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white p-5 rounded-xl shadow-xl w-96 space-y-4">
+            <h3 class="text-xs font-bold text-indigo-900 uppercase">📋 Duplicar Campo</h3>
+            <p class="text-[11px] text-gray-600">Selecciona a qué campo existente deseas asignar esta copia duplicada:</p>
+            <select id="modalCampoSelect" class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
+                <!-- Se clonarán las opciones del select principal dinámicamente -->
+            </select>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button id="modalBtnCancelar" class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition">Cancelar</button>
+                <button id="modalBtnConfirmar" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition">Duplicar y Asignar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { SUPABASE_URL, headers } from './js/config.js';
 
@@ -90,16 +105,28 @@
         const listaCoordenadas = document.getElementById('listaCoordenadas');
         const jsonOutput = document.getElementById('jsonOutput');
         const btnGuardar = document.getElementById('btnGuardarSupabase');
+        
+        const duplicateModal = document.getElementById('duplicateModal');
+        const modalCampoSelect = document.getElementById('modalCampoSelect');
+        const modalBtnCancelar = document.getElementById('modalBtnCancelar');
+        const modalBtnConfirmar = document.getElementById('modalBtnConfirmar');
 
         let pdfDoc = null;
         let pageViewport = null;
         let scale = 1.5;
         let coordenadasMap = {};
         let campoSeleccionadoActivo = null;
+        let campoPendienteDuplicar = null;
         
         let isDrawing = false;
         let startX = 0, startY = 0;
         let currentRect = null;
+
+        // Poblar el select del modal con las mismas opciones del select principal
+        function inicializarModalSelect() {
+            modalCampoSelect.innerHTML = campoSelect.innerHTML;
+        }
+        inicializarModalSelect();
 
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -192,26 +219,41 @@
             redibujarTodasLasCajas();
         });
 
-        window.duplicarCampo = function(campoOriginal) {
+        // Abrir modal de duplicado
+        window.abrirModalDuplicar = function(campoOriginal) {
             const boxOriginal = coordenadasMap[campoOriginal];
             if (!boxOriginal) return;
 
-            const nuevoNombre = prompt(`Introduce el nombre para el campo duplicado de "${campoOriginal}":`, `${campoOriginal}_copia`);
-            if (!nuevoNombre || !nuevoNombre.trim()) return;
+            campoPendienteDuplicar = campoOriginal;
+            duplicateModal.classList.remove('hidden');
+        };
 
-            const nombreLimpio = nuevoNombre.trim();
-            // Duplicar con un pequeño desplazamiento horizontal (+20px) para que no quede exactamente encimado
-            const offset = 20 / scale;
-            coordenadasMap[nombreLimpio] = {
-                x1: Math.round((boxOriginal.x1 + offset) * 10) / 10,
-                y1: boxOriginal.y1,
-                x2: Math.round((boxOriginal.x2 + offset) * 10) / 10,
-                y2: boxOriginal.y2
-            };
+        modalBtnCancelar.onclick = () => {
+            duplicateModal.classList.add('hidden');
+            campoPendienteDuplicar = null;
+        };
 
-            campoSeleccionadoActivo = nombreLimpio;
-            actualizarUI();
-            redibujarTodasLasCajas();
+        modalBtnConfirmar.onclick = () => {
+            const campoDestino = modalCampoSelect.value;
+            const boxOriginal = coordenadasMap[campoPendienteDuplicar];
+
+            if (boxOriginal && campoDestino) {
+                // Desplazar ligeramente (+20px) para que no se encime exactamente encima
+                const offset = 20 / scale;
+                coordenadasMap[campoDestino] = {
+                    x1: Math.round((boxOriginal.x1 + offset) * 10) / 10,
+                    y1: boxOriginal.y1,
+                    x2: Math.round((boxOriginal.x2 + offset) * 10) / 10,
+                    y2: boxOriginal.y2
+                };
+
+                campoSeleccionadoActivo = campoDestino;
+                actualizarUI();
+                redibujarTodasLasCajas();
+            }
+
+            duplicateModal.classList.add('hidden');
+            campoPendienteDuplicar = null;
         };
 
         function actualizarUI() {
@@ -235,7 +277,7 @@
                         <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
                     </div>
                     <div class="flex items-center space-x-1">
-                        <button class="text-blue-500 hover:text-blue-700 text-xs font-bold px-1 py-1" title="Duplicar campo" onclick="event.stopPropagation(); window.duplicarCampo('${campo}')">📋</button>
+                        <button class="text-blue-500 hover:text-blue-700 text-xs font-bold px-1 py-1" title="Duplicar y asignar" onclick="event.stopPropagation(); window.abrirModalDuplicar('${campo}')">📋</button>
                         <button class="text-red-500 hover:text-red-700 text-xs font-bold px-1 py-1" title="Eliminar campo" onclick="event.stopPropagation(); window.eliminarCampo('${campo}')">🗑️</button>
                     </div>
                 `;
