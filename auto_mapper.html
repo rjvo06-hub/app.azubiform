@@ -6,13 +6,14 @@
     <title>Vista Previa Unificada FOS - Azubiform</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js para la previsualización nítida -->
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <!-- pdf-lib para generar un PDF vectorial ultra nítido -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <!-- html2canvas y jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
@@ -70,9 +71,9 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Descarga de PDF Vectorial Ultra Nítido -->
-                    <button id="btnGenerarPdfVectorial" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
-                        <span>📥 Descargar PDF Vectorial (Calidad Imprenta)</span>
+                    <!-- Botón de Descarga en Alta Nitidez -->
+                    <button id="btnGenerarPdfDirecto" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
+                        <span>📥 Descargar PDF en Alta Nitidez</span>
                     </button>
                 </div>
 
@@ -97,11 +98,10 @@
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
         const btnGenerarVista = document.getElementById('btnGenerarVista');
-        const btnGenerarPdfVectorial = document.getElementById('btnGenerarPdfVectorial');
+        const btnGenerarPdfDirecto = document.getElementById('btnGenerarPdfDirecto');
         const estadoInfo = document.getElementById('estadoInfo');
 
         let pdfDoc = null;
-        let pdfBytesGlobal = null; // Almacenamos el binario original del PDF
         let pageViewport = null;
         let scale = 1.0;
         let coordenadasMap = {};
@@ -156,12 +156,15 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            pdfBytesGlobal = await file.arrayBuffer();
-            const typedarray = new Uint8Array(pdfBytesGlobal);
-            const loadingTask = pdfjsLib.getDocument(typedarray);
-            pdfDoc = await loadingTask.promise;
-            await renderPage(1);
-            estadoInfo.textContent = "✅ PDF cargado correctamente.";
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                const loadingTask = pdfjsLib.getDocument(typedarray);
+                pdfDoc = await loadingTask.promise;
+                await renderPage(1);
+                estadoInfo.textContent = "✅ PDF cargado correctamente.";
+            };
+            fileReader.readAsArrayBuffer(file);
         });
 
         async function renderPage(num) {
@@ -273,85 +276,43 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Generación de PDF Vectorial ultra nítido usando pdf-lib
-        btnGenerarPdfVectorial.addEventListener('click', async () => {
-            if (!pdfBytesGlobal || !ultimaSemanaDatos) {
-                alert("⚠️ Primero debes cargar el PDF y pintar los datos.");
+        // Captura en ultra alta resolución (Scale 4) para garantizar máxima nitidez al imprimir
+        btnGenerarPdfDirecto.addEventListener('click', async () => {
+            if (!pdfDoc || !ultimaSemanaDatos) {
+                alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
 
-            estadoInfo.textContent = "🔄 Generando PDF vectorial de alta calidad...";
+            estadoInfo.textContent = "🔄 Generando PDF en alta nitidez...";
 
             try {
-                const { PDFDocument, rgb, StandardFonts } = PDFLib;
-                const pdfDocLib = await PDFDocument.load(pdfBytesGlobal);
-                const pages = pdfDocLib.getPages();
-                const page = pages[0];
-                const { height } = page.getSize();
+                const capturedCanvas = await html2canvas(canvasContainer, {
+                    scale: 4, // Multiplicador de nitidez ultra alto para imprenta
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
 
-                const font = await pdfDocLib.embedFont(StandardFonts.Helvetica);
+                const imgData = capturedCanvas.toDataURL('image/png', 1.0);
+                const { jsPDF } = window.jspdf;
+                
+                const pdf = new jsPDF({
+                    orientation: capturedCanvas.width > capturedCanvas.height ? 'landscape' : 'portrait',
+                    unit: 'px',
+                    format: [capturedCanvas.width, capturedCanvas.height]
+                });
 
-                for (const [campo, box] of Object.entries(coordenadasMap)) {
-                    const lowerKey = campo.toLowerCase();
-                    let textoAsignado = '';
-                    let listaActividades = [];
-
-                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
-                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                            listaActividades = ultimaSemanaDatos.lunes || [];
-                        } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                            listaActividades = ultimaSemanaDatos.dienstag || [];
-                        } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                            listaActividades = ultimaSemanaDatos.mittwoch || [];
-                        } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                            listaActividades = ultimaSemanaDatos.donnerstag || [];
-                        } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                            listaActividades = ultimaSemanaDatos.freitag || [];
-                        } else if (lowerKey.includes('schueler')) {
-                            textoAsignado = selectUsuario.value;
-                        }
-                    }
-
-                    const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
-
-                    if (esDiaSemana && listaActividades.length > 0) {
-                        let currentY = height - box.y1 - 10;
-                        const fontSize = 8; // Texto vectorial súper nítido para imprenta
-                        
-                        listaActividades.forEach(act => {
-                            page.drawText(`• ${act}`, {
-                                x: box.x1 + 2,
-                                y: currentY,
-                                size: fontSize,
-                                font: font,
-                                color: rgb(0, 0, 0),
-                            });
-                            currentY -= 11; // Espaciado entre líneas
-                        });
-                    } else if (textoAsignado) {
-                        page.drawText(textoAsignado, {
-                            x: box.x1 + 2,
-                            y: height - box.y1 - 10,
-                            size: 9,
-                            font: font,
-                            color: rgb(0, 0, 0),
-                        });
-                    }
-                }
-
-                const modifiedPdfBytes = await pdfDocLib.save();
-                const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
+                pdf.addImage(imgData, 'PNG', 0, 0, capturedCanvas.width, capturedCanvas.height);
+                
                 const nombreUsuario = selectUsuario.value || 'Reporte';
-                link.download = `Wochenbericht_Vectorial_${nombreUsuario}.pdf`;
-                link.click();
+                pdf.save(`Wochenbericht_Nitido_${nombreUsuario}.pdf`);
 
-                estadoInfo.textContent = "✅ ¡PDF vectorial descargado con éxito!";
+                estadoInfo.textContent = "✅ ¡PDF de alta nitidez descargado con éxito!";
             } catch (err) {
                 console.error(err);
-                alert("❌ Error al generar el PDF vectorial.");
-                estadoInfo.textContent = "⚠️ Error en la generación.";
+                alert("❌ Ocurrió un error al generar el archivo PDF.");
+                estadoInfo.textContent = "⚠️ Error en la generación del PDF.";
             }
         });
 
@@ -359,7 +320,8 @@
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
-            const fontSizeFijo = 5.0; 
+            // Tamaño grande, legible y estandarizado idéntico al de la vista previa
+            const fontSizeFijo = 5.2; 
             const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
