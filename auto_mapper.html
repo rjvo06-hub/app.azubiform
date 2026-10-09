@@ -70,9 +70,9 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Descarga Directa -->
+                    <!-- Botón de Imprimir / Guardar PDF -->
                     <button id="btnImprimirPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
-                        <span>📥 Descargar Reporte en Imagen</span>
+                        <span>🖨️ Imprimir / Guardar PDF</span>
                     </button>
                 </div>
 
@@ -267,36 +267,56 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura síncrona/asíncrona fiable mediante html2canvas y descarga directa
+        // Captura limpia sin bordes extraños usando html2canvas con fondo blanco puro
         btnImprimirPdf.addEventListener('click', async () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
                 return;
             }
 
-            estadoInfo.textContent = "🔄 Procesando reporte...";
+            estadoInfo.textContent = "🔄 Preparando documento para imprimir...";
 
             try {
                 const canvasContainer = document.getElementById('canvasContainer');
                 const capturedCanvas = await html2canvas(canvasContainer, {
                     scale: 2,
                     useCORS: true,
-                    allowTaint: true
+                    allowTaint: true,
+                    backgroundColor: '#ffffff'
                 });
 
                 const dataUrl = capturedCanvas.toDataURL('image/png');
-                const enlace = document.createElement('a');
-                enlace.href = dataUrl;
-                enlace.download = `Reporte_FOS_${selectUsuario.value || 'usuario'}.png`;
-                document.body.appendChild(enlace);
-                enlace.click();
-                document.body.removeChild(enlace);
+                const ventanaImpresion = window.open('', '_blank');
+                
+                if (!ventanaImpresion) {
+                    alert("⚠️ Por favor, permite las ventanas emergentes (pop-ups) para imprimir.");
+                    return;
+                }
 
-                estadoInfo.textContent = "✅ ¡Reporte descargado correctamente!";
+                ventanaImpresion.document.write(`
+                    <html>
+                        <head>
+                            <title>Reporte FOS - Imprimir</title>
+                            <style>
+                                body { margin: 0; padding: 0; background: white; display: flex; justify-content: center; align-items: center; }
+                                img { width: 100%; height: auto; max-width: 100%; display: block; }
+                                @media print {
+                                    body { margin: 0; }
+                                    img { width: 100%; max-width: 100%; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <img src="${dataUrl}" onload="window.print();" />
+                        </body>
+                    </html>
+                `);
+                ventanaImpresion.document.close();
+                estadoInfo.textContent = "✅ ¡Listo para imprimir o guardar!";
             } catch (err) {
                 console.error(err);
-                alert("❌ Ocurrió un error al generar la imagen.");
-                estadoInfo.textContent = "⚠️ Error en la descarga.";
+                alert("❌ Error al generar la captura para impresión.");
+                estadoInfo.textContent = "⚠️ Error en la generación.";
             }
         });
 
@@ -366,6 +386,7 @@
 
                 if (esDiaSemana) {
                     cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1.5px;">• ${act}</div>`).join('');
+                    // Sin bordes ni clases de rounded para que la captura con html2canvas sea 100% limpia
                     cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-1 py-0.5 bg-white z-10 flex flex-col justify-start`;
                 } else {
                     cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white z-10 flex items-center`;
