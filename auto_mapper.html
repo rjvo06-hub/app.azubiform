@@ -267,7 +267,7 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura limpia sin bordes extraños usando html2canvas con fondo blanco puro
+        // Captura exacta con html2canvas sin bordes ni cajas visibles de coordenadas
         btnImprimirPdf.addEventListener('click', async () => {
             if (!pdfDoc) {
                 alert("⚠️ Primero debes pintar los datos en el PDF.");
@@ -384,12 +384,12 @@
 
                 const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
 
+                // Se eliminan por completo los bordes y fondos blancos (bg-transparent sin bordes ni rounded)
                 if (esDiaSemana) {
                     cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1.5px;">• ${act}</div>`).join('');
-                    // Sin bordes ni clases de rounded para que la captura con html2canvas sea 100% limpia
-                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-1 py-0.5 bg-white z-10 flex flex-col justify-start`;
+                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
                 } else {
-                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white z-10 flex items-center`;
+                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-0.5 bg-transparent z-10 flex items-center`;
                     cajaVisual.textContent = textoAsignado;
                 }
 
