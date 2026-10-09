@@ -39,6 +39,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let semanasAgrupadas = {};
     let pdfPageViewport = null;
     let pdfPageHeight = 0;
+    const scale = 1.2; // Sincronizado a escala 1.2 tal como lo usas en el mapeador
 
     try {
         // 1. Obtener datos del usuario
@@ -104,7 +105,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         const pdfDoc = await loadingTask.promise;
         const pagina = await pdfDoc.getPage(1);
 
-        const scale = 1.5;
         pdfPageViewport = pagina.getViewport({ scale });
         pdfPageHeight = pdfPageViewport.height;
 
@@ -162,12 +162,12 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     }
 
     function pdfToCanvasCoords(box) {
-        const scale = 1.5;
+        // Misma fórmula exacta que usa el mapeador visual
         const left = box.x1 * scale;
-        const canvasTop = pdfPageHeight - (box.y2 * scale);
+        const top = pdfPageHeight - (box.y2 * scale);
         const width = (box.x2 - box.x1) * scale;
         const height = (box.y2 - box.y1) * scale;
-        return { left, top: canvasTop, width, height };
+        return { left, top, width, height };
     }
 
     function renderizarVistaPreviaSemana(semKey, coordenadas) {
@@ -179,7 +179,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
             const pos = pdfToCanvasCoords(box);
             const elTexto = document.createElement('div');
-            elTexto.className = 'absolute text-[10px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/60 border border-indigo-300/60 rounded';
+            elTexto.className = 'absolute text-[9px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/80 border border-indigo-300 rounded';
             elTexto.style.left = `${pos.left}px`;
             elTexto.style.top = `${pos.top}px`;
             elTexto.style.width = `${pos.width}px`;
@@ -188,7 +188,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             const lowerKey = key.toLowerCase();
             let textoAsignado = '';
 
-            // Solo inyectamos el texto si la clave de la coordenada corresponde a la descripción (evitando duplicar en columnas de horas)
             if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
                 if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
                     textoAsignado = datosSemana.lunes.join(' • ');
