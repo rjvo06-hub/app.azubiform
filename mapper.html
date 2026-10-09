@@ -12,7 +12,6 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <style>
-        /* Esquinas reducidas y limpias para evitar sobreposiciones en móvil */
         .resize-handle {
             position: absolute;
             background: #ffffff;
@@ -49,7 +48,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Panel Izquierdo: Lienzo del PDF (Adaptado para scroll táctil) -->
+            <!-- Panel Izquierdo: Lienzo del PDF -->
             <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center overflow-auto max-h-[60vh] lg:max-h-[800px] relative border border-gray-300">
                 <div class="relative inline-block cursor-crosshair" id="canvasContainer">
                     <canvas id="pdfCanvas" class="block shadow-lg max-w-full"></canvas>
@@ -57,7 +56,7 @@
                 </div>
             </div>
 
-            <!-- Panel Derecho: Gestión de Campos, Controles Táctiles y Coordenadas -->
+            <!-- Panel Derecho: Gestión de Campos y Controles -->
             <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col">
                 <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Configuración de Campos</h2>
                 
@@ -189,7 +188,6 @@
         }
         inicializarModalSelect();
 
-        // Cargar lista de plantillas disponibles en Supabase al iniciar
         async function cargarListaPlantillas() {
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
@@ -211,7 +209,6 @@
         }
         cargarListaPlantillas();
 
-        // Botón para descargar y cargar las coordenadas de la escuela seleccionada
         btnCargarPlantilla.addEventListener('click', async () => {
             const fileIdentifier = selectPlantillasGuardadas.value;
             if (!fileIdentifier) {
@@ -220,7 +217,7 @@
             }
 
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${fileIdentifier}&select=coordinates_json`, {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(fileIdentifier)}&select=coordinates_json`, {
                     headers: { ...headers, 'Range': '0-999' }
                 });
                 
@@ -246,7 +243,7 @@
 
                         actualizarUI();
                         redibujarTodasLasCajas();
-                        alert("✅ ¡Coordenadas cargadas con éxito! Ya puedes revisarlas o modificar el campo que faltaba.");
+                        alert("✅ ¡Coordenadas cargadas con éxito!");
                     } else {
                         alert("⚠️ No se encontraron coordenadas para esta plantilla.");
                     }
