@@ -39,10 +39,11 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     let semanasAgrupadas = {};
     let pdfPageViewport = null;
     let pdfPageHeight = 0;
-    const scale = 1.2; // Sincronizado a escala 1.2 tal como lo usas en el mapeador
+    
+    // Reducimos la escala para que el PDF se vea más pequeño y encaje bien en la vista previa
+    const scale = 0.8; 
 
     try {
-        // 1. Obtener datos del usuario
         const resUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${idPrueba}&select=*`, {
             headers: headers
         });
@@ -60,7 +61,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             return;
         }
 
-        // 2. Obtener plantilla de coordenadas
         const resTemplate = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?school_name=eq.${encodeURIComponent(schoolName)}&select=*`, {
             headers: headers
         });
@@ -72,7 +72,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
         globalPlantilla = templates[0];
         const coordenadas = globalPlantilla.coordinates_json || {};
 
-        // 3. Obtener registros diarios
         const resRegistros = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
             headers: headers
         });
@@ -83,7 +82,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             return;
         }
 
-        // 4. Agrupar registros por semana
         semanasAgrupadas = agruparRegistrosPorSemana(registrosRaw);
 
         const llavesSemanas = Object.keys(semanasAgrupadas);
@@ -100,7 +98,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
             selectSemana.appendChild(opt);
         });
 
-        // 5. Renderizar PDF base
         const loadingTask = pdfjsLib.getDocument('./admin.pdf');
         const pdfDoc = await loadingTask.promise;
         const pagina = await pdfDoc.getPage(1);
@@ -162,7 +159,6 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
     }
 
     function pdfToCanvasCoords(box) {
-        // Misma fórmula exacta que usa el mapeador visual
         const left = box.x1 * scale;
         const top = pdfPageHeight - (box.y2 * scale);
         const width = (box.x2 - box.x1) * scale;
@@ -179,7 +175,7 @@ export async function inicializarPruebaVistaPreviaFos(contenedorId, usuarioId) {
 
             const pos = pdfToCanvasCoords(box);
             const elTexto = document.createElement('div');
-            elTexto.className = 'absolute text-[9px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/80 border border-indigo-300 rounded';
+            elTexto.className = 'absolute text-[8px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/90 border border-indigo-300 rounded';
             elTexto.style.left = `${pos.left}px`;
             elTexto.style.top = `${pos.top}px`;
             elTexto.style.width = `${pos.width}px`;
