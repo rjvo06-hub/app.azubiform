@@ -334,3 +334,148 @@
             }
 
             duplicateModal.classList.add('hidden');
+            campoPendienteDuplicar = null;
+        };
+
+        function actualizarUI() {
+            listaCoordenadas.innerHTML = '';
+            jsonOutput.value = JSON.stringify(coordenadasMap, null, 2);
+
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const item = document.createElement('div');
+                const esActivo = campo === campoSeleccionadoActivo;
+                item.className = `p-2 rounded border text-xs flex justify-between items-center cursor-pointer transition ${esActivo ? 'bg-indigo-50 border-indigo-500 shadow-xs ring-1 ring-indigo-500' : 'bg-white border-gray-200 hover:bg-gray-50'}`;
+                
+                item.onclick = () => {
+                    campoSeleccionadoActivo = campo;
+                    actualizarUI();
+                    redibujarTodasLasCajas();
+                };
+
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-indigo-900">${campo} ${esActivo ? '⚡ (Activo)' : ''}</span>
+                        <div class="text-[10px] text-gray-500 font-mono">x1:${box.x1}, y1:${box.y1}, x2:${box.x2}, y2:${box.y2}</div>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <button class="text-blue-500 hover:text-blue-700 text-xs font-bold px-1 py-1" title="Duplicar campo" onclick="event.stopPropagation(); window.abrirModalDuplicar('${campo}')">📋</button>
+                        <button class="text-red-500 hover:text-red-700 text-xs font-bold px-1 py-1" title="Eliminar campo" onclick="event.stopPropagation(); window.eliminarCampo('${campo}')">🗑️</button>
+                    </div>
+                `;
+                listaCoordenadas.appendChild(item);
+            }
+        }
+
+        function redibujarTodasLasCajas() {
+            drawingOverlay.innerHTML = '';
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const left = box.x1 * scale;
+                const top = pageViewport.height - (box.y2 * scale);
+                const width = (box.x2 - box.x1) * scale;
+                const height = (box.y2 - box.y1) * scale;
+
+                const cajaVisual = document.createElement('div');
+                const esActivo = campo === campoSeleccionadoActivo;
+                
+                cajaVisual.className = `caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between transition ${esActivo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 ring-2 ring-red-400 z-10' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 hover:bg-indigo-500/40'}`;
+                cajaVisual.style.left = `${left}px`;
+                cajaVisual.style.top = `${top}px`;
+                cajaVisual.style.width = `${width}px`;
+                cajaVisual.style.height = `${height}px`;
+                cajaVisual.style.cursor = 'move';
+                cajaVisual.textContent = campo;
+
+                cajaVisual.onmousedown = (e) => {
+                    e.stopPropagation(); // Evitar que el contenedor dibuje un rectángulo nuevo
+                    campoSeleccionadoActivo = campo;
+                    actualizarUI();
+                    redibujarTodasLasCajas();
+
+                    isMoving = true;
+                    const rect = canvas.getBoundingClientRect();
+                    startX = e.clientX - rect.left;
+                    startY = e.clientY - rect.top;
+                };
+
+                if (esActivo) {
+                    const handles = ['nw', 'ne', 'se', 'sw', 'n', 's', 'w', 'e'];
+                    handles.forEach(h => {
+                        const handle = document.createElement('div');
+                        handle.className = `resize-handle handle-${h}`;
+                        handle.onmousedown = (ev) => {
+                            ev.stopPropagation(); // CLAVE: Evita que la caja interprete el clic como movimiento y active el redimensionamiento puro
+                            isResizing = true;
+                            resizeHandleType = h;
+                            const rect = canvas.getBoundingClientRect();
+                            startX = ev.clientX - rect.left;
+                            startY = ev.clientY - rect.top;
+                        };
+                        cajaVisual.appendChild(handle);
+                    });
+                }
+
+                drawingOverlay.appendChild(cajaVisual);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (!campoSeleccionadoActivo || !coordenadasMap[campoSeleccionadoActivo]) return;
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+            const paso = e.shiftKey ? 5 : 1;
+            const box = coordenadasMap[campoSeleccionadoActivo];
+
+            let movio = false;
+            if (e.key === 'ArrowLeft') { box.x1 -= paso; box.x2 -= paso; movio = true; }
+            if (e.key === 'ArrowRight') { box.x1 += paso; box.x2 += paso; movio = true; }
+            if (e.key === 'ArrowUp') { box.y1 += paso; box.y2 += paso; movio = true; }
+            if (e.key === 'ArrowDown') { box.y1 -= paso; box.y2 -= paso; movio = true; }
+
+            if (movio) {
+                e.preventDefault();
+                box.x1 = Math.round(box.x1 * 10) / 10;
+                box.x2 = Math.round(box.x2 * 10) / 10;
+                box.y1 = Math.round(box.y1 * 10) / 10;
+                box.y2 = Math.round(box.y2 * 10) / 10;
+
+                actualizarUI();
+                redibujarTodasLasCajas();
+            }
+        });
+
+        window.eliminarCampo = function(campo) {
+            delete coordenadasMap[campo];
+            if (campoSeleccionadoActivo === campo) campoSeleccionadoActivo = null;
+            actualizarUI();
+            redibujarTodasLasCajas();
+        };
+
+        btnGuardar.addEventListener('click', async () => {
+            const schoolName = prompt("Introduce el nombre exacto de la escuela (ej. Berufliche Oberschule Holzkirchen):");
+            if (!schoolName) return;
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates`, {
+                    method: 'POST',
+                    headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+                    body: JSON.stringify({
+                        school_name: schoolName,
+                        pdf_filename: 'admin.pdf',
+                        coordinates_json: coordenadasMap
+                    })
+                });
+
+                if (response.ok) {
+                    alert("✅ ¡Plantilla y coordenadas guardadas con éxito en Supabase!");
+                } else {
+                    const err = await response.text();
+                    alert("❌ Error al guardar: " + err);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error de red al conectar con Supabase.");
+            }
+        });
+    </script>
+</body>
+</html>
