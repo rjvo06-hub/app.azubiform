@@ -13,20 +13,29 @@
     </script>
     <style>
         @media print {
-            body * {
-                visibility: hidden;
+            body {
+                background: white !important;
+                padding: 0 !important;
             }
-            #canvasContainer, #canvasContainer * {
-                visibility: visible;
+            /* Ocultamos los paneles de controles y cabeceras de la web al imprimir */
+            .max-w-7xl > div:first-child,
+            .grid > div:last-child {
+                display: none !important;
+            }
+            .grid {
+                display: block !important;
+            }
+            .lg\:col-span-2 {
+                width: 100% !important;
+                background: white !important;
+                padding: 0 !important;
+                border: none !important;
+                max-height: none !important;
+                overflow: visible !important;
             }
             #canvasContainer {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                background: white !important;
+                box-shadow: none !important;
+                margin: 0 auto !important;
             }
         }
     </style>
@@ -350,6 +359,7 @@
                     } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
                         listaActividades = datosSemana.freitag || [];
                     } else if (lowerKey.includes('schueler')) {
+                        textoAsigned = selectUsuario.value;
                         textoAsignado = selectUsuario.value;
                     }
                 }
@@ -358,9 +368,9 @@
 
                 if (esDiaSemana) {
                     cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 1.5px;">• ${act}</div>`).join('');
-                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-1 py-0.5 bg-white/95 z-10 flex flex-col justify-start`;
+                    cajaVisual.className = `absolute text-[${fontSizeGlobal}px] leading-[1.1] text-black font-sans overflow-hidden px-1 py-0.5 bg-white z-10 flex flex-col justify-start`;
                 } else {
-                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white/95 z-10 flex items-center`;
+                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 bg-white z-10 flex items-center`;
                     cajaVisual.textContent = textoAsignado;
                 }
 
