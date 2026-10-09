@@ -1,8 +1,3 @@
-El error de red al conectar con Supabase desde el teléfono suele deberse a dos causas comunes en aplicaciones móviles web:
- * El archivo ./js/config.js no se encuentra o no está accesible desde la ruta relativa cuando abres la app en el móvil o en Vercel, lo que hace que SUPABASE_URL o headers sean undefined y falle la petición fetch.
- * Las cabeceras de Supabase (como apikey o Authorization) no se están enviando correctamente o falta alguna directiva de CORS/PostgREST.
-Para solucionar esto de raíz y evitar que dependas de que el archivo externo config.js falle en el móvil, vamos a asegurarnos de que la URL y las cabeceras estén directamente integradas o validadas en el script, o bien proteger la llamada con un bloque que te avise exactamente si la configuración es correcta.
-Aquí tienes el código completo y definitivo con un sistema de depuración visual integrado para que, si falta algo en la configuración o las credenciales, te muestre una alerta clara en lugar de un "error de red":
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -588,4 +583,3 @@ Aquí tienes el código completo y definitivo con un sistema de depuración visu
     </script>
 </body>
 </html>
-
