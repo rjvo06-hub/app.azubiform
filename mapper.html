@@ -18,7 +18,7 @@
             border: 2px solid #ef4444;
             width: 8px;
             height: 8px;
-            z-index: 20;
+            z-index: 30;
         }
         .handle-nw { top: -4px; left: -4px; cursor: nwse-resize; }
         .handle-ne { top: -4px; right: -4px; cursor: nesw-resize; }
@@ -35,7 +35,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <!-- Cabecera -->
         <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual con Redimensionamiento Pro</h1>
+            <h1 class="text-sm font-bold text-indigo-900 uppercase">🎯 Mapeador Visual Pro (Mover, Redimensionar y Duplicar)</h1>
             <div class="flex items-center space-x-3">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-xs text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 <button id="btnGuardarSupabase" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">Guardar en Supabase</button>
@@ -80,7 +80,7 @@
                         <option value="donnerstag_stunden">Donnerstag - Stunden (Horas Jueves)</option>
                         <option value="freitag_stunden">Freitag - Stunden (Horas Viernes)</option>
                     </select>
-                    <p class="text-[11px] text-gray-500">Haz clic en una caja para seleccionarla, estira sus bordes/esquinas con el ratón o ajústala con las flechas del teclado.</p>
+                    <p class="text-[11px] text-gray-500">Dibuja, haz clic para mover con el ratón/teclado, o usa los tiradores rojos para estirar.</p>
                 </div>
 
                 <!-- Lista de campos guardados -->
@@ -137,6 +137,7 @@
         
         let isDrawing = false;
         let isResizing = false;
+        let isMoving = false;
         let resizeHandleType = null;
         let startX = 0, startY = 0;
         let currentRect = null;
@@ -174,24 +175,21 @@
 
         container.addEventListener('mousedown', (e) => {
             if (!pdfDoc) return;
-            
-            // Si estamos redimensionando mediante handles, se maneja en su propio evento
-            if (isResizing) return;
+            if (isResizing || isMoving) return;
 
-            if (e.target.classList.contains('caja-mapeada')) {
-                return;
+            // Si no se hace clic en una caja existente, iniciamos dibujo de un nuevo rectángulo
+            if (!e.target.classList.contains('caja-mapeada')) {
+                const rect = canvas.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                isDrawing = true;
+
+                currentRect = document.createElement('div');
+                currentRect.className = 'absolute border-2 border-indigo-600 bg-indigo-500/20 rounded pointer-events-none';
+                currentRect.style.left = `${startX}px`;
+                currentRect.style.top = `${startY}px`;
+                drawingOverlay.appendChild(currentRect);
             }
-
-            const rect = canvas.getBoundingClientRect();
-            startX = e.clientX - rect.left;
-            startY = e.clientY - rect.top;
-            isDrawing = true;
-
-            currentRect = document.createElement('div');
-            currentRect.className = 'absolute border-2 border-indigo-600 bg-indigo-500/20 rounded pointer-events-none';
-            currentRect.style.left = `${startX}px`;
-            currentRect.style.top = `${startY}px`;
-            drawingOverlay.appendChild(currentRect);
         });
 
         container.addEventListener('mousemove', (e) => {
@@ -211,7 +209,6 @@
                 const box = coordenadasMap[campoSeleccionadoActivo];
                 if (!box) return;
 
-                // Convertir coordenadas actuales a canvas pixels
                 let canvasX1 = box.x1 * scale;
                 let canvasX2 = box.x2 * scale;
                 let canvasY1 = pageViewport.height - (box.y2 * scale);
@@ -227,11 +224,29 @@
                 if (resizeHandleType.includes('n')) canvasY1 += dy;
                 if (resizeHandleType.includes('s')) canvasY2 += dy;
 
-                // Volver a calcular PDF coords
                 box.x1 = Math.round((Math.min(canvasX1, canvasX2) / scale) * 10) / 10;
                 box.x2 = Math.round((Math.max(canvasX1, canvasX2) / scale) * 10) / 10;
                 box.y1 = Math.round(((pageViewport.height - Math.max(canvasY1, canvasY2)) / scale) * 10) / 10;
                 box.y2 = Math.round(((pageViewport.height - Math.min(canvasY1, canvasY2)) / scale) * 10) / 10;
+
+                actualizarUI();
+                redibujarTodasLasCajas();
+            } else if (isMoving && campoSeleccionadoActivo) {
+                const box = coordenadasMap[campoSeleccionadoActivo];
+                if (!box) return;
+
+                const dx = currentX - startX;
+                const dy = currentY - startY;
+                startX = currentX;
+                startY = currentY;
+
+                const deltaPdfX = dx / scale;
+                const deltaPdfY = -dy / scale; // Invertir Y en coordenadas PDF
+
+                box.x1 = Math.round((box.x1 + deltaPdfX) * 10) / 10;
+                box.x2 = Math.round((box.x2 + deltaPdfX) * 10) / 10;
+                box.y1 = Math.round((box.y1 + deltaPdfY) * 10) / 10;
+                box.y2 = Math.round((box.y2 + deltaPdfY) * 10) / 10;
 
                 actualizarUI();
                 redibujarTodasLasCajas();
@@ -282,6 +297,10 @@
                 isResizing = false;
                 resizeHandleType = null;
             }
+
+            if (isMoving) {
+                isMoving = false;
+            }
         });
 
         window.abrirModalDuplicar = function(campoOriginal) {
@@ -310,6 +329,7 @@
                     y2: boxOriginal.y2
                 };
 
+                // Hereda toda la funcionalidad de selección, movimiento y redimensionamiento activo
                 campoSeleccionadoActivo = campoDestino;
                 actualizarUI();
                 redibujarTodasLasCajas();
@@ -364,17 +384,24 @@
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
                 cajaVisual.style.height = `${height}px`;
-                cajaVisual.style.cursor = 'pointer';
+                cajaVisual.style.cursor = 'move';
                 cajaVisual.textContent = campo;
 
-                cajaVisual.onclick = (e) => {
+                // Clic para seleccionar la caja
+                cajaVisual.onmousedown = (e) => {
                     e.stopPropagation();
                     campoSeleccionadoActivo = campo;
                     actualizarUI();
                     redibujarTodasLasCajas();
+
+                    // Iniciar movimiento con el ratón
+                    isMoving = true;
+                    const rect = canvas.getBoundingClientRect();
+                    startX = e.clientX - rect.left;
+                    startY = e.clientY - rect.top;
                 };
 
-                // Si es el campo activo, inyectar los 8 tiradores de redimensionamiento (esquinas y bordes)
+                // Si es el campo activo, inyectar los 8 tiradores de redimensionamiento
                 if (esActivo) {
                     const handles = ['nw', 'ne', 'se', 'sw', 'n', 's', 'w', 'e'];
                     handles.forEach(h => {
