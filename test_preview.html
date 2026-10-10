@@ -354,14 +354,12 @@
                     let startX, startY, initialLeft, initialTop;
 
                     cajaVisual.addEventListener('pointerdown', (e) => {
-                        // EXCLUSIÓN INTELIGENTE: Si estás haciendo clic en los 25 píxeles inferiores/derechos (la esquina de redimensionar), 
-                        // dejamos que actúe el redimensionador nativo del navegador. Si es en el centro, movemos la caja.
                         const rect = cajaVisual.getBoundingClientRect();
                         const isNearRightEdge = e.clientX > rect.right - 25;
                         const isNearBottomEdge = e.clientY > rect.bottom - 25;
 
                         if (isNearRightEdge && isNearBottomEdge) {
-                            return; // Permite estirar libremente desde la esquina
+                            return; 
                         }
 
                         isDragging = true;
@@ -486,8 +484,9 @@
                     const y1Visual = Number(box.y1);
                     const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
+                    // TAMAÑO DE LETRA ACTUALIZADO (+0.5 pt)
                     const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
-                    const fontSize = esEncabezado ? 10 : 8;
+                    const fontSize = esEncabezado ? 10.5 : 8.5; // Encabezados 10.5pt, Contenido 8.5pt
                     const fuenteUsada = esEncabezado ? fontBold : font;
                     const espaciadoLineas = fontSize * 1.4;
 
