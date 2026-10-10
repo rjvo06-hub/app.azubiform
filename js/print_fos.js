@@ -139,7 +139,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 🚀 Sincronización optimizada y en paralelo con Supabase
+    // 🚀 Sincronización optimizada y en paralelo con Supabase (con Plan B de respaldo)
     try {
         estadoInfoModal.textContent = "⏳ Sincronizando datos...";
 
@@ -184,6 +184,20 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const tplData = await respTpl.json();
             if (tplData.length > 0) {
                 coordenadasMap = tplData[0].coordinates_json || {};
+            }
+        }
+
+        // 🔄 PLAN B DE RESPALDO: Si las coordenadas siguen vacías, cargamos la primera plantilla disponible
+        if (Object.keys(coordenadasMap).length === 0) {
+            console.warn("⚠️ No se hallaron coordenadas con el ID exacto, aplicando plantilla por defecto de Supabase...");
+            const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
+                headers: { ...headers, 'Range': '0-0' } 
+            });
+            if (respFallbackTpl.ok) {
+                const fallbackData = await respFallbackTpl.json();
+                if (fallbackData.length > 0) {
+                    coordenadasMap = fallbackData[0].coordinates_json || {};
+                }
             }
         }
 
