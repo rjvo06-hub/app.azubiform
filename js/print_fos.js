@@ -6,7 +6,22 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     container.innerHTML = `
         <div class="space-y-4">
-            <!-- 1. Carga manual del PDF base -->
+            <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS -->
+            <div class="bg-indigo-900 text-white p-3 rounded-xl shadow-md space-y-2 text-xs">
+                <div class="flex justify-between items-center border-b border-indigo-700 pb-1.5">
+                    <span class="font-bold uppercase tracking-wider text-indigo-200">👤 Datos del Reporte Activo</span>
+                    <span id="fosLblSemanaActual" class="bg-emerald-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">Semana: No seleccionada</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Nombre:</span><strong id="fosResNombre" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Clase:</span><strong id="fosResClase" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Profesión:</span><strong id="fosResProfesion" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Lugar (Betrieb):</span><strong id="fosResWorkplace" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Profesora:</span><strong id="fosResProfesora" class="text-white">Cargando...</strong></div>
+                </div>
+            </div>
+
+            <!-- 1. Carga manual del PDF base (Lo único que falta) -->
             <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
                     <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Cargar Plantilla PDF Base</h3>
@@ -21,11 +36,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
                     <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ 2. Generar Ausbildungsnachweis</h3>
-                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar actividades, clase, profesión, lugar de trabajo y fechas.</p>
+                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar toda la información.</p>
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
                     <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium flex-1 sm:flex-initial">
-                        <option value="">-- Carga el PDF y selecciona semana --</option>
+                        <option value="">-- Selecciona semana --</option>
                     </select>
                     <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition whitespace-nowrap">
                         🚀 Descargar PDF
@@ -34,14 +49,14 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             </div>
 
             <!-- Visor / Canvas -->
-            <div class="bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[50vh] relative border border-gray-300">
+            <div class="bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[45vh] relative border border-gray-300">
                 <div class="relative inline-block shadow-2xl" id="fosCanvasContainerModal">
                     <canvas id="fosPdfCanvasModal" class="block"></canvas>
                     <div id="fosDrawingOverlayModal" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
-                📌 Sube primero el PDF base para comenzar.
+                📌 Datos cargados correctamente. Sube el PDF base para comenzar.
             </div>
         </div>
     `;
@@ -53,6 +68,14 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const canvasModal = document.getElementById('fosPdfCanvasModal');
     const drawingOverlayModal = document.getElementById('fosDrawingOverlayModal');
 
+    // Elementos de la tarjeta visual superior
+    const fosResNombre = document.getElementById('fosResNombre');
+    const fosResClase = document.getElementById('fosResClase');
+    const fosResProfesion = document.getElementById('fosResProfesion');
+    const fosResWorkplace = document.getElementById('fosResWorkplace');
+    const fosResProfesora = document.getElementById('fosResProfesora');
+    const fosLblSemanaActual = document.getElementById('fosLblSemanaActual');
+
     let pdfDoc = null;
     let pageViewport = null;
     let scale = 1.0;
@@ -63,21 +86,22 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let escuelaSeleccionadaId = null;
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     
-    // Variables de perfil del usuario
-    let claseUsuario = '';
-    let profesionUsuario = '';
-    let workplaceUsuario = '';
-    let profesoraUsuario = localStorage.getItem('usuario_teacher') || localStorage.getItem('usuario_profesora') || '';
+    // Variables de perfil
+    let claseUsuario = '-';
+    let profesionUsuario = '-';
+    let workplaceUsuario = '-';
+    let profesoraUsuario = localStorage.getItem('usuario_teacher') || localStorage.getItem('usuario_profesora') || '-';
 
     if (!nombreUsuarioActual) {
         estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
         return;
     }
 
-    // 1. Consultar datos en la tabla 'usuarios' y 'profesions' de Supabase
+    // Rellenar visualmente el nombre de entrada
+    fosResNombre.textContent = nombreUsuarioActual;
+
+    // 1. Consultar datos en Supabase (usuarios y profesions)
     try {
-        estadoInfoModal.textContent = `⏳ Cargando perfil de ${nombreUsuarioActual}...`;
-        
         const respUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
         });
@@ -87,13 +111,13 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             if (dataUsr.length > 0) {
                 const usuario = dataUsr[0];
                 escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
-                claseUsuario = usuario.klasse || usuario.clase || '';
-                workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '';
+                claseUsuario = usuario.klasse || usuario.clase || '-';
+                workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
                 if (usuario.teacher || usuario.profesora) {
                     profesoraUsuario = usuario.teacher || usuario.profesora;
                 }
                 
-                // Consultar la tabla 'profesions' para obtener el nombre completo de la formación
+                // Consultar tabla 'profesions'
                 const idProfesion = usuario.profesion || usuario.ausbildung || usuario.fachrichtung;
                 if (idProfesion) {
                     const respProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?id=eq.${encodeURIComponent(idProfesion)}&select=*`, {
@@ -110,6 +134,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 }
             }
         }
+
+        // Actualizar la tarjeta visual superior con los datos obtenidos
+        fosResClase.textContent = claseUsuario;
+        fosResProfesion.textContent = profesionUsuario;
+        fosResWorkplace.textContent = workplaceUsuario;
+        fosResProfesora.textContent = profesoraUsuario;
 
         if (!escuelaSeleccionadaId) {
             const respTemplates = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=file_identifier`, {
@@ -133,7 +163,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Cargar registros diarios del usuario desde la tabla 'registro_diario'
+        // Cargar registros diarios del usuario
         const respReg = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
         });
@@ -148,7 +178,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 opt.textContent = `Woche: ${sem}`;
                 selectSemanaModal.appendChild(opt);
             });
-            estadoInfoModal.textContent = `✅ Registros cargados. Por favor, selecciona el archivo PDF base arriba.`;
         }
 
     } catch (err) {
@@ -165,7 +194,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
             pdfDoc = await loadingTask.promise;
             await renderizarPaginaModal(1);
-            estadoInfoModal.textContent = "✅ PDF base cargado correctamente. Selecciona una semana.";
+            estadoInfoModal.textContent = "✅ PDF base cargado. Selecciona la semana para visualizar.";
         } catch (err) {
             console.error(err);
             estadoInfoModal.textContent = "❌ Error al procesar el archivo PDF.";
@@ -185,7 +214,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         redibujarOverlayModal();
     }
 
-    selectSemanaModal.addEventListener('change', () => {
+    selectSemanaModal.addEventListener('change', (e) => {
+        const semSeleccionada = e.target.value;
+        fosLblSemanaActual.textContent = semSeleccionada ? `Semana: ${semSeleccionada}` : "Semana: No seleccionada";
         if (pdfDoc) redibujarOverlayModal();
     });
 
@@ -268,7 +299,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         }
     }
 
-    // Generar y descargar PDF definitivo con todos los campos mapeados
+    // Generar y descargar PDF definitivo
     btnGenerarPdfModal.addEventListener('click', async () => {
         if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
