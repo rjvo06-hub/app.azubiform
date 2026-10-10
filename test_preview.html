@@ -292,8 +292,10 @@
 
             for (const campo in coordenadasMap) {
                 const box = coordenadasMap[campo];
-                box.y1 -= offset;
-                box.y2 -= offset;
+                if (box && typeof box.y1 !== 'undefined' && typeof box.y2 !== 'undefined') {
+                    box.y1 = Number(box.y1) - offset;
+                    box.y2 = Number(box.y2) - offset;
+                }
             }
 
             redibujarOverlay();
@@ -310,12 +312,17 @@
             const nombreUsuario = selectUsuario.value || "Ejemplo Usuario";
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
-                if (!box || typeof box.x1 === 'undefined') continue;
+                if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined' || isNaN(box.x1) || isNaN(box.y2)) continue;
 
-                const left = box.x1 * scale;
-                const top = pageViewport.height - (box.y2 * scale);
-                const width = (box.x2 - box.x1) * scale;
-                const height = (box.y2 - box.y1) * scale;
+                const x1 = Number(box.x1);
+                const y1 = Number(box.y1);
+                const x2 = Number(box.x2);
+                const y2 = Number(box.y2);
+
+                const left = x1 * scale;
+                const top = pageViewport.height - (y2 * scale);
+                const width = Math.max(10, (x2 - x1) * scale);
+                const height = Math.max(10, (y2 - y1) * scale);
 
                 const cajaVisual = document.createElement('div');
                 cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md resize' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
@@ -336,8 +343,7 @@
                     else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
                 }
 
-                // Si está vacío, se muestra limpio en la vista previa
-                const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">(Vacío)</span>`;
+                const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
                 cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
 
                 if (modoEdicionActivo) {
@@ -438,7 +444,7 @@
                 const nombreUsuario = selectUsuario.value;
 
                 for (const [campo, box] of Object.entries(coordenadasMap)) {
-                    if (!box || typeof box.x1 === 'undefined') continue;
+                    if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined' || isNaN(box.x1) || isNaN(box.y2)) continue;
 
                     const lowerKey = campo.toLowerCase();
                     let textoAsignado = '';
@@ -452,23 +458,26 @@
                         else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
                     }
 
-                    // VALIDACIÓN CLAVE: Si el texto está vacío, lo salta por completo y no imprime nada (deja el campo en blanco)
                     if (!textoAsignado || textoAsignado.trim() === '') continue;
 
-                    const x = box.x1;
-                    const y = pdfHeight - box.y2; 
-                    const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
-                    const fontSize = esEncabezado ? 7 : 5;
+                    try {
+                        const x = Number(box.x1);
+                        const y = pdfHeight - Number(box.y2); 
+                        const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
+                        const fontSize = esEncabezado ? 7 : 5;
 
-                    firstPage.drawText(textoAsignado, {
-                        x: x,
-                        y: y + 2,
-                        size: fontSize,
-                        font: esEncabezado ? fontBold : font,
-                        color: PDFLib.rgb(0, 0, 0),
-                        maxWidth: box.x2 - box.x1,
-                        lineHeight: fontSize * 1.2
-                    });
+                        firstPage.drawText(textoAsignado, {
+                            x: x,
+                            y: y + 2,
+                            size: fontSize,
+                            font: esEncabezado ? fontBold : font,
+                            color: PDFLib.rgb(0, 0, 0),
+                            maxWidth: Math.max(10, Number(box.x2) - Number(box.x1)),
+                            lineHeight: fontSize * 1.2
+                        });
+                    } catch (innerErr) {
+                        console.warn(`No se pudo estampar el campo ${campo}:`, innerErr);
+                    }
                 }
 
                 const pdfBytesFinales = await pdfDocLib.save();
