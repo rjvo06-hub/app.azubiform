@@ -1,4 +1,4 @@
-import { SUPABASE_URL, headers } from './config.js';
+limport { SUPABASE_URL, headers } from './config.js';
 
 export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPreseleccionado = null) {
     const container = document.getElementById(containerId);
@@ -329,9 +329,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('<br>');
                 else if (lowerKey.includes('schueler') || lowerKey.includes('name')) textoAsignado = nombreUsuarioActual;
                 else if (lowerKey.includes('klasse') || lowerKey.includes('class')) textoAsignado = fosResClase.textContent;
-                else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) textoAsignado = fosResProfesion.textContent;
+                else if (lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('fachrichtung') || (lowerKey.includes('ausbildung') && !lowerKey.includes('staette') && !lowerKey.includes('betrieb')) || lowerKey.includes('beruf') || lowerKey.includes('profesion')) textoAsignado = fosResProfesion.textContent;
                 else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) textoAsignado = fosResWorkplace.textContent;
-                else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) textoAsignado = fosResProfesora.textContent;
+                else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) textoAsignado = fosResProfesora.textContent;
                 else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) textoAsignado = semSeleccionada;
             }
 
@@ -412,9 +412,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) lineasAsignadas = datosSemana.freitag || [];
                     else if (lowerKey.includes('schueler') || lowerKey.includes('name')) lineasAsignadas = [nombreUsuarioActual];
                     else if (lowerKey.includes('klasse') || lowerKey.includes('class')) lineasAsignadas = [fosResClase.textContent];
-                    else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) lineasAsignadas = [fosResProfesion.textContent];
+                    else if (lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('fachrichtung') || (lowerKey.includes('ausbildung') && !lowerKey.includes('staette') && !lowerKey.includes('betrieb')) || lowerKey.includes('beruf') || lowerKey.includes('profesion')) lineasAsignadas = [fosResProfesion.textContent];
                     else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) lineasAsignadas = [fosResWorkplace.textContent];
-                    else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) lineasAsignadas = [fosResProfesora.textContent];
+                    else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) lineasAsignadas = [fosResProfesora.textContent];
                     else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) lineasAsignadas = [semSeleccionada];
                 }
 
@@ -428,7 +428,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const y1Visual = Number(box.y1);
                 const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
-                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('lapso');
+                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
