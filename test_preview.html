@@ -2,30 +2,429 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba Aislada - Coordenadas FOS</title>
-    <!-- Tailwind CSS para los estilos -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vista Previa Unificada FOS - Azubiform</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js para renderizar la plantilla PDF -->
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
+    <!-- PDF-Lib para modificar y descargar el PDF -->
+    <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
 </head>
-<body class="bg-gray-100 p-6">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-lg font-bold text-gray-800 mb-4">🧪 Entorno de Pruebas: Vista Previa FOS</h1>
-        <!-- Contenedor donde se inyectará el visor -->
-        <div id="visor-coordenadas"></div>
+<body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
+
+    <div class="max-w-7xl mx-auto space-y-4">
+        <!-- Cabecera -->
+        <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">📄 Vista Previa Unificada FOS con Datos</h1>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
+                <input type="file" id="pdfFile" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Panel Izquierdo: Lienzo del PDF -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center overflow-auto max-h-[60vh] lg:max-h-[800px] relative border border-gray-300">
+                <div class="relative inline-block" id="canvasContainer">
+                    <canvas id="pdfCanvas" class="block shadow-lg max-w-full"></canvas>
+                    <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+
+            <!-- Panel Derecho: Controles de Plantilla y Usuario -->
+            <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col">
+                <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Controles de Visualización</h2>
+                
+                <div class="space-y-3">
+                    <!-- Cargar Plantilla de Coordenadas -->
+                    <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-indigo-900">📂 1. Cargar plantilla de coordenadas:</label>
+                        <div class="flex space-x-1">
+                            <select id="selectPlantillasGuardadas" class="w-full p-1 border border-indigo-300 rounded text-xs bg-white">
+                                <option value="">-- Selecciona una escuela --</option>
+                            </select>
+                            <button id="btnCargarPlantilla" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2.5 py-1 rounded">📥 Cargar</button>
+                        </div>
+                    </div>
+
+                    <!-- Seleccionar Usuario -->
+                    <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-emerald-900">👤 2. Seleccionar usuario:</label>
+                        <select id="selectUsuario" class="w-full p-1 border border-emerald-300 rounded text-xs bg-white">
+                            <option value="">-- Selecciona un usuario --</option>
+                        </select>
+                    </div>
+
+                    <!-- Seleccionar Semana -->
+                    <div class="bg-amber-50 p-2 rounded-lg border border-amber-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-amber-900">📅 3. Seleccionar semana:</label>
+                        <select id="selectSemana" class="w-full p-1 border border-amber-300 rounded text-xs bg-white">
+                            <option value="">-- Primero carga usuario --</option>
+                        </select>
+                    </div>
+
+                    <button id="btnGenerarVista" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
+                        ⚡ Pintar Datos en el PDF
+                    </button>
+
+                    <!-- Botón de Descarga -->
+                    <button id="btnDescargarPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
+                        📥 Descargar PDF Relleno
+                    </button>
+                </div>
+
+                <!-- Estado -->
+                <div id="estadoInfo" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center mt-auto">
+                    📌 Carga un PDF y selecciona los datos.
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Cargar el script modular aislado -->
     <script type="module">
-        import { inicializarPruebaVistaPreviaFos } from './print_fos.js';
+        import { SUPABASE_URL, headers } from './js/config.js';
 
-        // Ejecutamos el visor pasando el ID del contenedor y un ID de usuario fijo de prueba
-        document.addEventListener('DOMContentLoaded', () => {
-            inicializarPruebaVistaPreviaFos('visor-coordenadas', 93);
+        const fileInput = document.getElementById('pdfFile');
+        const canvas = document.getElementById('pdfCanvas');
+        const container = document.getElementById('canvasContainer');
+        const drawingOverlay = document.getElementById('drawingOverlay');
+        const selectPlantillasGuardadas = document.getElementById('selectPlantillasGuardadas');
+        const btnCargarPlantilla = document.getElementById('btnCargarPlantilla');
+        const selectUsuario = document.getElementById('selectUsuario');
+        const selectSemana = document.getElementById('selectSemana');
+        const btnGenerarVista = document.getElementById('btnGenerarVista');
+        const btnDescargarPdf = document.getElementById('btnDescargarPdf');
+        const estadoInfo = document.getElementById('estadoInfo');
+
+        let pdfDoc = null;
+        let pageViewport = null;
+        let scale = 1.2;
+        let coordenadasMap = {};
+        let semanasAgrupadas = {};
+        let registrosGlobales = [];
+        let archivoPdfBytes = null; // Guardar los bytes del PDF original para la descarga
+
+        async function cargarListaPlantillas() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    selectPlantillasGuardadas.innerHTML = '<option value="">-- Selecciona una escuela --</option>';
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.file_identifier;
+                        opt.textContent = item.school_name;
+                        selectPlantillasGuardadas.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error al obtener plantillas:", err);
+            }
+        }
+
+        async function cargarListaUsuarios() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id,nombre`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    selectUsuario.innerHTML = '<option value="">-- Selecciona un usuario --</option>';
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.nombre;
+                        opt.textContent = item.nombre;
+                        selectUsuario.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Error al obtener usuarios:", err);
+            }
+        }
+
+        cargarListaPlantillas();
+        cargarListaUsuarios();
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const arrayBuffer = await file.arrayBuffer();
+            archivoPdfBytes = new Uint8Array(arrayBuffer);
+
+            const typedarray = new Uint8Array(arrayBuffer);
+            const loadingTask = pdfjsLib.getDocument(typedarray);
+            pdfDoc = await loadingTask.promise;
+            await renderPage(1);
+            estadoInfo.textContent = "✅ PDF cargado correctamente.";
+        });
+
+        async function renderPage(num) {
+            const page = await pdfDoc.getPage(num);
+            pageViewport = page.getViewport({ scale });
+
+            const context = canvas.getContext('2d');
+            canvas.height = pageViewport.height;
+            canvas.width = pageViewport.width;
+
+            await page.render({ canvasContext: context, viewport: pageViewport }).promise;
+            if (Object.keys(coordenadasMap).length > 0) {
+                redibujarDatos([]);
+            }
+        }
+
+        btnCargarPlantilla.addEventListener('click', async () => {
+            const fileIdentifier = selectPlantillasGuardadas.value;
+            if (!fileIdentifier) return alert("⚠️ Selecciona una escuela.");
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(fileIdentifier)}&select=coordinates_json`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.length > 0 && data[0].coordinates_json) {
+                        coordenadasMap = data[0].coordinates_json;
+                        alert("✅ Coordenadas cargadas con éxito.");
+                    } else {
+                        alert("⚠️ No hay coordenadas guardadas.");
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al cargar coordenadas.");
+            }
+        });
+
+        selectUsuario.addEventListener('change', async (e) => {
+            const nombreUsuario = e.target.value;
+            if (!nombreUsuario) return;
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    registrosGlobales = await response.json();
+                    semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
+
+                    selectSemana.innerHTML = '<option value="">-- Selecciona una semana --</option>';
+                    Object.keys(semanasAgrupadas).forEach(sem => {
+                        const opt = document.createElement('option');
+                        opt.value = sem;
+                        opt.textContent = `Woche: ${sem}`;
+                        selectSemana.appendChild(opt);
+                    });
+                    alert(`✅ Registros cargados para ${nombreUsuario}`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al cargar registros del usuario.");
+            }
+        });
+
+        function agruparRegistrosPorSemana(registros) {
+            const semanas = {};
+            registros.forEach(reg => {
+                if (!reg.fecha) return;
+                const fechaObj = new Date(reg.fecha);
+                const diaSemana = fechaObj.getDay();
+                const diff = fechaObj.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+                const lunes = new Date(new Date(fechaObj).setDate(diff));
+                const viernes = new Date(lunes);
+                viernes.setDate(lunes.getDate() + 4);
+
+                const claveSemana = `${lunes.toLocaleDateString()} bis ${viernes.toLocaleDateString()}`;
+
+                if (!semanas[claveSemana]) {
+                    semanas[claveSemana] = { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
+                }
+
+                const d = new Date(reg.fecha).getDay();
+                const texto = reg.nombre_actividad || '';
+
+                if (d === 1) semanas[claveSemana].lunes.push(texto);
+                else if (d === 2) semanas[claveSemana].dienstag.push(texto);
+                else if (d === 3) semanas[claveSemana].mittwoch.push(texto);
+                else if (d === 4) semanas[claveSemana].donnerstag.push(texto);
+                else if (d === 5) semanas[claveSemana].freitag.push(texto);
+            });
+            return semanas;
+        }
+
+        btnGenerarVista.addEventListener('click', () => {
+            if (!pdfDoc) return alert("⚠️ Carga primero el archivo PDF base.");
+            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
+            const semSeleccionada = selectSemana.value;
+            if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
+
+            redibujarDatos(semanasAgrupadas[semSeleccionada]);
+            estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en la vista previa!";
+        });
+
+        // Generar vista previa visual en pantalla
+        function redibujarDatos(datosSemana) {
+            if (!pageViewport) return;
+            drawingOverlay.innerHTML = '';
+
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const left = box.x1 * scale;
+                const top = pageViewport.height - (box.y2 * scale);
+                const width = (box.x2 - box.x1) * scale;
+                const height = (box.y2 - box.y1) * scale;
+
+                const cajaVisual = document.createElement('div');
+                const lowerKey = campo.toLowerCase();
+                
+                const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
+                                             lowerKey.includes('klasse') || 
+                                             lowerKey.includes('woche') || 
+                                             lowerKey.includes('bericht') || 
+                                             lowerKey.includes('ausbildung');
+
+                if (esEncabezadoOSimilar) {
+                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 flex items-center z-10`;
+                } else {
+                    cajaVisual.className = `absolute text-black font-sans overflow-hidden px-1 z-10`;
+                    cajaVisual.style.fontSize = '4.5px';
+                }
+
+                cajaVisual.style.left = `${left}px`;
+                cajaVisual.style.top = `${top}px`;
+                cajaVisual.style.width = `${width}px`;
+                cajaVisual.style.height = `${height}px`;
+
+                let textoAsignado = '';
+                let esActividad = false;
+
+                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                        textoAsignado = (datosSemana.lunes || []).join('<br>');
+                        esActividad = true;
+                    } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                        textoAsignado = (datosSemana.dienstag || []).join('<br>');
+                        esActividad = true;
+                    } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                        textoAsignado = (datosSemana.mittwoch || []).join('<br>');
+                        esActividad = true;
+                    } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                        textoAsignado = (datosSemana.donnerstag || []).join('<br>');
+                        esActividad = true;
+                    } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                        textoAsignado = (datosSemana.freitag || []).join('<br>');
+                        esActividad = true;
+                    } else if (lowerKey.includes('schueler')) {
+                        textoAsignado = selectUsuario.value;
+                    }
+                }
+
+                if (esActividad) {
+                    cajaVisual.innerHTML = textoAsignado;
+                    cajaVisual.style.display = 'flex';
+                    cajaVisual.style.flexDirection = 'column';
+                    cajaVisual.style.justifyContent = 'flex-start';
+                } else {
+                    cajaVisual.textContent = textoAsignado;
+                    if (!esEncabezadoOSimilar) {
+                        cajaVisual.style.display = 'flex';
+                        cajaVisual.style.alignItems = 'center';
+                    }
+                }
+
+                drawingOverlay.appendChild(cajaVisual);
+            }
+        }
+
+        // Lógica para descargar el PDF real usando pdf-lib
+        btnDescargarPdf.addEventListener('click', async () => {
+            if (!archivoPdfBytes) return alert("⚠️ Carga primero el archivo PDF base.");
+            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
+            const semSeleccionada = selectSemana.value;
+            if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
+
+            try {
+                const datosSemana = semanasAgrupadas[semSeleccionada];
+                
+                // Cargar el PDF con pdf-lib
+                const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfBytes);
+                const pages = pdfDocLib.getPages();
+                const firstPage = pages[0]; // Página 1
+                const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+
+                for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    const lowerKey = campo.toLowerCase();
+                    let textoAsignado = '';
+                    let esActividad = false;
+                    let fontSize = 8; // Predeterminado para encabezados
+
+                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                            textoAsignado = (datosSemana.lunes || []).join('\n');
+                            esActividad = true;
+                        } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                            textoAsignado = (datosSemana.dienstag || []).join('\n');
+                            esActividad = true;
+                        } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                            textoAsignado = (datosSemana.mittwoch || []).join('\n');
+                            esActividad = true;
+                        } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                            textoAsignado = (datosSemana.donnerstag || []).join('\n');
+                            esActividad = true;
+                        } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                            textoAsignado = (datosSemana.freitag || []).join('\n');
+                            esActividad = true;
+                        } else if (lowerKey.includes('schueler')) {
+                            textoAsignado = selectUsuario.value;
+                        }
+                    }
+
+                    if (!textoAsignado) continue;
+
+                    // Definir tamaño según requerimiento
+                    const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
+                                                 lowerKey.includes('klasse') || 
+                                                 lowerKey.includes('woche') || 
+                                                 lowerKey.includes('bericht') || 
+                                                 lowerKey.includes('ausbildung');
+
+                    if (esEncabezadoOSimilar) {
+                        fontSize = 8;
+                    } else {
+                        fontSize = 4.5; // Actividades a 4.5 px
+                    }
+
+                    // Coordenadas PDF-lib (origen abajo a la izquierda)
+                    const x = box.x1;
+                    const y = box.y1 + 2; // Pequeño ajuste vertical
+
+                    firstPage.drawText(textoAsignado, {
+                        x: x,
+                        y: y,
+                        size: fontSize,
+                        font: font,
+                        color: PDFLib.rgb(0, 0, 0),
+                        lineHeight: fontSize * 1.2
+                    });
+                }
+
+                // Generar el archivo PDF modificado y descargar
+                const pdfBytesModificados = await pdfDocLib.save();
+                const blob = new Blob([pdfBytesModificados], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `Wochenbericht_${selectUsuario.value}_${semSeleccionada.replace(/\//g, '-')}.pdf`;
+                link.click();
+
+                estadoInfo.textContent = "✅ ¡PDF descargado con éxito!";
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error al generar y descargar el PDF.");
+            }
         });
     </script>
 </body>
