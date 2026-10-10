@@ -127,7 +127,7 @@
         let pdfDoc = null;
         let pageViewport = null;
         let scale = 1.2;
-        let archivoPdfOriginalBytes = null; // Guardará el respaldo intocable
+        let archivoPdfOriginalBytes = null;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
         let registrosGlobales = [];
@@ -196,11 +196,9 @@
             const file = e.target.files[0];
             if (!file) return;
             
-            // Guardamos el buffer original completo de respaldo
             const bufferOriginal = await file.arrayBuffer();
             archivoPdfOriginalBytes = bufferOriginal;
 
-            // Para la vista previa usamos un clon separado para que PDF.js no afecte al original
             const loadingTask = pdfjsLib.getDocument({ data: bufferOriginal.slice(0) });
             pdfDoc = await loadingTask.promise;
             await renderPage(1);
@@ -439,7 +437,6 @@
             try {
                 estadoInfo.textContent = "⏳ Generando PDF final...";
                 
-                // Creamos un nuevo clon limpio del buffer original para la librería PDF-Lib
                 const pdfBytesClon = archivoPdfOriginalBytes.slice(0);
                 const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesClon);
                 
@@ -452,7 +449,7 @@
                 const nombreUsuario = selectUsuario.value;
 
                 for (const [campo, box] of Object.entries(coordenadasMap)) {
-                    if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined' || isNaN(box.x1) || isNaN(box.y2)) {
+                    if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined' || isNaN(box.x1) || isNaN(box.y1)) {
                         console.warn(`⚠️ Coordenada inválida o vacía para el campo: ${campo}`, box);
                         continue;
                     }
@@ -469,34 +466,58 @@
                         else if (lowerKey.includes('schueler')) lineasAsignadas = [nombreUsuario];
                     }
 
-                    // Filtramos líneas vacías o nulas automáticamente
                     lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
                     if (lineasAsignadas.length === 0) continue;
 
                     const x = Number(box.x1);
-                    let yInicial = pdfHeight - Number(box.y2) + 2; 
+                    const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
+                    
+                    // CONVERSIÓN AUTOMÁTICA: Convertimos de la altura nativa de PDF.js/Visualización a la altura real de PDF-Lib
+                    const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
+                    const y1Visual = Number(box.y1);
+                    const yPdfLib = pdfHeight - (heightCanvasPdfJs - y1Visual) - 6;
+
                     const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
                     const fontSize = esEncabezado ? 7 : 5;
-                    const espaciadoLineas = fontSize * 1.4; // Espacio vertical automático entre líneas
+                    const fuenteUsada = esEncabezado ? fontBold : font;
+                    const espaciadoLineas = fontSize * 1.5;
 
-                    // Dibujamos cada actividad de forma individual hacia abajo de manera automática
-                    lineasAsignadas.forEach((linea, index) => {
-                        const yActual = yInicial - (index * espaciadoLineas);
+                    // Ajuste automático de texto (Word Wrapping)
+                    let lineasFinalesParaDibujar = [];
+                    lineasAsignadas.forEach(parrafo => {
+                        const palabras = String(parrafo).trim().split(/\s+/);
+                        let lineaActual = '';
+
+                        palabras.forEach(palabra => {
+                            const pruebaLinea = lineaActual ? `${lineaActual} ${palabra}` : palabra;
+                            const anchoPrueba = fuenteUsada.widthOfTextAtSize(pruebaLinea, fontSize);
+
+                            if (anchoPrueba > anchoCaja && lineaActual !== '') {
+                                lineasFinalesParaDibujar.push(lineaActual);
+                                lineaActual = palabra;
+                            } else {
+                                lineaActual = pruebaLinea;
+                            }
+                        });
+                        if (lineaActual) {
+                            lineasFinalesParaDibujar.push(lineaActual);
+                        }
+                    });
+
+                    // Dibujamos utilizando la conversión matemática exacta
+                    lineasFinalesParaDibujar.forEach((linea, index) => {
+                        const yActual = yPdfLib - (index * espaciadoLineas);
 
                         try {
-                            const textoSeguro = String(linea).trim();
-                            if (!textoSeguro) return;
-
-                            firstPage.drawText(textoSeguro, {
+                            firstPage.drawText(linea, {
                                 x: x,
                                 y: yActual,
                                 size: fontSize,
-                                font: esEncabezado ? fontBold : font,
-                                color: PDFLib.rgb(0, 0, 0),
-                                maxWidth: Math.max(10, Number(box.x2) - Number(box.x1))
+                                font: fuenteUsada,
+                                color: PDFLib.rgb(0, 0, 0)
                             });
                         } catch (innerErr) {
-                            console.error(`❌ Error al estampar la línea en el campo "${campo}":`, innerErr);
+                            console.error(`❌ Error al estampar en el campo "${campo}":`, innerErr);
                         }
                     });
                 }
