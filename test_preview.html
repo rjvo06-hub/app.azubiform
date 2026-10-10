@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Generador y Ajustador FOS - Azubiform</title>
+    <title>Generador y Calibrador FOS - Azubiform</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js para renderizar la vista previa -->
@@ -15,10 +15,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <style>
         .draggable-box {
-            cursor: move;
+            touch-action: none; /* Evita que el navegador haga scroll al intentar mover la caja */
             user-select: none;
-            resize: both;
-            overflow: auto;
         }
     </style>
 </head>
@@ -80,7 +78,7 @@
                             <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
                             <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
                         </div>
-                        <p class="text-[9px] text-amber-800">Al activar, puedes arrastrar las cajas rojas en pantalla para acomodarlas a tu gusto y guardar los cambios.</p>
+                        <p class="text-[9px] text-amber-800">Al activar, arrastra las cajas rojas para reubicar los textos en pantalla.</p>
                         <button id="btnGuardarCoordenadas" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1.5 rounded hidden">💾 Guardar Nuevas Coordenadas</button>
                     </div>
 
@@ -293,7 +291,7 @@
                 const height = (box.y2 - box.y1) * scale;
 
                 const cajaVisual = document.createElement('div');
-                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/40 draggable-box pointer-events-auto' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
+                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/60 draggable-box cursor-move pointer-events-auto shadow-md' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
@@ -311,20 +309,51 @@
                     else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
                 }
 
-                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-gray-500 block mb-0.5">${campo}</span>${textoAsignado}`;
+                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-800 block mb-0.5">${campo}</span><div class="pointer-events-none">${textoAsignado}</div>`;
                 cajaVisual.style.fontSize = '4.5px';
 
+                // Lógica robusta de arrastre basada en Punteros (Pointer Events)
                 if (modoEdicionActivo) {
-                    cajaVisual.addEventListener('mouseup', () => {
+                    let isDragging = false;
+                    let startX, startY, initialLeft, initialTop;
+
+                    cajaVisual.addEventListener('pointerdown', (e) => {
+                        isDragging = true;
+                        startX = e.clientX;
+                        startY = e.clientY;
+                        initialLeft = parseFloat(cajaVisual.style.left);
+                        initialTop = parseFloat(cajaVisual.style.top);
+                        cajaVisual.setPointerCapture(e.pointerId);
+                        e.stopPropagation();
+                    });
+
+                    cajaVisual.addEventListener('pointermove', (e) => {
+                        if (!isDragging) return;
+                        const dx = e.clientX - startX;
+                        const dy = e.clientY - startY;
+
+                        const newLeft = initialLeft + dx;
+                        const newTop = initialTop + dy;
+
+                        cajaVisual.style.left = `${newLeft}px`;
+                        cajaVisual.style.top = `${newTop}px`;
+                    });
+
+                    cajaVisual.addEventListener('pointerup', (e) => {
+                        if (!isDragging) return;
+                        isDragging = false;
+                        cajaVisual.releasePointerCapture(e.pointerId);
+
+                        // Recalcular y actualizar coordenadas en el mapa global
                         const newLeft = parseFloat(cajaVisual.style.left) / scale;
                         const newTop = parseFloat(cajaVisual.style.top) / scale;
-                        const newWidth = parseFloat(cajaVisual.style.width) / scale;
-                        const newHeight = parseFloat(cajaVisual.style.height) / scale;
+                        const widthPx = parseFloat(cajaVisual.style.width) / scale;
+                        const heightPx = parseFloat(cajaVisual.style.height) / scale;
 
                         coordenadasMap[campo] = {
                             x1: newLeft,
-                            y1: pageViewport.height / scale - newTop - newHeight,
-                            x2: newLeft + newWidth,
+                            y1: pageViewport.height / scale - newTop - heightPx,
+                            x2: newLeft + widthPx,
                             y2: pageViewport.height / scale - newTop
                         };
                     });
