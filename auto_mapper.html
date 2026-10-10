@@ -265,7 +265,7 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Lógica de renderizado con tamaño de fuente ajustado a 3px y saltos de línea
+        // Lógica de renderizado con tamaño de fuente 4px, interlineado y saltos de línea
         function redibujarDatos(datosSemana) {
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
@@ -277,8 +277,8 @@
                 const height = (box.y2 - box.y1) * scale;
 
                 const cajaVisual = document.createElement('div');
-                // Se cambia a text-[3px] para mantener el tamaño compacto de fuente con saltos de línea
-                cajaVisual.className = `absolute text-[3px] text-black font-sans overflow-hidden px-1 flex flex-col justify-start bg-white/90 border border-indigo-400 rounded z-10 whitespace-pre-line`;
+                // Se mantiene text-[4px] con leading-tight para conservar el tamaño legible original y permitir saltos de línea
+                cajaVisual.className = `absolute text-[4px] leading-tight text-black font-sans overflow-hidden px-1 flex flex-col justify-start bg-white/90 border border-indigo-400 rounded z-10 whitespace-pre-line`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
