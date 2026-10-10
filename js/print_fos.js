@@ -21,7 +21,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
                     <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ 2. Generar Ausbildungsnachweis</h3>
-                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar actividades, clase, profesora y fechas.</p>
+                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar actividades, clase, profesión, lugar de trabajo y fechas.</p>
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
                     <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium flex-1 sm:flex-initial">
@@ -63,8 +63,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let escuelaSeleccionadaId = null;
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     
-    // Datos adicionales de la cuenta del usuario
-    let claseUsuario = localStorage.getItem('usuario_clase') || '';
+    // Variables de perfil del usuario
+    let claseUsuario = '';
+    let profesionUsuario = '';
+    let workplaceUsuario = '';
     let profesoraUsuario = localStorage.getItem('usuario_teacher') || localStorage.getItem('usuario_profesora') || '';
 
     if (!nombreUsuarioActual) {
@@ -72,7 +74,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         return;
     }
 
-    // Cargar datos del usuario y sus coordenadas automáticamente desde Supabase
+    // 1. Consultar datos en la tabla 'usuarios' y 'profesions' de Supabase
     try {
         estadoInfoModal.textContent = `⏳ Cargando perfil de ${nombreUsuarioActual}...`;
         
@@ -83,10 +85,29 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         if (respUsuario.ok) {
             const dataUsr = await respUsuario.json();
             if (dataUsr.length > 0) {
-                escuelaSeleccionadaId = dataUsr[0].file_identifier || dataUsr[0].escuela || '';
-                // Si la clase o profesora están en la base de datos, las complementamos
-                if (dataUsr[0].klasse) claseUsuario = dataUsr[0].klasse;
-                if (dataUsr[0].teacher) profesoraUsuario = dataUsr[0].teacher;
+                const usuario = dataUsr[0];
+                escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
+                claseUsuario = usuario.klasse || usuario.clase || '';
+                workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '';
+                if (usuario.teacher || usuario.profesora) {
+                    profesoraUsuario = usuario.teacher || usuario.profesora;
+                }
+                
+                // Consultar la tabla 'profesions' para obtener el nombre completo de la formación
+                const idProfesion = usuario.profesion || usuario.ausbildung || usuario.fachrichtung;
+                if (idProfesion) {
+                    const respProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?id=eq.${encodeURIComponent(idProfesion)}&select=*`, {
+                        headers: { ...headers, 'Range': '0-9' }
+                    });
+                    if (respProf.ok) {
+                        const dataProf = await respProf.json();
+                        if (dataProf.length > 0) {
+                            profesionUsuario = dataProf[0].nombre || dataProf[0].titulo || dataProf[0].descripcion || idProfesion;
+                        } else {
+                            profesionUsuario = idProfesion;
+                        }
+                    }
+                }
             }
         }
 
@@ -112,7 +133,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Cargar registros diarios del usuario
+        // Cargar registros diarios del usuario desde la tabla 'registro_diario'
         const respReg = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
         });
@@ -182,15 +203,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const claveSemana = `${lunes.toLocaleDateString('de-DE')} bis ${viernes.toLocaleDateString('de-DE')}`;
 
             if (!semanas[claveSemana]) {
-                semanas[claveSemana] = { 
-                    lunes: [], 
-                    dienstag: [], 
-                    mittwoch: [], 
-                    donnerstag: [], 
-                    freitag: [],
-                    lunesFecha: lunes,
-                    viernesFecha: viernes
-                };
+                semanas[claveSemana] = { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
             }
 
             const d = new Date(reg.fecha).getDay();
@@ -243,8 +256,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('<br>');
                 else if (lowerKey.includes('schueler') || lowerKey.includes('name')) textoAsignado = nombreUsuarioActual;
                 else if (lowerKey.includes('klasse')) textoAsignado = claseUsuario;
+                else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) textoAsignado = profesionUsuario;
+                else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) textoAsignado = workplaceUsuario;
                 else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) textoAsignado = profesoraUsuario;
-                else if (lowerKey.includes('woche') || lowerKey.includes('semana')) textoAsignado = semSeleccionada;
+                else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) textoAsignado = semSeleccionada;
             }
 
             const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
@@ -253,7 +268,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         }
     }
 
-    // Generar y descargar PDF definitivo con todos los campos automatizados
+    // Generar y descargar PDF definitivo con todos los campos mapeados
     btnGenerarPdfModal.addEventListener('click', async () => {
         if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
@@ -287,8 +302,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) lineasAsignadas = datosSemana.freitag || [];
                     else if (lowerKey.includes('schueler') || lowerKey.includes('name')) lineasAsignadas = [nombreUsuarioActual];
                     else if (lowerKey.includes('klasse')) lineasAsignadas = [claseUsuario];
+                    else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) lineasAsignadas = [profesionUsuario];
+                    else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) lineasAsignadas = [workplaceUsuario];
                     else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) lineasAsignadas = [profesoraUsuario];
-                    else if (lowerKey.includes('woche') || lowerKey.includes('semana')) lineasAsignadas = [semSeleccionada];
+                    else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) lineasAsignadas = [semSeleccionada];
                 }
 
                 lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
@@ -301,7 +318,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const y1Visual = Number(box.y1);
                 const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
-                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche') || lowerKey.includes('lehrer');
+                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
@@ -344,7 +361,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
 
             const pdfBytesFinales = await pdfDocLib.save();
-            const blob = new Blob([pdfBytesFinales], { type: 'application/pdf'}}, { type: 'application/pdf' });
+            const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `Ausbildungsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
