@@ -78,7 +78,8 @@
                             <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
                         </div>
                         <p class="text-[9px] text-amber-800">Arrastra para mover o redimensiona desde la esquina.</p>
-                        <button id="btnGuardarCoordenadas" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1.5 rounded hidden">💾 Guardar Cambios en Supabase</button>
+                        <!-- Botón de guardado siempre accesible al editar -->
+                        <button id="btnGuardarCoordenadas" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-2 rounded shadow hidden">💾 Guardar Cambios en Supabase</button>
                     </div>
 
                     <button id="btnActualizarVista" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold py-2 rounded shadow transition">
@@ -270,7 +271,7 @@
 
         btnActivarEdicion.addEventListener('click', () => {
             modoEdicionActivo = !modoEdicionActivo;
-            btnActivarEdicion.textContent = modoEdicionActivo ? "❌ Desactivar Edición" : "Activar Edición";
+            btnActivarEdicion.textContent = modoEdicionActivo ? "❌ Salir de Edición" : "Activar Edición";
             btnActivarEdicion.className = modoEdicionActivo ? "bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-1 rounded font-bold" : "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold";
             btnGuardarCoordenadas.classList.toggle('hidden', !modoEdicionActivo);
             redibujarOverlay();
@@ -370,7 +371,7 @@
         }
 
         btnGuardarCoordenadas.addEventListener('click', async () => {
-            if (!escuelaSeleccionadaId) return;
+            if (!escuelaSeleccionadaId) return alert("⚠️ Selecciona una escuela primero.");
 
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}`, {
@@ -382,11 +383,14 @@
                 if (response.ok) {
                     modoEdicionActivo = false;
                     btnActivarEdicion.textContent = "Activar Edición";
+                    btnActivarEdicion.className = "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold";
                     btnGuardarCoordenadas.classList.add('hidden');
                     redibujarOverlay();
-                    estadoInfo.textContent = "💾 ¡Coordenadas guardadas correctamente!";
+                    estadoInfo.textContent = "💾 ¡Coordenadas guardadas correctamente en Supabase!";
+                } else {
+                    alert("❌ Error al guardar en Supabase.");
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error(err); alert("❌ Error de red."); }
         });
 
         btnGenerarPDFDirecto.addEventListener('click', async () => {
@@ -401,7 +405,7 @@
                 const firstPage = pdfDocLib.getPages()[0];
                 const { height: pdfHeight } = firstPage.getSize();
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-                const fontBold = await PDFLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
                 const datosSemana = semanasAgrupadas[semSeleccionada] || {};
                 const nombreUsuario = selectUsuario.value;
@@ -412,7 +416,8 @@
                     const lowerKey = campo.toLowerCase();
                     let textoAsignado = '';
 
-                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora')) {
+                    // Filtrar estrictamente campos de horas/números o secciones que no sean texto plano de actividades
+                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
                         if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || []).join('\n');
                         else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || []).join('\n');
                         else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || []).join('\n');
@@ -449,8 +454,8 @@
                 estadoInfo.textContent = "🎉 ¡PDF generado y descargado con éxito!";
             } catch (err) {
                 console.error("DETALLE DEL ERROR PDF:", err);
-                estadoInfo.textContent = "❌ Error al generar el PDF (Revisa la consola).";
-                alert("Error generando el PDF. Abre la consola del navegador para ver el detalle.");
+                estadoInfo.textContent = "❌ Error al generar el PDF.";
+                alert("Ocurrió un error al generar el archivo. Revisa que las coordenadas sean válidas.");
             }
         });
     </script>
