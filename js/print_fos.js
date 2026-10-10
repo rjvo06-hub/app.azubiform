@@ -99,7 +99,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 1. CONSULTA DIRECTA A LA BASE DE DATOS DE USUARIO EN SUPABASE
+    // 1. CONSULTA DIRECTA A LA TABLA 'usuarios' EN SUPABASE
     try {
         estadoInfoModal.textContent = `⏳ Consultando datos de ${nombreUsuarioActual} en Supabase...`;
         
@@ -113,20 +113,18 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const usuario = dataUsr[0];
                 console.log("📦 Datos obtenidos de la tabla 'usuarios':", usuario);
 
-                // Extracción exhaustiva de campos de la tabla usuarios
-                escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
+                escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || '';
                 
-                // Capturamos la clase probando los nombres de columna más comunes
-                claseUsuario = usuario.klasse || usuario.clase || usuario.curso || usuario.grado || '-';
+                // Columnas exactas vistas en tu captura de Supabase
+                claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
+                workplaceUsuario = usuario.workplace || usuario.betrieb || '-';
+                profesoraUsuario = usuario.teacher || usuario.profesora || '-';
                 
-                workplaceUsuario = usuario.betrieb || usuario.workplace || usuario.ausbildungsstaette || usuario.lugar || '-';
-                profesoraUsuario = usuario.teacher || usuario.profesora || usuario.lehrer || '-';
-                
-                // Extraer el nombre corto o ID de la profesión
-                const idProfesion = usuario.ausbildung || usuario.profesion || usuario.fachrichtung;
+                // Obtener profesión usando el campo 'ausbildung'
+                const idProfesion = usuario.ausbildung;
                 
                 if (idProfesion) {
-                    // 2. CONSULTA A LA TABLA 'profesions' PARA OBTENER EL NOMBRE COMPLETO
+                    // 2. CONSULTA A LA TABLA 'profesions' PARA EL NOMBRE COMPLETO
                     const respProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?id=eq.${encodeURIComponent(idProfesion)}&select=*`, {
                         headers: { ...headers, 'Range': '0-9' }
                     });
@@ -142,7 +140,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Reflejar inmediatamente los datos en la tarjeta visual superior
+        // Reflejar de inmediato los datos en la tarjeta superior visual
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
@@ -186,7 +184,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 opt.textContent = `Woche: ${sem}`;
                 selectSemanaModal.appendChild(opt);
             });
-            estadoInfoModal.textContent = "✅ Datos de usuario y semanas cargados. Sube el PDF base.";
+            estadoInfoModal.textContent = "✅ Datos cargados correctamente. Sube el PDF base.";
         }
 
     } catch (err) {
@@ -295,7 +293,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || []).join('<br>');
                 else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('<br>');
                 else if (lowerKey.includes('schueler') || lowerKey.includes('name')) textoAsignado = nombreUsuarioActual;
-                else if (lowerKey.includes('klasse')) textoAsignado = claseUsuario;
+                else if (lowerKey.includes('klasse') || lowerKey.includes('class')) textoAsignado = claseUsuario;
                 else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) textoAsignado = profesionUsuario;
                 else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) textoAsignado = workplaceUsuario;
                 else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) textoAsignado = profesoraUsuario;
@@ -308,7 +306,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         }
     }
 
-    // Generar y descargar PDF definitivo con todos los datos de Supabase estampados
+    // Generar y descargar PDF definitivo con todos los datos estampados
     btnGenerarPdfModal.addEventListener('click', async () => {
         if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
@@ -341,7 +339,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) lineasAsignadas = datosSemana.donnerstag || [];
                     else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) lineasAsignadas = datosSemana.freitag || [];
                     else if (lowerKey.includes('schueler') || lowerKey.includes('name')) lineasAsignadas = [nombreUsuarioActual];
-                    else if (lowerKey.includes('klasse')) lineasAsignadas = [claseUsuario];
+                    else if (lowerKey.includes('klasse') || lowerKey.includes('class')) lineasAsignadas = [claseUsuario];
                     else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) lineasAsignadas = [profesionUsuario];
                     else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) lineasAsignadas = [workplaceUsuario];
                     else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) lineasAsignadas = [profesoraUsuario];
@@ -358,7 +356,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const y1Visual = Number(box.y1);
                 const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
-                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('lapso');
+                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
