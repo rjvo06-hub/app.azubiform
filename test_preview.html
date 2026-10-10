@@ -71,15 +71,22 @@
                         </div>
                     </div>
 
-                    <!-- Herramienta de Calibración Activa -->
+                    <!-- Herramienta de Calibración Global y Manual -->
                     <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200 space-y-2">
                         <div class="flex items-center justify-between">
                             <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
                             <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
                         </div>
-                        <p class="text-[9px] text-amber-800">Arrastra para mover o redimensiona desde la esquina.</p>
-                        <!-- Botón de guardado siempre accesible al editar -->
-                        <button id="btnGuardarCoordenadas" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-2 rounded shadow hidden">💾 Guardar Cambios en Supabase</button>
+                        <p class="text-[9px] text-amber-800">Arrastra cajas de forma individual o desplázalas todas juntas abajo:</p>
+                        
+                        <!-- Opción para desplazar todas las coordenadas hacia abajo -->
+                        <div class="flex space-x-1 pt-1">
+                            <input type="number" id="inputDesplazarY" value="30" class="w-20 p-1 text-xs border rounded bg-white text-center" placeholder="Píxeles">
+                            <button id="btnDesplazarTodoAbajo" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1 rounded">⬇️ Mover Todo 30px Abajo</button>
+                        </div>
+
+                        <!-- Botón de guardado -->
+                        <button id="btnGuardarCoordenadas" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold py-2 rounded shadow hidden">💾 Guardar Cambios en Supabase</button>
                     </div>
 
                     <button id="btnActualizarVista" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold py-2 rounded shadow transition">
@@ -111,6 +118,8 @@
         const selectSemana = document.getElementById('selectSemana');
         const btnActualizarVista = document.getElementById('btnActualizarVista');
         const btnActivarEdicion = document.getElementById('btnActivarEdicion');
+        const btnDesplazarTodoAbajo = document.getElementById('btnDesplazarTodoAbajo');
+        const inputDesplazarY = document.getElementById('inputDesplazarY');
         const btnGuardarCoordenadas = document.getElementById('btnGuardarCoordenadas');
         const btnGenerarPDFDirecto = document.getElementById('btnGenerarPDFDirecto');
         const estadoInfo = document.getElementById('estadoInfo');
@@ -277,6 +286,23 @@
             redibujarOverlay();
         });
 
+        // Botón para mover TODAS las coordenadas hacia abajo de forma masiva
+        btnDesplazarTodoAbajo.addEventListener('click', () => {
+            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas.");
+            const offset = parseFloat(inputDesplazarY.value) || 30;
+
+            for (const campo in coordenadasMap) {
+                const box = coordenadasMap[campo];
+                // En el sistema de PDF (origen abajo), restar a y1 y y2 mueve el bloque hacia abajo en la página visual
+                box.y1 -= offset;
+                box.y2 -= offset;
+            }
+
+            redibujarOverlay();
+            btnGuardarCoordenadas.classList.remove('hidden');
+            estadoInfo.textContent = `⬇️ Todas las coordenadas se movieron ${offset}px hacia abajo. ¡Guarda los cambios!`;
+        });
+
         function redibujarOverlay() {
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
@@ -350,6 +376,7 @@
                             x2: newLeft + widthPx,
                             y2: pageViewport.height / scale - newTop
                         };
+                        btnGuardarCoordenadas.classList.remove('hidden');
                     };
 
                     cajaVisual.addEventListener('pointerup', (e) => {
@@ -405,7 +432,7 @@
                 const firstPage = pdfDocLib.getPages()[0];
                 const { height: pdfHeight } = firstPage.getSize();
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-                const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                const fontBold = await PDFLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
                 const datosSemana = semanasAgrupadas[semSeleccionada] || {};
                 const nombreUsuario = selectUsuario.value;
@@ -416,7 +443,6 @@
                     const lowerKey = campo.toLowerCase();
                     let textoAsignado = '';
 
-                    // Filtrar estrictamente campos de horas/números o secciones que no sean texto plano de actividades
                     if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
                         if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || []).join('\n');
                         else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || []).join('\n');
@@ -448,7 +474,7 @@
                 const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = `Ausbildungsnachweis_${nombreUsuario}_${semSeleccionada}.pdf`;
+                link.download = `Ausbildungsnachweis_${nombreNode || nombreUsuario}_${semSeleccionada}.pdf`;
                 link.click();
 
                 estadoInfo.textContent = "🎉 ¡PDF generado y descargado con éxito!";
