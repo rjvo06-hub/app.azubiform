@@ -127,7 +127,7 @@
         let pdfDoc = null;
         let pageViewport = null;
         let scale = 1.2;
-        let archivoPdfOriginalBytes = null;
+        let archivoPdfOriginalBytes = null; // Guardará el respaldo intocable
         let coordenadasMap = {};
         let semanasAgrupadas = {};
         let registrosGlobales = [];
@@ -195,9 +195,13 @@
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            archivoPdfOriginalBytes = await file.arrayBuffer();
+            
+            // Guardamos el buffer original completo de respaldo
+            const bufferOriginal = await file.arrayBuffer();
+            archivoPdfOriginalBytes = bufferOriginal;
 
-            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes });
+            // Para la vista previa usamos un clon separado para que PDF.js no afecte al original
+            const loadingTask = pdfjsLib.getDocument({ data: bufferOriginal.slice(0) });
             pdfDoc = await loadingTask.promise;
             await renderPage(1);
             estadoInfo.textContent = "✅ PDF base cargado.";
@@ -435,9 +439,9 @@
             try {
                 estadoInfo.textContent = "⏳ Generando PDF final...";
                 
-                // SOLUCIÓN: Hacemos una copia independiente del ArrayBuffer para que PDF-Lib no détache el búfer original
-                const pdfBytesCllon = archivoPdfOriginalBytes.slice(0);
-                const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesCllon);
+                // Creamos un nuevo clon limpio del buffer original para la librería PDF-Lib
+                const pdfBytesClon = archivoPdfOriginalBytes.slice(0);
+                const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesClon);
                 
                 const firstPage = pdfDocLib.getPages()[0];
                 const { height: pdfHeight } = firstPage.getSize();
