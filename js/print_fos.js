@@ -6,7 +6,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     container.innerHTML = `
         <div class="space-y-4">
-            <!-- 1. Carga manual del PDF base (ya que no está en el repositorio) -->
+            <!-- 1. Carga manual del PDF base -->
             <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
                     <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Cargar Plantilla PDF Base</h3>
@@ -21,7 +21,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
                     <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ 2. Generar Ausbildungsnachweis</h3>
-                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar y descargar el documento.</p>
+                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar actividades, clase, profesora y fechas.</p>
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
                     <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium flex-1 sm:flex-initial">
@@ -62,13 +62,17 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let registrosGlobales = [];
     let escuelaSeleccionadaId = null;
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
+    
+    // Datos adicionales de la cuenta del usuario
+    let claseUsuario = localStorage.getItem('usuario_clase') || '';
+    let profesoraUsuario = localStorage.getItem('usuario_teacher') || localStorage.getItem('usuario_profesora') || '';
 
     if (!nombreUsuarioActual) {
         estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
         return;
     }
 
-    // Cargar datos del usuario y sus coordenadas automáticamente desde Supabase al abrir
+    // Cargar datos del usuario y sus coordenadas automáticamente desde Supabase
     try {
         estadoInfoModal.textContent = `⏳ Cargando perfil de ${nombreUsuarioActual}...`;
         
@@ -80,6 +84,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const dataUsr = await respUsuario.json();
             if (dataUsr.length > 0) {
                 escuelaSeleccionadaId = dataUsr[0].file_identifier || dataUsr[0].escuela || '';
+                // Si la clase o profesora están en la base de datos, las complementamos
+                if (dataUsr[0].klasse) claseUsuario = dataUsr[0].klasse;
+                if (dataUsr[0].teacher) profesoraUsuario = dataUsr[0].teacher;
             }
         }
 
@@ -128,7 +135,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         estadoInfoModal.textContent = "❌ Error al conectar con Supabase.";
     }
 
-    // Manejar la carga del archivo PDF por parte del usuario
     fosPdfFileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -173,10 +179,18 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const viernes = new Date(lunes);
             viernes.setDate(lunes.getDate() + 4);
 
-            const claveSemana = `${lunes.toLocaleDateString()} bis ${viernes.toLocaleDateString()}`;
+            const claveSemana = `${lunes.toLocaleDateString('de-DE')} bis ${viernes.toLocaleDateString('de-DE')}`;
 
             if (!semanas[claveSemana]) {
-                semanas[claveSemana] = { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
+                semanas[claveSemana] = { 
+                    lunes: [], 
+                    dienstag: [], 
+                    mittwoch: [], 
+                    donnerstag: [], 
+                    freitag: [],
+                    lunesFecha: lunes,
+                    viernesFecha: viernes
+                };
             }
 
             const d = new Date(reg.fecha).getDay();
@@ -227,7 +241,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || []).join('<br>');
                 else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || []).join('<br>');
                 else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('<br>');
-                else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuarioActual;
+                else if (lowerKey.includes('schueler') || lowerKey.includes('name')) textoAsignado = nombreUsuarioActual;
+                else if (lowerKey.includes('klasse')) textoAsignado = claseUsuario;
+                else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) textoAsignado = profesoraUsuario;
+                else if (lowerKey.includes('woche') || lowerKey.includes('semana')) textoAsignado = semSeleccionada;
             }
 
             const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
@@ -236,7 +253,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         }
     }
 
-    // Generar y descargar PDF definitivo
+    // Generar y descargar PDF definitivo con todos los campos automatizados
     btnGenerarPdfModal.addEventListener('click', async () => {
         if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
@@ -268,7 +285,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) lineasAsignadas = datosSemana.mittwoch || [];
                     else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) lineasAsignadas = datosSemana.donnerstag || [];
                     else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) lineasAsignadas = datosSemana.freitag || [];
-                    else if (lowerKey.includes('schueler')) lineasAsignadas = [nombreUsuarioActual];
+                    else if (lowerKey.includes('schueler') || lowerKey.includes('name')) lineasAsignadas = [nombreUsuarioActual];
+                    else if (lowerKey.includes('klasse')) lineasAsignadas = [claseUsuario];
+                    else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) lineasAsignadas = [profesoraUsuario];
+                    else if (lowerKey.includes('woche') || lowerKey.includes('semana')) lineasAsignadas = [semSeleccionada];
                 }
 
                 lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
@@ -281,7 +301,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const y1Visual = Number(box.y1);
                 const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
-                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
+                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche') || lowerKey.includes('lehrer');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
@@ -324,7 +344,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
 
             const pdfBytesFinales = await pdfDocLib.save();
-            const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
+            const blob = new Blob([pdfBytesFinales], { type: 'application/pdf'}}, { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `Ausbildungsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
