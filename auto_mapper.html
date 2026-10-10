@@ -289,15 +289,15 @@
 
                 if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
                     if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                        textoAsignado = (datosSemana.lunes || []).join('<br>');
+                        textoAsignado = (datosSemana.lunes || []).join(' • ');
                     } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                        textoAsignado = (datosSemana.dienstag || []).join('<br>');
+                        textoAsignado = (datosSemana.dienstag || []).join(' • ');
                     } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                        textoAsignado = (datosSemana.mittwoch || []).join('<br>');
+                        textoAsignado = (datosSemana.mittwoch || []).join(' • ');
                     } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                        textoAsignado = (datosSemana.donnerstag || []).join('<br>');
+                        textoAsignado = (datosSemana.donnerstag || []).join(' • ');
                     } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                        textoAsignado = (datosSemana.freitag || []).join('<br>');
+                        textoAsignado = (datosSemana.freitag || []).join(' • ');
                     } else if (lowerKey.includes('schueler')) {
                         textoAsignado = selectUsuario.value;
                     }
