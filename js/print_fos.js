@@ -5,7 +5,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     if (!container) return;
 
     container.innerHTML = `
-        <div class="space-y-4">
+        <div class="space-y-4 relative">
             <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS -->
             <div class="bg-indigo-900 text-white p-3 rounded-xl shadow-md space-y-2 text-xs">
                 <div class="flex justify-between items-center border-b border-indigo-700 pb-1.5">
@@ -58,6 +58,39 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
                 📌 Datos cargados correctamente. Sube el PDF base para comenzar.
             </div>
+
+            <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN -->
+            <div id="fosModalVerificacion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+                <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
+                    <div class="bg-indigo-900 text-white px-4 py-3 flex justify-between items-center">
+                        <h3 class="text-sm font-bold uppercase tracking-wider">🔍 Verificar Datos del Ausbildungsnachweis</h3>
+                        <button id="fosModalCerrarX" class="text-indigo-200 hover:text-white font-bold text-lg">&times;</button>
+                    </div>
+                    <div class="p-4 overflow-y-auto space-y-3 text-xs text-gray-700 flex-1">
+                        <p class="text-[11px] text-gray-500">Por favor, revisa que los datos y las actividades a imprimir sean correctos antes de generar el documento final:</p>
+                        
+                        <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 grid grid-cols-2 gap-2">
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Estudiante:</span><strong id="fosValNombre" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Clase:</span><strong id="fosValClase" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Semana:</span><strong id="fosValSemana" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Profesión:</span><strong id="fosValProfesion" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Lugar de Trabajo:</span><strong id="fosValWorkplace" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Profesora:</span><strong id="fosValProfesora" class="text-indigo-900">-</strong></div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-gray-800 uppercase text-[10px] mb-1">📋 Actividades Registradas para esta Semana:</h4>
+                            <div id="fosValActividades" class="bg-gray-50 p-2.5 rounded-lg border border-gray-200 space-y-1 text-[11px] max-h-40 overflow-y-auto">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+                        <button id="fosModalBtnCancelar" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold px-3 py-1.5 rounded text-xs transition">Cancelar</button>
+                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded text-xs transition shadow">Confirmar y Descargar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 
@@ -67,6 +100,20 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const estadoInfoModal = document.getElementById('fosEstadoInfoModal');
     const canvasModal = document.getElementById('fosPdfCanvasModal');
     const drawingOverlayModal = document.getElementById('fosDrawingOverlayModal');
+
+    // Referencias del Modal
+    const fosModalVerificacion = document.getElementById('fosModalVerificacion');
+    const fosModalCerrarX = document.getElementById('fosModalCerrarX');
+    const fosModalBtnCancelar = document.getElementById('fosModalBtnCancelar');
+    const fosModalBtnConfirmar = document.getElementById('fosModalBtnConfirmar');
+
+    const fosValNombre = document.getElementById('fosValNombre');
+    const fosValClase = document.getElementById('fosValClase');
+    const fosValSemana = document.getElementById('fosValSemana');
+    const fosValProfesion = document.getElementById('fosValProfesion');
+    const fosValWorkplace = document.getElementById('fosValWorkplace');
+    const fosValProfesora = document.getElementById('fosValProfesora');
+    const fosValActividades = document.getElementById('fosValActividades');
 
     // Elementos de la tarjeta visual superior
     const fosResNombre = document.getElementById('fosResNombre');
@@ -109,17 +156,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const dataUsr = await respUsuario.json();
             if (dataUsr.length > 0) {
                 const usuario = dataUsr[0];
-                console.log("📦 Datos completos del usuario en Supabase:", usuario);
-
-                // Asignamos la escuela del usuario, o por defecto 'fos_holzkirchen' si está vacía
                 escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
-                
                 claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
                 workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
                 
-                if (usuario.teacher) {
-                    profesoraUsuario = usuario.teacher;
-                }
+                if (usuario.teacher) profesoraUsuario = usuario.teacher;
                 
                 const codigoProfesion = usuario.ausbildung;
                 if (codigoProfesion) {
@@ -138,18 +179,13 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Actualizar la tarjeta visual superior
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
         fosResProfesora.textContent = profesoraUsuario;
 
-        // Si por alguna razón sigue vacío, forzamos 'fos_holzkirchen'
-        if (!escuelaSeleccionadaId) {
-            escuelaSeleccionadaId = 'fos_holzkirchen';
-        }
+        if (!escuelaSeleccionadaId) escuelaSeleccionadaId = 'fos_holzkirchen';
 
-        // Consultar coordenadas en school_templates usando 'fos_holzkirchen'
         let respTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
         });
@@ -158,22 +194,17 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const tplData = await respTpl.json();
             if (tplData.length > 0) {
                 coordenadasMap = tplData[0].coordinates_json || {};
-                console.log("🗺️ Coordenadas cargadas exitosamente para:", escuelaSeleccionadaId);
             } else {
-                // Respaldo de emergencia: tomar la primera plantilla disponible en la tabla
                 const respTemplates = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, {
                     headers: { ...headers, 'Range': '0-9' }
                 });
                 if (respTemplates.ok) {
                     const templates = await respTemplates.json();
-                    if (templates.length > 0) {
-                        coordenadasMap = templates[0].coordinates_json || {};
-                    }
+                    if (templates.length > 0) coordenadasMap = templates[0].coordinates_json || {};
                 }
             }
         }
 
-        // Cargar registros diarios del usuario
         const respReg = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
         });
@@ -309,12 +340,55 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         }
     }
 
-    // Generar y descargar PDF definitivo
-    btnGenerarPdfModal.addEventListener('click', async () => {
+    // 1. Al hacer clic en Descargar PDF, abrimos primero el modal de verificación
+    btnGenerarPdfModal.addEventListener('click', () => {
         if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
         const semSeleccionada = selectSemanaModal.value;
         if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
+
+        // Poblar datos en el modal
+        fosValNombre.textContent = nombreUsuarioActual;
+        fosValClase.textContent = claseUsuario;
+        fosValSemana.textContent = semSeleccionada;
+        fosValProfesion.textContent = profesionUsuario;
+        fosValWorkplace.textContent = workplaceUsuario;
+        fosValProfesora.textContent = profesoraUsuario;
+
+        const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+        const dias = [
+            { nombre: 'Montag (Lunes)', items: datosSemana.lunes },
+            { nombre: 'Dienstag (Martes)', items: datosSemana.dienstag },
+            { nombre: 'Mittwoch (Miércoles)', items: datosSemana.mittwoch },
+            { nombre: 'Donnerstag (Jueves)', items: datosSemana.donnerstag },
+            { nombre: 'Freitag (Viernes)', items: datosSemana.freitag }
+        ];
+
+        let htmlActividades = '';
+        dias.forEach(dia => {
+            const listado = (dia.items || []).filter(i => i && i.trim() !== '');
+            htmlActividades += `
+                <div>
+                    <span class="font-semibold text-indigo-900">${dia.nombre}:</span>
+                    <span class="text-gray-600">${listado.length > 0 ? listado.join(' | ') : '<span class="italic text-gray-400">Sin actividades</span>'}</span>
+                </div>
+            `;
+        });
+        fosValActividades.innerHTML = htmlActividades;
+
+        // Mostrar el modal
+        fosModalVerificacion.classList.remove('hidden');
+    });
+
+    // Funciones para cerrar el modal
+    const cerrarModal = () => fosModalVerificacion.classList.add('hidden');
+    fosModalCerrarX.addEventListener('click', cerrarModal);
+    fosModalBtnCancelar.addEventListener('click', cerrarModal);
+
+    // 2. Al confirmar en el modal, se procede a generar y descargar el PDF definitivo
+    fosModalBtnConfirmar.addEventListener('click', async () => {
+        cerrarModal();
+        const semSeleccionada = selectSemanaModal.value;
 
         try {
             estadoInfoModal.textContent = "⏳ Generando PDF final...";
