@@ -6,6 +6,21 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     container.innerHTML = `
         <div class="space-y-4">
+            <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS -->
+            <div class="bg-indigo-900 text-white p-3 rounded-xl shadow-md space-y-2 text-xs">
+                <div class="flex justify-between items-center border-b border-indigo-700 pb-1.5">
+                    <span class="font-bold uppercase tracking-wider text-indigo-200">👤 Datos del Reporte Activo (Supabase)</span>
+                    <span id="fosLblSemanaActual" class="bg-emerald-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">Semana: No seleccionada</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Nombre:</span><strong id="fosResNombre" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Clase:</span><strong id="fosResClase" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Profesión:</span><strong id="fosResProfesion" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Lugar (Betrieb):</span><strong id="fosResWorkplace" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Profesora:</span><strong id="fosResProfesora" class="text-white">Cargando...</strong></div>
+                </div>
+            </div>
+
             <!-- 1. Carga manual del PDF base -->
             <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
@@ -21,11 +36,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
                     <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ 2. Generar Ausbildungsnachweis</h3>
-                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar actividades, clase, profesión y fechas.</p>
+                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar toda la información.</p>
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
                     <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium flex-1 sm:flex-initial">
-                        <option value="">-- Carga el PDF y selecciona semana --</option>
+                        <option value="">-- Selecciona semana --</option>
                     </select>
                     <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition whitespace-nowrap">
                         🚀 Descargar PDF
@@ -34,14 +49,14 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             </div>
 
             <!-- Visor / Canvas -->
-            <div class="bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[50vh] relative border border-gray-300">
+            <div class="bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[45vh] relative border border-gray-300">
                 <div class="relative inline-block shadow-2xl" id="fosCanvasContainerModal">
                     <canvas id="fosPdfCanvasModal" class="block"></canvas>
                     <div id="fosDrawingOverlayModal" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
-                📌 Sube primero el PDF base para comenzar.
+                📌 Datos cargados correctamente. Sube el PDF base para comenzar.
             </div>
         </div>
     `;
@@ -53,6 +68,14 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const canvasModal = document.getElementById('fosPdfCanvasModal');
     const drawingOverlayModal = document.getElementById('fosDrawingOverlayModal');
 
+    // Elementos de la tarjeta visual superior
+    const fosResNombre = document.getElementById('fosResNombre');
+    const fosResClase = document.getElementById('fosResClase');
+    const fosResProfesion = document.getElementById('fosResProfesion');
+    const fosResWorkplace = document.getElementById('fosResWorkplace');
+    const fosResProfesora = document.getElementById('fosResProfesora');
+    const fosLblSemanaActual = document.getElementById('fosLblSemanaActual');
+
     let pdfDoc = null;
     let pageViewport = null;
     let scale = 1.0;
@@ -63,19 +86,22 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let escuelaSeleccionadaId = null;
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     
-    // Variables de perfil
-    let claseUsuario = '';
-    let profesionUsuario = '';
-    let profesoraUsuario = localStorage.getItem('usuario_teacher') || localStorage.getItem('usuario_profesora') || '';
+    // Variables de perfil extraídas de Supabase
+    let claseUsuario = '-';
+    let profesionUsuario = '-';
+    let workplaceUsuario = '-';
+    let profesoraUsuario = '-';
 
     if (!nombreUsuarioActual) {
         estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
         return;
     }
 
-    // 1. Cargar datos del usuario, su profesión relacionada y sus coordenadas desde Supabase
+    fosResNombre.textContent = nombreUsuarioActual;
+
+    // 1. CONSULTA DIRECTA Y OBLIGATORIA A LA BASE DE DATOS DE USUARIO EN SUPABASE
     try {
-        estadoInfoModal.textContent = `⏳ Cargando perfil de ${nombreUsuarioActual}...`;
+        estadoInfoModal.textContent = `⏳ Consultando datos de ${nombreUsuarioActual} en Supabase...`;
         
         const respUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
@@ -85,13 +111,20 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const dataUsr = await respUsuario.json();
             if (dataUsr.length > 0) {
                 const usuario = dataUsr[0];
+                console.log("📦 Datos obtenidos de la tabla 'usuarios':", usuario);
+
+                // Extracción directa de campos desde Supabase
                 escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
-                claseUsuario = usuario.klasse || usuario.clase || '';
+                claseUsuario = usuario.clase || usuario.klasse || '-';
+                workplaceUsuario = usuario.betrieb || usuario.workplace || usuario.ausbildungsstaette || '-';
+                profesoraUsuario = usuario.teacher || usuario.profesora || usuario.lehrer || '-';
                 
-                // Si el usuario tiene una profesión asociada (ID o código), consultamos la tabla profesiones
-                const idProfesion = usuario.profesion || usuario.ausbildung || usuario.fachrichtung;
+                // Extraer el nombre corto/ID de la profesión (ej. en la columna ausbildung o profesion)
+                const idProfesion = usuario.ausbildung || usuario.profesion || usuario.fachrichtung;
+                
                 if (idProfesion) {
-                    const respProf = await fetch(`${SUPABASE_URL}/rest/v1/profesiones?id=eq.${encodeURIComponent(idProfesion)}&select=*`, {
+                    // 2. CONSULTA A LA TABLA 'profesions' PARA OBTENER EL NOMBRE COMPLETO
+                    const respProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?id=eq.${encodeURIComponent(idProfesion)}&select=*`, {
                         headers: { ...headers, 'Range': '0-9' }
                     });
                     if (respProf.ok) {
@@ -106,6 +139,13 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
+        // Reflejar de inmediato los datos extraídos en la tarjeta superior visual
+        fosResClase.textContent = claseUsuario;
+        fosResProfesion.textContent = profesionUsuario;
+        fosResWorkplace.textContent = workplaceUsuario;
+        fosResProfesora.textContent = profesoraUsuario;
+
+        // Cargar plantilla y coordenadas de la escuela
         if (!escuelaSeleccionadaId) {
             const respTemplates = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=file_identifier`, {
                 headers: { ...headers, 'Range': '0-9' }
@@ -143,11 +183,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 opt.textContent = `Woche: ${sem}`;
                 selectSemanaModal.appendChild(opt);
             });
-            estadoInfoModal.textContent = `✅ Registros cargados. Por favor, selecciona el archivo PDF base arriba.`;
+            estadoInfoModal.textContent = "✅ Datos de usuario y semanas cargados. Sube el PDF base.";
         }
 
     } catch (err) {
-        console.error("Error cargando datos de Supabase:", err);
+        console.error("Error conectando con Supabase:", err);
         estadoInfoModal.textContent = "❌ Error al conectar con Supabase.";
     }
 
@@ -160,7 +200,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
             pdfDoc = await loadingTask.promise;
             await renderizarPaginaModal(1);
-            estadoInfoModal.textContent = "✅ PDF base cargado correctamente. Selecciona una semana.";
+            estadoInfoModal.textContent = "✅ PDF base cargado. Selecciona la semana para visualizar.";
         } catch (err) {
             console.error(err);
             estadoInfoModal.textContent = "❌ Error al procesar el archivo PDF.";
@@ -180,7 +220,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         redibujarOverlayModal();
     }
 
-    selectSemanaModal.addEventListener('change', () => {
+    selectSemanaModal.addEventListener('change', (e) => {
+        const semSeleccionada = e.target.value;
+        fosLblSemanaActual.textContent = semSeleccionada ? `Semana: ${semSeleccionada}` : "Semana: No seleccionada";
         if (pdfDoc) redibujarOverlayModal();
     });
 
@@ -252,8 +294,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 else if (lowerKey.includes('schueler') || lowerKey.includes('name')) textoAsignado = nombreUsuarioActual;
                 else if (lowerKey.includes('klasse')) textoAsignado = claseUsuario;
                 else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) textoAsignado = profesionUsuario;
+                else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) textoAsignado = workplaceUsuario;
                 else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) textoAsignado = profesoraUsuario;
-                else if (lowerKey.includes('woche') || lowerKey.includes('semana')) textoAsignado = semSeleccionada;
+                else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) textoAsignado = semSeleccionada;
             }
 
             const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
@@ -262,7 +305,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         }
     }
 
-    // Generar y descargar PDF definitivo
+    // Generar y descargar PDF definitivo con todos los datos de Supabase estampados
     btnGenerarPdfModal.addEventListener('click', async () => {
         if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
@@ -297,8 +340,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     else if (lowerKey.includes('schueler') || lowerKey.includes('name')) lineasAsignadas = [nombreUsuarioActual];
                     else if (lowerKey.includes('klasse')) lineasAsignadas = [claseUsuario];
                     else if (lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('fachrichtung') || lowerKey.includes('profesion')) lineasAsignadas = [profesionUsuario];
+                    else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) lineasAsignadas = [workplaceUsuario];
                     else if (lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) lineasAsignadas = [profesoraUsuario];
-                    else if (lowerKey.includes('woche') || lowerKey.includes('semana')) lineasAsignadas = [semSeleccionada];
+                    else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) lineasAsignadas = [semSeleccionada];
                 }
 
                 lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
@@ -311,7 +355,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const y1Visual = Number(box.y1);
                 const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
-                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('ausbildung') || lowerKey.includes('beruf');
+                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('ausbildung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
