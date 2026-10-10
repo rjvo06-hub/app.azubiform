@@ -143,7 +143,6 @@
         cargarListaPlantillas();
         cargarListaUsuarios();
 
-        // Lectura robusta mediante FileReader para evitar errores de búfer binario en PDF-Lib
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -253,7 +252,7 @@
             return semanas;
         }
 
-        // ACCIÓN UNIFICADA: Pinta en pantalla y genera/descarga automáticamente el PDF
+        // ACCIÓN UNIFICADA: Pinta en pantalla y genera/descarga automáticamente el PDF de forma segura
         btnGenerarVista.addEventListener('click', async () => {
             if (!pdfDoc || !archivoPdfArrayBuffer) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
@@ -272,7 +271,7 @@
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
 
                 for (const [campo, box] of Object.entries(coordenadasMap)) {
-                    if (!box) continue;
+                    if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
                     const lowerKey = campo.toLowerCase();
                     let textoAsignado = '';
                     let fontSize = 8;
@@ -305,8 +304,8 @@
 
                     try {
                         firstPage.drawText(textoAsignado, {
-                            x: box.x1,
-                            y: box.y1 + 2,
+                            x: Number(box.x1),
+                            y: Number(box.y1) + 2,
                             size: fontSize,
                             font: font,
                             color: PDFLib.rgb(0, 0, 0),
@@ -327,7 +326,7 @@
                 estadoInfo.textContent = "✨ ¡Datos pintados y PDF descargado con éxito!";
             } catch (err) {
                 console.error("Error al generar PDF:", err);
-                alert("❌ Error al generar el archivo PDF.");
+                alert("❌ Error al generar el archivo PDF. Verifica que el archivo PDF base sea válido.");
             }
         });
 
