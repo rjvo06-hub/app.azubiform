@@ -250,7 +250,7 @@
             return semanas;
         }
 
-        // ACCIÓN UNIFICADA: Pinta visualmente y descarga de forma robusta
+        // ACCIÓN UNIFICADA: Pintar vista previa y generar descarga automática del PDF
         btnGenerarVista.addEventListener('click', async () => {
             if (!pdfDoc || !archivoPdfFile) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
@@ -262,18 +262,18 @@
             // 1. Pintar vista previa visual en pantalla
             redibujarDatosVisuales(datosSemana);
 
-            // 2. Generar y descargar el PDF de forma automática inmediata
+            // 2. Generar y descargar el PDF con pdf-lib usando los tamaños exactos requeridos
             try {
                 const existingPdfBytes = await archivoPdfFile.arrayBuffer();
                 const pdfDocLib = await PDFLib.PDFDocument.load(existingPdfBytes);
                 const firstPage = pdfDocLib.getPages()[0];
+                const { height: pageHeight } = firstPage.getSize();
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
 
                 for (const [campo, box] of Object.entries(coordenadasMap)) {
-                    if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
+                    if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined') continue;
                     const lowerKey = campo.toLowerCase();
                     let textoAsignado = '';
-                    let fontSize = 8;
 
                     if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
                         if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
@@ -293,18 +293,22 @@
 
                     if (!textoAsignado) continue;
 
+                    // Tamaños estrictos: 8 px para cabeceras/datos principales, 4.5 px para actividades
                     const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
                                                  lowerKey.includes('klasse') || 
                                                  lowerKey.includes('woche') || 
                                                  lowerKey.includes('bericht') || 
                                                  lowerKey.includes('ausbildung');
 
-                    fontSize = esEncabezadoOSimilar ? 8 : 4.5;
+                    const fontSize = esEncabezadoOSimilar ? 8 : 4.5;
+
+                    const x = Number(box.x1);
+                    const y = pageHeight - Number(box.y2);
 
                     try {
                         firstPage.drawText(textoAsignado, {
-                            x: Number(box.x1),
-                            y: Number(box.y1) + 2,
+                            x: x,
+                            y: y,
                             size: fontSize,
                             font: font,
                             color: PDFLib.rgb(0, 0, 0),
@@ -325,7 +329,7 @@
                 estadoInfo.textContent = "✨ ¡Datos pintados y PDF descargado con éxito!";
             } catch (err) {
                 console.error("Error al generar PDF:", err);
-                alert("❌ Error al generar el archivo PDF. Asegúrate de haber seleccionado una plantilla de coordenadas válida.");
+                alert("❌ Error al generar el archivo PDF.");
             }
         });
 
