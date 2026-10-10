@@ -17,25 +17,10 @@
         .draggable-box {
             touch-action: none;
             user-select: none;
-            resize: both;
-            overflow: auto;
-            position: relative;
-        }
-        /* Puntos/tiradores visuales más grandes y cómodos para tocar en el teléfono */
-        .handle-dot {
+            resize: both !important;
+            overflow: auto !important;
             position: absolute;
-            width: 12px;
-            height: 12px;
-            background-color: #ffffff;
-            border: 2px solid #dc2626;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 20;
         }
-        .handle-tl { top: -6px; left: -6px; }
-        .handle-tr { top: -6px; right: -6px; }
-        .handle-bl { bottom: -6px; left: -6px; }
-        .handle-br { bottom: -6px; right: -6px; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
@@ -93,7 +78,7 @@
                             <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
                             <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
                         </div>
-                        <p class="text-[9px] text-amber-800">Arrastra cajas de forma individual o desplázalas todas juntas abajo:</p>
+                        <p class="text-[9px] text-amber-800">Arrastra cajas o estira la esquina inferior derecha para ajustar el ancho:</p>
                         
                         <!-- Opción para desplazar todas las coordenadas hacia abajo -->
                         <div class="flex space-x-1 pt-1">
@@ -339,25 +324,15 @@
 
                 const left = x1 * scale;
                 const top = pageViewport.height - (y2 * scale);
-                const width = Math.max(10, (x2 - x1) * scale);
+                const width = Math.max(20, (x2 - x1) * scale);
                 const height = Math.max(10, (y2 - y1) * scale);
 
                 const cajaVisual = document.createElement('div');
-                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md resize' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
+                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
                 cajaVisual.style.height = `${height}px`;
-
-                // Agregamos tiradores visuales grandes en las esquinas para facilitar la manipulación táctil
-                if (modoEdicionActivo) {
-                    cajaVisual.innerHTML += `
-                        <div class="handle-dot handle-tl"></div>
-                        <div class="handle-dot handle-tr"></div>
-                        <div class="handle-dot handle-bl"></div>
-                        <div class="handle-dot handle-br"></div>
-                    `;
-                }
 
                 const lowerKey = campo.toLowerCase();
                 let textoAsignado = '';
@@ -372,14 +347,15 @@
                 }
 
                 const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
-                cajaVisual.innerHTML += `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
+                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
 
                 if (modoEdicionActivo) {
                     let isDragging = false;
                     let startX, startY, initialLeft, initialTop;
 
                     cajaVisual.addEventListener('pointerdown', (e) => {
-                        if (e.offsetX > cajaVisual.offsetWidth - 15 && e.offsetY > cajaVisual.offsetHeight - 15) return;
+                        // Permitir la redimensión nativa si hace clic en la esquina inferior derecha
+                        if (e.offsetX > cajaVisual.offsetWidth - 20 && e.offsetY > cajaVisual.offsetHeight - 20) return;
                         isDragging = true;
                         startX = e.clientX;
                         startY = e.clientY;
@@ -497,7 +473,7 @@
 
                     const x = Number(box.x1);
                     
-                    // ANCHO REAL RESPETADO: Usamos exactamente el ancho que midas/calibres con tu caja (x2 - x1)
+                    // ANCHO EXACTO CALIBRADO: Respeta milimétricamente el ancho que estires en la PC
                     const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                     
                     const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
@@ -509,7 +485,7 @@
                     const fuenteUsada = esEncabezado ? fontBold : font;
                     const espaciadoLineas = fontSize * 1.4;
 
-                    // Ajuste automático de texto (Word Wrapping) basado estrictamente en el ancho de la caja que dibujes
+                    // Ajuste automático de texto (Word Wrapping) estrictamente con el ancho que definas
                     let lineasFinalesParaDibujar = [];
                     lineasAsignadas.forEach(parrafo => {
                         const palabras = String(parrafo).trim().split(/\s+/);
@@ -531,7 +507,7 @@
                         }
                     });
 
-                    // Dibujamos respetando los límites de tu caja calibrada
+                    // Dibujamos respetando el ancho exacto guardado
                     lineasFinalesParaDibujar.forEach((linea, index) => {
                         const yActual = yPdfLibTop - (index * espaciadoLineas);
 
