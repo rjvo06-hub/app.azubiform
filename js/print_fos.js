@@ -4,17 +4,28 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Estructura interna para el visor y generador automático dentro del modal
     container.innerHTML = `
         <div class="space-y-4">
+            <!-- 1. Carga manual del PDF base (ya que no está en el repositorio) -->
+            <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div>
+                    <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Cargar Plantilla PDF Base</h3>
+                    <p class="text-[10px] text-amber-700">Selecciona el archivo PDF original de la escuela.</p>
+                </div>
+                <div class="w-full sm:w-auto">
+                    <input type="file" id="fosPdfFileInput" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-amber-100 file:text-amber-800 w-full cursor-pointer">
+                </div>
+            </div>
+
+            <!-- 2. Selección de Semana y Descarga -->
             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
-                    <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ Generador Automático Ausbildungsnachweis</h3>
-                    <p class="text-[10px] text-indigo-700">Genera el PDF definitivo con las actividades de la semana visualizada.</p>
+                    <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ 2. Generar Ausbildungsnachweis</h3>
+                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar y descargar el documento.</p>
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
                     <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium flex-1 sm:flex-initial">
-                        <option value="">-- Selecciona semana --</option>
+                        <option value="">-- Carga el PDF y selecciona semana --</option>
                     </select>
                     <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition whitespace-nowrap">
                         🚀 Descargar PDF
@@ -22,18 +33,20 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 </div>
             </div>
 
-            <div class="bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[60vh] relative border border-gray-300">
+            <!-- Visor / Canvas -->
+            <div class="bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[50vh] relative border border-gray-300">
                 <div class="relative inline-block shadow-2xl" id="fosCanvasContainerModal">
                     <canvas id="fosPdfCanvasModal" class="block"></canvas>
                     <div id="fosDrawingOverlayModal" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
-                📌 Cargando datos del usuario...
+                📌 Sube primero el PDF base para comenzar.
             </div>
         </div>
     `;
 
+    const fosPdfFileInput = document.getElementById('fosPdfFileInput');
     const selectSemanaModal = document.getElementById('fosSelectSemanaModal');
     const btnGenerarPdfModal = document.getElementById('btnGenerarPdfModal');
     const estadoInfoModal = document.getElementById('fosEstadoInfoModal');
@@ -55,11 +68,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         return;
     }
 
-    // 1. Obtener datos del usuario y su escuela/institución asignada desde Supabase
+    // Cargar datos del usuario y sus coordenadas automáticamente desde Supabase al abrir
     try {
-        estadoInfoModal.textContent = `⏳ Cargando información de ${nombreUsuarioActual}...`;
+        estadoInfoModal.textContent = `⏳ Cargando perfil de ${nombreUsuarioActual}...`;
         
-        // Consultamos la tabla de usuarios o perfil para obtener su institución/escuela
         const respUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
         });
@@ -67,12 +79,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         if (respUsuario.ok) {
             const dataUsr = await respUsuario.json();
             if (dataUsr.length > 0) {
-                // Suponemos que el campo en tu tabla se llama 'escuela', 'institution' o 'file_identifier'
-                escuelaSeleccionadaId = dataUsr[0].file_identifier || dataUsr[0].escuela || 'default_school';
+                escuelaSeleccionadaId = dataUsr[0].file_identifier || dataUsr[0].escuela || '';
             }
         }
 
-        // Si no se encontró en la tabla, asignamos un identificador por defecto o el primero disponible
         if (!escuelaSeleccionadaId) {
             const respTemplates = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=file_identifier`, {
                 headers: { ...headers, 'Range': '0-9' }
@@ -83,7 +93,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // 2. Cargar coordenadas y plantilla PDF de la escuela
         if (escuelaSeleccionadaId) {
             const respTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}&select=*`, {
                 headers: { ...headers, 'Range': '0-999' }
@@ -96,23 +105,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // 3. Cargar el PDF base desde la ruta estática de tu repositorio (ajusta la ruta según tu estructura)
-        const rutaPdfBase = `./pdfs/${escuelaSeleccionadaId}.pdf` || './pdfs/default.pdf';
-        try {
-            const pdfResp = await fetch(rutaPdfBase);
-            if (pdfResp.ok) {
-                archivoPdfOriginalBytes = await pdfResp.arrayBuffer();
-                const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
-                pdfDoc = await loadingTask.promise;
-                await renderizarPaginaModal(1);
-            } else {
-                console.warn("⚠️ No se pudo cargar el PDF base desde la ruta local, se intentará usar respaldo.");
-            }
-        } catch (e) {
-            console.warn("⚠️ Error cargando PDF local:", e);
-        }
-
-        // 4. Cargar registros diarios del usuario
+        // Cargar registros diarios del usuario
         const respReg = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
         });
@@ -127,13 +120,30 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 opt.textContent = `Woche: ${sem}`;
                 selectSemanaModal.appendChild(opt);
             });
-            estadoInfoModal.textContent = `✅ Datos listos para ${nombreUsuarioActual}. Selecciona una semana.`;
+            estadoInfoModal.textContent = `✅ Registros cargados. Por favor, selecciona el archivo PDF base arriba.`;
         }
 
     } catch (err) {
-        console.error("Error inicializando FOS modal:", err);
-        estadoInfoModal.textContent = "❌ Error al cargar los datos de la sesión.";
+        console.error("Error cargando datos de Supabase:", err);
+        estadoInfoModal.textContent = "❌ Error al conectar con Supabase.";
     }
+
+    // Manejar la carga del archivo PDF por parte del usuario
+    fosPdfFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            archivoPdfOriginalBytes = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
+            pdfDoc = await loadingTask.promise;
+            await renderizarPaginaModal(1);
+            estadoInfoModal.textContent = "✅ PDF base cargado correctamente. Selecciona una semana.";
+        } catch (err) {
+            console.error(err);
+            estadoInfoModal.textContent = "❌ Error al procesar el archivo PDF.";
+        }
+    });
 
     async function renderizarPaginaModal(num) {
         if (!pdfDoc) return;
@@ -226,12 +236,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         }
     }
 
-    // Generar y descargar PDF definitivo con un clic
+    // Generar y descargar PDF definitivo
     btnGenerarPdfModal.addEventListener('click', async () => {
-        if (!archivoPdfOriginalBytes) return alert("⚠️ No se ha cargado la plantilla PDF base.");
-        if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas configuradas para esta escuela.");
+        if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
+        if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
         const semSeleccionada = selectSemanaModal.value;
-        if (!semSeleccionada) return alert("⚠️ Selecciona una semana primero.");
+        if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
         try {
             estadoInfoModal.textContent = "⏳ Generando PDF final...";
