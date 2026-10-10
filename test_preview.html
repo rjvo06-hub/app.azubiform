@@ -447,37 +447,44 @@
                     if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined' || isNaN(box.x1) || isNaN(box.y2)) continue;
 
                     const lowerKey = campo.toLowerCase();
-                    let textoAsignado = '';
+                    let lineasAsignadas = [];
 
                     if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
-                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || []).join('\n');
-                        else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || []).join('\n');
-                        else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || []).join('\n');
-                        else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || []).join('\n');
-                        else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('\n');
-                        else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
+                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) lineasAsignadas = datosSemana.lunes || [];
+                        else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) lineasAsignadas = datosSemana.dienstag || [];
+                        else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) lineasAsignadas = datosSemana.mittwoch || [];
+                        else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) lineasAsignadas = datosSemana.donnerstag || [];
+                        else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) lineasAsignadas = datosSemana.freitag || [];
+                        else if (lowerKey.includes('schueler')) lineasAsignadas = [nombreUsuario];
                     }
 
-                    if (!textoAsignado || textoAsignado.trim() === '') continue;
+                    // Filtramos líneas vacías o nulas automáticamente
+                    lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
+                    if (lineasAsignadas.length === 0) continue;
 
-                    try {
-                        const x = Number(box.x1);
-                        const y = pdfHeight - Number(box.y2); 
-                        const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
-                        const fontSize = esEncabezado ? 7 : 5;
+                    const x = Number(box.x1);
+                    let yInicial = pdfHeight - Number(box.y2) + 2; 
+                    const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
+                    const fontSize = esEncabezado ? 7 : 5;
+                    const espaciadoLineas = fontSize * 1.4; // Espacio vertical automático entre líneas
 
-                        firstPage.drawText(textoAsignado, {
-                            x: x,
-                            y: y + 2,
-                            size: fontSize,
-                            font: esEncabezado ? fontBold : font,
-                            color: PDFLib.rgb(0, 0, 0),
-                            maxWidth: Math.max(10, Number(box.x2) - Number(box.x1)),
-                            lineHeight: fontSize * 1.2
-                        });
-                    } catch (innerErr) {
-                        console.warn(`No se pudo estampar el campo ${campo}:`, innerErr);
-                    }
+                    // Dibujamos cada actividad de forma individual hacia abajo de manera automática
+                    lineasAsignadas.forEach((linea, index) => {
+                        const yActual = yInicial - (index * espaciadoLineas);
+
+                        try {
+                            firstPage.drawText(linea, {
+                                x: x,
+                                y: yActual,
+                                size: fontSize,
+                                font: esEncabezado ? fontBold : font,
+                                color: PDFLib.rgb(0, 0, 0),
+                                maxWidth: Math.max(10, Number(box.x2) - Number(box.x1))
+                            });
+                        } catch (innerErr) {
+                            console.warn(`No se pudo estampar la línea en ${campo}:`, innerErr);
+                        }
+                    });
                 }
 
                 const pdfBytesFinales = await pdfDocLib.save();
