@@ -1,4 +1,4 @@
-limport { SUPABASE_URL, headers } from './config.js';
+import { SUPABASE_URL, headers } from './config.js';
 
 export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPreseleccionado = null) {
     const container = document.getElementById(containerId);
@@ -131,6 +131,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let coordenadasMap = {};
     let semanasAgrupadas = {};
     
+    // 🔐 Recuperación correcta del usuario actual (sesión)
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     if (!nombreUsuarioActual) {
         estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
@@ -161,7 +162,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
         const claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
         const workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
-        const profesoraUsuario = usuario.teacher || '-'; // Única fuente de verdad en BD
+        const profesoraUsuario = usuario.teacher || '-'; 
         const codigoProfesion = usuario.ausbildung;
 
         // 2. Consultar profesión y plantilla en paralelo
