@@ -15,8 +15,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <style>
         .draggable-box {
-            touch-action: none; /* Evita que el navegador haga scroll al intentar mover la caja */
+            touch-action: none;
             user-select: none;
+            resize: both; /* Permite redimensionar la caja libremente */
+            overflow: auto; /* Necesario para que funcione el resize visual */
         }
     </style>
 </head>
@@ -32,7 +34,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Panel Izquierdo: Lienzo Interactivo para Mover y Ver Coordenadas -->
+            <!-- Panel Izquierdo: Lienzo Interactivo para Mover y Redimensionar -->
             <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center overflow-auto max-h-[70vh] lg:max-h-[800px] relative border border-gray-300">
                 <div class="relative inline-block shadow-2xl" id="canvasContainer">
                     <canvas id="pdfCanvas" class="block"></canvas>
@@ -78,7 +80,7 @@
                             <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
                             <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
                         </div>
-                        <p class="text-[9px] text-amber-800">Al activar, arrastra las cajas rojas para reubicar los textos en pantalla.</p>
+                        <p class="text-[9px] text-amber-800">Arrastra desde el centro para mover, o estira desde la esquina inferior derecha para ampliar el tamaño.</p>
                         <button id="btnGuardarCoordenadas" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1.5 rounded hidden">💾 Guardar Nuevas Coordenadas</button>
                     </div>
 
@@ -291,7 +293,7 @@
                 const height = (box.y2 - box.y1) * scale;
 
                 const cajaVisual = document.createElement('div');
-                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/60 draggable-box cursor-move pointer-events-auto shadow-md' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
+                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md resize' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
@@ -309,15 +311,16 @@
                     else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
                 }
 
-                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-800 block mb-0.5">${campo}</span><div class="pointer-events-none">${textoAsignado}</div>`;
-                cajaVisual.style.fontSize = '4.5px';
+                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${textoAsignado}</div>`;
 
-                // Lógica robusta de arrastre basada en Punteros (Pointer Events)
                 if (modoEdicionActivo) {
                     let isDragging = false;
                     let startX, startY, initialLeft, initialTop;
 
+                    // Detectar movimiento por arrastre
                     cajaVisual.addEventListener('pointerdown', (e) => {
+                        // Si hace clic en la esquina de redimensionar nativa, dejamos que actúe el resize de CSS
+                        if (e.offsetX > cajaVisual.offsetWidth - 15 && e.offsetY > cajaVisual.offsetHeight - 15) return;
                         isDragging = true;
                         startX = e.clientX;
                         startY = e.clientY;
@@ -332,23 +335,15 @@
                         const dx = e.clientX - startX;
                         const dy = e.clientY - startY;
 
-                        const newLeft = initialLeft + dx;
-                        const newTop = initialTop + dy;
-
-                        cajaVisual.style.left = `${newLeft}px`;
-                        cajaVisual.style.top = `${newTop}px`;
+                        cajaVisual.style.left = `${initialLeft + dx}px`;
+                        cajaVisual.style.top = `${initialTop + dy}px`;
                     });
 
-                    cajaVisual.addEventListener('pointerup', (e) => {
-                        if (!isDragging) return;
-                        isDragging = false;
-                        cajaVisual.releasePointerCapture(e.pointerId);
-
-                        // Recalcular y actualizar coordenadas en el mapa global
+                    const actualizarCoordenadasGlobales = () => {
                         const newLeft = parseFloat(cajaVisual.style.left) / scale;
                         const newTop = parseFloat(cajaVisual.style.top) / scale;
-                        const widthPx = parseFloat(cajaVisual.style.width) / scale;
-                        const heightPx = parseFloat(cajaVisual.style.height) / scale;
+                        const widthPx = cajaVisual.offsetWidth / scale;
+                        const heightPx = cajaVisual.offsetHeight / scale;
 
                         coordenadasMap[campo] = {
                             x1: newLeft,
@@ -356,7 +351,21 @@
                             x2: newLeft + widthPx,
                             y2: pageViewport.height / scale - newTop
                         };
+                    };
+
+                    cajaVisual.addEventListener('pointerup', (e) => {
+                        if (isDragging) {
+                            isDragging = false;
+                            cajaVisual.releasePointerCapture(e.pointerId);
+                        }
+                        actualizarCoordenadasGlobales();
                     });
+
+                    // También actualizar al terminar de redimensionar
+                    const observer = new ResizeObserver(() => {
+                        if (modoEdicionActivo) actualizarCoordenadasGlobales();
+                    });
+                    observer.observe(cajaVisual);
                 }
 
                 drawingOverlay.appendChild(cajaVisual);
