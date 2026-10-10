@@ -66,12 +66,9 @@
                         </select>
                     </div>
 
-                    <button id="btnGenerarVista" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
-                        ⚡ Pintar Datos en el PDF
-                    </button>
-
-                    <button id="btnDescargarPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
-                        📥 Descargar PDF Relleno
+                    <!-- Botón Único: Pinta y Descarga Automáticamente -->
+                    <button id="btnGenerarVista" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-lg shadow transition">
+                        ⚡ Pintar y Descargar PDF Relleno
                     </button>
                 </div>
 
@@ -94,7 +91,6 @@
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
         const btnGenerarVista = document.getElementById('btnGenerarVista');
-        const btnDescargarPdf = document.getElementById('btnDescargarPdf');
         const estadoInfo = document.getElementById('estadoInfo');
 
         let pdfDoc = null;
@@ -254,17 +250,85 @@
             return semanas;
         }
 
-        btnGenerarVista.addEventListener('click', () => {
-            if (!pdfDoc) return alert("⚠️ Carga primero el archivo PDF base.");
+        // ACCIÓN UNIFICADA: Pinta en pantalla y genera/descarga automáticamente el PDF
+        btnGenerarVista.addEventListener('click', async () => {
+            if (!pdfDoc || !archivoPdfBytes) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
             const semSeleccionada = selectSemana.value;
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
-            redibujarDatos(semanasAgrupadas[semSeleccionada]);
-            estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en la vista previa!";
+            const datosSemana = semanasAgrupadas[semSeleccionada] || { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
+
+            // 1. Pintar vista previa visual en pantalla
+            redibujarDatosVisuales(datosSemana);
+
+            // 2. Generar y descargar el PDF de forma automática inmediata
+            try {
+                const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfBytes);
+                const firstPage = pdfDocLib.getPages()[0];
+                const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+
+                for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    if (!box) continue;
+                    const lowerKey = campo.toLowerCase();
+                    let textoAsignado = '';
+                    let fontSize = 8;
+
+                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                            textoAsignado = (datosSemana.lunes || []).join('\n');
+                        } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                            textoAsignado = (datosSemana.dienstag || []).join('\n');
+                        } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                            textoAsignado = (datosSemana.mittwoch || []).join('\n');
+                        } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                            textoAsignado = (datosSemana.donnerstag || []).join('\n');
+                        } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                            textoAsignado = (datosSemana.freitag || []).join('\n');
+                        } else if (lowerKey.includes('schueler')) {
+                            textoAsignado = selectUsuario.value || '';
+                        }
+                    }
+
+                    if (!textoAsignado) continue;
+
+                    const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
+                                                 lowerKey.includes('klasse') || 
+                                                 lowerKey.includes('woche') || 
+                                                 lowerKey.includes('bericht') || 
+                                                 lowerKey.includes('ausbildung');
+
+                    fontSize = esEncabezadoOSimilar ? 8 : 4.5;
+
+                    try {
+                        firstPage.drawText(textoAsignado, {
+                            x: box.x1,
+                            y: box.y1 + 2,
+                            size: fontSize,
+                            font: font,
+                            color: PDFLib.rgb(0, 0, 0),
+                            lineHeight: fontSize * 1.2
+                        });
+                    } catch (innerErr) {
+                        console.warn(`Campo omitido: ${campo}`, innerErr);
+                    }
+                }
+
+                const pdfBytesModificados = await pdfDocLib.save();
+                const blob = new Blob([pdfBytesModificados], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `Wochenbericht_${selectUsuario.value || 'Usuario'}_${semSeleccionada.replace(/\//g, '-')}.pdf`;
+                link.click();
+
+                estadoInfo.textContent = "✨ ¡Datos pintados y PDF descargado con éxito!";
+            } catch (err) {
+                console.error("Error al generar PDF:", err);
+                alert("❌ Error al generar el archivo PDF.");
+            }
         });
 
-        function redibujarDatos(datosSemana) {
+        function redibujarDatosVisuales(datosSemana) {
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
@@ -336,87 +400,6 @@
                 drawingOverlay.appendChild(cajaVisual);
             }
         }
-
-        btnDescargarPdf.addEventListener('click', async () => {
-            if (!archivoPdfBytes) return alert("⚠️ Carga primero el archivo PDF base.");
-            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
-            const semSeleccionada = selectSemana.value;
-            if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
-
-            try {
-                const datosSemana = semanasAgrupadas[semSeleccionada] || { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
-                
-                const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfBytes);
-                const pages = pdfDocLib.getPages();
-                const firstPage = pages[0];
-                const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-
-                for (const [campo, box] of Object.entries(coordenadasMap)) {
-                    if (!box) continue;
-                    const lowerKey = campo.toLowerCase();
-                    let textoAsignado = '';
-                    let fontSize = 8;
-
-                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
-                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                            textoAsignado = (datosSemana.lunes || []).join('\n');
-                        } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                            textoAsignado = (datosSemana.dienstag || []).join('\n');
-                        } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                            textoAsignado = (datosSemana.mittwoch || []).join('\n');
-                        } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                            textoAsignado = (datosSemana.donnerstag || []).join('\n');
-                        } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                            textoAsignado = (datosSemana.freitag || []).join('\n');
-                        } else if (lowerKey.includes('schueler')) {
-                            textoAsignado = selectUsuario.value || '';
-                        }
-                    }
-
-                    if (!textoAsignado) continue;
-
-                    const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
-                                                 lowerKey.includes('klasse') || 
-                                                 lowerKey.includes('woche') || 
-                                                 lowerKey.includes('bericht') || 
-                                                 lowerKey.includes('ausbildung');
-
-                    if (esEncabezadoOSimilar) {
-                        fontSize = 8;
-                    } else {
-                        fontSize = 4.5;
-                    }
-
-                    const x = box.x1;
-                    const y = box.y1 + 2;
-
-                    try {
-                        firstPage.drawText(textoAsignado, {
-                            x: x,
-                            y: y,
-                            size: fontSize,
-                            font: font,
-                            color: PDFLib.rgb(0, 0, 0),
-                            lineHeight: fontSize * 1.2
-                        });
-                    } catch (innerErr) {
-                        console.warn(`No se pudo estampar el campo ${campo}:`, innerErr);
-                    }
-                }
-
-                const pdfBytesModificados = await pdfDocLib.save();
-                const blob = new Blob([pdfBytesModificados], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `Wochenbericht_${selectUsuario.value || 'Usuario'}_${semSeleccionada.replace(/\//g, '-')}.pdf`;
-                link.click();
-
-                estadoInfo.textContent = "✅ ¡PDF descargado con éxito!";
-            } catch (err) {
-                console.error("Error al generar PDF:", err);
-                alert("❌ Error al generar y descargar el PDF.");
-            }
-        });
     </script>
 </body>
 </html>
