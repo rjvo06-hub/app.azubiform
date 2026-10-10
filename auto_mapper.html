@@ -11,9 +11,6 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <!-- html2canvas y jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
@@ -27,15 +24,15 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Panel Izquierdo: Vista previa -->
-            <div id="previewWrapper" class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center items-center overflow-visible relative border border-gray-300">
+            <!-- Panel Izquierdo: Lienzo del PDF -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center overflow-auto max-h-[60vh] lg:max-h-[800px] relative border border-gray-300">
                 <div class="relative inline-block" id="canvasContainer">
-                    <canvas id="pdfCanvas" class="block shadow-lg max-w-full h-auto"></canvas>
+                    <canvas id="pdfCanvas" class="block shadow-lg max-w-full"></canvas>
                     <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
 
-            <!-- Panel Derecho: Controles -->
+            <!-- Panel Derecho: Controles de Plantilla y Usuario -->
             <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col">
                 <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Controles de Visualización</h2>
                 
@@ -70,11 +67,6 @@
                     <button id="btnGenerarVista" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
                         ⚡ Pintar Datos en el PDF
                     </button>
-
-                    <!-- Botón de Descarga en Alta Nitidez -->
-                    <button id="btnGenerarPdfDirecto" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-1">
-                        <span>📥 Descargar PDF en Alta Nitidez</span>
-                    </button>
                 </div>
 
                 <!-- Estado -->
@@ -91,24 +83,22 @@
         const fileInput = document.getElementById('pdfFile');
         const canvas = document.getElementById('pdfCanvas');
         const container = document.getElementById('canvasContainer');
-        const previewWrapper = document.getElementById('previewWrapper');
         const drawingOverlay = document.getElementById('drawingOverlay');
         const selectPlantillasGuardadas = document.getElementById('selectPlantillasGuardadas');
         const btnCargarPlantilla = document.getElementById('btnCargarPlantilla');
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
         const btnGenerarVista = document.getElementById('btnGenerarVista');
-        const btnGenerarPdfDirecto = document.getElementById('btnGenerarPdfDirecto');
         const estadoInfo = document.getElementById('estadoInfo');
 
         let pdfDoc = null;
         let pageViewport = null;
-        let scale = 1.0;
+        let scale = 1.2; // Escala exacta del mapeador
         let coordenadasMap = {};
         let semanasAgrupadas = {};
         let registrosGlobales = [];
-        let ultimaSemanaDatos = null;
 
+        // 1. Cargar lista de plantillas disponibles
         async function cargarListaPlantillas() {
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
@@ -129,6 +119,7 @@
             }
         }
 
+        // 2. Cargar lista de usuarios
         async function cargarListaUsuarios() {
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id,nombre`, {
@@ -152,6 +143,7 @@
         cargarListaPlantillas();
         cargarListaUsuarios();
 
+        // Manejo de carga de PDF (idéntico al mapeador)
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -169,11 +161,6 @@
 
         async function renderPage(num) {
             const page = await pdfDoc.getPage(num);
-            const unscaledViewport = page.getViewport({ scale: 1.0 });
-            
-            const availableWidth = previewWrapper.clientWidth - 32;
-            scale = availableWidth / unscaledViewport.width;
-            
             pageViewport = page.getViewport({ scale });
 
             const context = canvas.getContext('2d');
@@ -181,11 +168,12 @@
             canvas.width = pageViewport.width;
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
-            if (Object.keys(coordenadasMap).length > 0 && ultimaSemanaDatos) {
-                redibujarDatos(ultimaSemanaDatos);
+            if (Object.keys(coordenadasMap).length > 0) {
+                redibujarDatos([]);
             }
         }
 
+        // Botón Cargar Plantilla Coordenadas
         btnCargarPlantilla.addEventListener('click', async () => {
             const fileIdentifier = selectPlantillasGuardadas.value;
             if (!fileIdentifier) return alert("⚠️ Selecciona una escuela.");
@@ -209,6 +197,7 @@
             }
         });
 
+        // Cuando cambia el usuario, cargamos sus registros diarios
         selectUsuario.addEventListener('change', async (e) => {
             const nombreUsuario = e.target.value;
             if (!nombreUsuario) return;
@@ -265,108 +254,56 @@
             return semanas;
         }
 
+        // Botón Pintar Datos
         btnGenerarVista.addEventListener('click', () => {
             if (!pdfDoc) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
             const semSeleccionada = selectSemana.value;
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
-            ultimaSemanaDatos = semanasAgrupadas[semSeleccionada];
-            redibujarDatos(ultimaSemanaDatos);
+            redibujarDatos(semanasAgrupadas[semSeleccionada]);
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        // Captura en ultra alta resolución (Scale 4) para garantizar máxima nitidez al imprimir
-        btnGenerarPdfDirecto.addEventListener('click', async () => {
-            if (!pdfDoc || !ultimaSemanaDatos) {
-                alert("⚠️ Primero debes pintar los datos en el PDF.");
-                return;
-            }
-
-            estadoInfo.textContent = "🔄 Generando PDF en alta nitidez...";
-
-            try {
-                const capturedCanvas = await html2canvas(canvasContainer, {
-                    scale: 4, // Multiplicador de nitidez ultra alto para imprenta
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff',
-                    logging: false
-                });
-
-                const imgData = capturedCanvas.toDataURL('image/png', 1.0);
-                const { jsPDF } = window.jspdf;
-                
-                const pdf = new jsPDF({
-                    orientation: capturedCanvas.width > capturedCanvas.height ? 'landscape' : 'portrait',
-                    unit: 'px',
-                    format: [capturedCanvas.width, capturedCanvas.height]
-                });
-
-                pdf.addImage(imgData, 'PNG', 0, 0, capturedCanvas.width, capturedCanvas.height);
-                
-                const nombreUsuario = selectUsuario.value || 'Reporte';
-                pdf.save(`Wochenbericht_Nitido_${nombreUsuario}.pdf`);
-
-                estadoInfo.textContent = "✅ ¡PDF de alta nitidez descargado con éxito!";
-            } catch (err) {
-                console.error(err);
-                alert("❌ Ocurrió un error al generar el archivo PDF.");
-                estadoInfo.textContent = "⚠️ Error en la generación del PDF.";
-            }
-        });
-
+        // Lógica de renderizado idéntica a la del mapeador pero inyectando los textos
         function redibujarDatos(datosSemana) {
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
-            // Tamaño grande, legible y estandarizado idéntico al de la vista previa
-            const fontSizeFijo = 5.2; 
-            const diasSemanaKeys = ['lunes', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
-
             for (const [campo, box] of Object.entries(coordenadasMap)) {
+                // Misma fórmula exacta del mapeador visual
                 const left = box.x1 * scale;
                 const top = pageViewport.height - (box.y2 * scale);
                 const width = (box.x2 - box.x1) * scale;
                 const height = (box.y2 - box.y1) * scale;
 
                 const cajaVisual = document.createElement('div');
-                
-                const lowerKey = campo.toLowerCase();
-                let textoAsignado = '';
-                let listaActividades = [];
-
-                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
-                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                        listaActividades = datosSemana.lunes || [];
-                    } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                        listaActividades = datosSemana.dienstag || [];
-                    } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                        listaActividades = datosSemana.mittwoch || [];
-                    } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                        listaActividades = datosSemana.donnerstag || [];
-                    } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                        listaActividades = datosSemana.freitag || [];
-                    } else if (lowerKey.includes('schueler')) {
-                        textoAsignado = selectUsuario.value;
-                    }
-                }
-
-                const esDiaSemana = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].some(d => lowerKey.includes(d));
-
-                if (esDiaSemana) {
-                    cajaVisual.innerHTML = listaActividades.map(act => `<div style="margin-bottom: 2px;">• ${act}</div>`).join('');
-                    cajaVisual.className = `absolute text-[${fontSizeFijo}px] leading-[1.15] text-black font-sans px-0.5 py-0.5 bg-transparent z-10 flex flex-col justify-start`;
-                } else {
-                    cajaVisual.className = `absolute text-[8px] text-black font-sans px-0.5 bg-transparent z-10 flex items-center`;
-                    cajaVisual.textContent = textoAsignado;
-                }
-
+                cajaVisual.className = `absolute text-[9px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/90 border border-indigo-400 rounded z-10`;
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
                 cajaVisual.style.height = `${height}px`;
 
+                const lowerKey = campo.toLowerCase();
+                let textoAsignado = '';
+
+                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                        textoAsignado = (datosSemana.lunes || []).join(' • ');
+                    } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                        textoAsignado = (datosSemana.dienstag || []).join(' • ');
+                    } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                        textoAsignado = (datosSemana.mittwoch || []).join(' • ');
+                    } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                        textoAsignado = (datosSemana.donnerstag || []).join(' • ');
+                    } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                        textoAsignado = (datosSemana.freitag || []).join(' • ');
+                    } else if (lowerKey.includes('schueler')) {
+                        textoAsignado = selectUsuario.value;
+                    }
+                }
+
+                cajaVisual.textContent = textoAsignado;
                 drawingOverlay.appendChild(cajaVisual);
             }
         }
