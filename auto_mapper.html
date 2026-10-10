@@ -272,7 +272,7 @@
                 const cajaVisual = document.createElement('div');
                 const lowerKey = campo.toLowerCase();
                 
-                // Definir tamaños según los elementos solicitados
+                // Definir tamaños según los elementos solicitados (sin bordes ni fondos para impresión limpia)
                 const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
                                              lowerKey.includes('klasse') || 
                                              lowerKey.includes('woche') || 
@@ -280,10 +280,10 @@
                                              lowerKey.includes('ausbildung');
 
                 if (esEncabezadoOSimilar) {
-                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 flex items-center bg-white/90 border border-indigo-400 rounded z-10`;
+                    cajaVisual.className = `absolute text-[8px] text-black font-sans overflow-hidden px-1 flex items-center z-10`;
                 } else {
-                    // Actividades configuradas en tamaño 4.5px mediante estilo en línea para soportar decimales exactos
-                    cajaVisual.className = `absolute text-black font-sans overflow-hidden px-1 bg-white/90 border border-indigo-400 rounded z-10`;
+                    // Actividades en tamaño 4.5px, sin bordes ni fondos
+                    cajaVisual.className = `absolute text-black font-sans overflow-hidden px-1 z-10`;
                     cajaVisual.style.fontSize = '4.5px';
                 }
 
