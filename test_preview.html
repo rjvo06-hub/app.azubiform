@@ -3,67 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Generador Directo FOS - Azubiform</title>
+    <title>Generador y Ajustador FOS - Azubiform</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF-Lib para manipular y rellenar el PDF base -->
+    <!-- PDF.js para renderizar la vista previa -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <!-- PDF-Lib para generar el PDF final -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <style>
+        .draggable-box {
+            cursor: move;
+            user-select: none;
+            resize: both;
+            overflow: auto;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen p-4 sm:p-6">
+<body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
-    <div class="max-w-xl mx-auto space-y-4">
+    <div class="max-w-7xl mx-auto space-y-4">
         <!-- Cabecera -->
-        <div class="bg-white p-4 rounded-xl shadow-sm space-y-3">
-            <h1 class="text-sm font-bold text-indigo-900 uppercase text-center">⚡ GENERADOR DIRECTO FOS CON PLANTILLA DE FONDO</h1>
-            
-            <!-- Cargar PDF Base de la Escuela -->
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1">
-                <label class="text-[11px] font-semibold text-gray-700">📄 1. Subir PDF base de la escuela:</label>
-                <input type="file" id="pdfFile" accept="application/pdf" class="w-full text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+        <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase">⚡ Generador y Calibrador de Coordenadas FOS</h1>
+            <div class="w-full sm:w-auto">
+                <input type="file" id="pdfFile" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 w-full">
             </div>
         </div>
 
-        <!-- Controles Operativos -->
-        <div class="bg-white p-4 rounded-xl shadow-sm space-y-4">
-            <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Controles Operativos</h2>
-            
-            <div class="space-y-3">
-                <!-- Cargar Plantilla de Coordenadas -->
-                <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 space-y-1.5">
-                    <label class="text-[11px] font-semibold text-indigo-900">📂 2. Cargar coordenadas desde Supabase:</label>
-                    <div class="flex space-x-2">
-                        <select id="selectPlantillasGuardadas" class="w-full p-2 border border-indigo-300 rounded text-xs bg-white">
-                            <option value="">-- Selecciona escuela --</option>
-                        </select>
-                        <button id="btnCargarPlantilla" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded font-semibold whitespace-nowrap">📥 Cargar</button>
-                    </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Panel Izquierdo: Lienzo Interactivo para Mover y Ver Coordenadas -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center overflow-auto max-h-[70vh] lg:max-h-[800px] relative border border-gray-300">
+                <div class="relative inline-block shadow-2xl" id="canvasContainer">
+                    <canvas id="pdfCanvas" class="block"></canvas>
+                    <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
                 </div>
-
-                <!-- Seleccionar Usuario -->
-                <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200 space-y-1.5">
-                    <label class="text-[11px] font-semibold text-emerald-900">👤 3. Seleccionar usuario:</label>
-                    <select id="selectUsuario" class="w-full p-2 border border-emerald-300 rounded text-xs bg-white">
-                        <option value="">-- Selecciona usuario --</option>
-                    </select>
-                </div>
-
-                <!-- Seleccionar Semana -->
-                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-1.5">
-                    <label class="text-[11px] font-semibold text-amber-900">📅 4. Seleccionar semana:</label>
-                    <select id="selectSemana" class="w-full p-2 border border-amber-300 rounded text-xs bg-white">
-                        <option value="">-- Carga usuario primero --</option>
-                    </select>
-                </div>
-
-                <!-- Botón de Ejecución y Descarga -->
-                <button id="btnGenerarPDFDirecto" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-lg shadow transition uppercase tracking-wide">
-                    🚀 Generar y Descargar PDF Final
-                </button>
             </div>
 
-            <!-- Estado -->
-            <div id="estadoInfo" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 p-2.5 rounded border border-indigo-200 text-center">
-                📌 Sube el PDF de la escuela y selecciona los datos.
+            <!-- Panel Derecho: Controles y Calibración -->
+            <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Controles y Calibración</h2>
+                    
+                    <!-- 1. Plantilla -->
+                    <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-200 space-y-1">
+                        <label class="text-[10px] font-semibold text-indigo-900">📂 1. Cargar coordenadas desde Supabase:</label>
+                        <div class="flex space-x-1">
+                            <select id="selectPlantillasGuardadas" class="w-full p-1.5 border border-indigo-300 rounded text-xs bg-white">
+                                <option value="">-- Selecciona escuela --</option>
+                            </select>
+                            <button id="btnCargarPlantilla" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2.5 py-1 rounded font-bold">📥 Cargar</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Usuario y Semana -->
+                    <div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 space-y-2">
+                        <div>
+                            <label class="text-[10px] font-semibold text-emerald-900">👤 2. Seleccionar usuario:</label>
+                            <select id="selectUsuario" class="w-full p-1.5 border border-emerald-300 rounded text-xs bg-white">
+                                <option value="">-- Selecciona usuario --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-emerald-900">📅 3. Seleccionar semana:</label>
+                            <select id="selectSemana" class="w-full p-1.5 border border-emerald-300 rounded text-xs bg-white">
+                                <option value="">-- Carga usuario primero --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Herramienta de Calibración Activa -->
+                    <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
+                            <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
+                        </div>
+                        <p class="text-[9px] text-amber-800">Al activar, puedes arrastrar las cajas rojas en pantalla para acomodarlas a tu gusto y guardar los cambios.</p>
+                        <button id="btnGuardarCoordenadas" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1.5 rounded hidden">💾 Guardar Nuevas Coordenadas</button>
+                    </div>
+
+                    <button id="btnActualizarVista" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold py-2 rounded shadow transition">
+                        👁️ Actualizar Vista Previa
+                    </button>
+                </div>
+
+                <!-- Botón Final de Descarga -->
+                <div class="space-y-2 pt-2 border-t">
+                    <button id="btnGenerarPDFDirecto" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition uppercase tracking-wide">
+                        🚀 Descargar PDF Definitivo
+                    </button>
+                    <div id="estadoInfo" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
+                        📌 Sube un PDF base y carga los datos.
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -72,19 +106,28 @@
         import { SUPABASE_URL, headers } from './js/config.js';
 
         const fileInput = document.getElementById('pdfFile');
+        const canvas = document.getElementById('pdfCanvas');
+        const drawingOverlay = document.getElementById('drawingOverlay');
         const selectPlantillasGuardadas = document.getElementById('selectPlantillasGuardadas');
         const btnCargarPlantilla = document.getElementById('btnCargarPlantilla');
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
+        const btnActualizarVista = document.getElementById('btnActualizarVista');
+        const btnActivarEdicion = document.getElementById('btnActivarEdicion');
+        const btnGuardarCoordenadas = document.getElementById('btnGuardarCoordenadas');
         const btnGenerarPDFDirecto = document.getElementById('btnGenerarPDFDirecto');
         const estadoInfo = document.getElementById('estadoInfo');
 
+        let pdfDoc = null;
+        let pageViewport = null;
+        let scale = 1.2;
         let archivoPdfOriginalBytes = null;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
         let registrosGlobales = [];
+        let modoEdicionActivo = false;
+        let escuelaSeleccionadaId = null;
 
-        // Cargar listas al iniciar la página
         async function cargarListaPlantillas() {
             try {
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
@@ -100,9 +143,7 @@
                         selectPlantillasGuardadas.appendChild(opt);
                     });
                 }
-            } catch (err) {
-                console.error("Error al obtener plantillas:", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         async function cargarListaUsuarios() {
@@ -120,30 +161,41 @@
                         selectUsuario.appendChild(opt);
                     });
                 }
-            } catch (err) {
-                console.error("Error al obtener usuarios:", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // Ejecutar cargas iniciales
         cargarListaPlantillas();
         cargarListaUsuarios();
 
-        // Capturar archivo PDF base subido
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             archivoPdfOriginalBytes = await file.arrayBuffer();
+
+            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes });
+            pdfDoc = await loadingTask.promise;
+            await renderPage(1);
             estadoInfo.textContent = "✅ PDF base cargado correctamente.";
         });
 
-        // Botón Cargar Coordenadas de la Escuela seleccionada
+        async function renderPage(num) {
+            const page = await pdfDoc.getPage(num);
+            pageViewport = page.getViewport({ scale });
+
+            const context = canvas.getContext('2d');
+            canvas.height = pageViewport.height;
+            canvas.width = pageViewport.width;
+
+            await page.render({ canvasContext: context, viewport: pageViewport }).promise;
+            redibujarOverlay();
+        }
+
         btnCargarPlantilla.addEventListener('click', async () => {
-            const fileIdentifier = selectPlantillasGuardadas.value;
-            if (!fileIdentifier) return alert("⚠️ Selecciona una escuela.");
+            escuelaSeleccionadaId = selectPlantillasGuardadas.value;
+            if (!escuelaSeleccionadaId) return alert("⚠️ Selecciona una escuela.");
 
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(fileIdentifier)}&select=coordinates_json`, {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}&select=coordinates_json`, {
                     headers: { ...headers, 'Range': '0-999' }
                 });
                 if (response.ok) {
@@ -151,18 +203,14 @@
                     if (data.length > 0 && data[0].coordinates_json) {
                         coordenadasMap = data[0].coordinates_json;
                         alert("✅ Coordenadas cargadas con éxito.");
-                        estadoInfo.textContent = "✅ Coordenadas listas.";
+                        if (pdfDoc) redibujarOverlay();
                     } else {
-                        alert("⚠️ No hay coordenadas guardadas para esta escuela.");
+                        alert("⚠️ No hay coordenadas guardadas.");
                     }
                 }
-            } catch (err) {
-                console.error(err);
-                alert("❌ Error al cargar coordenadas.");
-            }
+            } catch (err) { console.error(err); alert("❌ Error cargando coordenadas."); }
         });
 
-        // Al cambiar de usuario, buscar registros y agrupar por semanas
         selectUsuario.addEventListener('change', async (e) => {
             const nombreUsuario = e.target.value;
             if (!nombreUsuario) return;
@@ -184,10 +232,7 @@
                     });
                     estadoInfo.textContent = `✅ Registros cargados para ${nombreUsuario}`;
                 }
-            } catch (err) {
-                console.error(err);
-                alert("❌ Error al cargar registros del usuario.");
-            }
+            } catch (err) { console.error(err); }
         });
 
         function agruparRegistrosPorSemana(registros) {
@@ -219,20 +264,110 @@
             return semanas;
         }
 
-        // Generar y descargar PDF directamente con la plantilla por detrás
+        btnActualizarVista.addEventListener('click', () => {
+            if (!pdfDoc) return alert("⚠️ Carga primero el PDF base.");
+            redibujarOverlay();
+            estadoInfo.textContent = "👁️ Vista previa actualizada.";
+        });
+
+        btnActivarEdicion.addEventListener('click', () => {
+            modoEdicionActivo = !modoEdicionActivo;
+            btnActivarEdicion.textContent = modoEdicionActivo ? "❌ Desactivar Edición" : "Activar Edición";
+            btnActivarEdicion.className = modoEdicionActivo ? "bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-1 rounded font-bold" : "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold";
+            btnGuardarCoordenadas.classList.toggle('hidden', !modoEdicionActivo);
+            redibujarOverlay();
+        });
+
+        function redibujarOverlay() {
+            if (!pageViewport) return;
+            drawingOverlay.innerHTML = '';
+
+            const semSeleccionada = selectSemana.value;
+            const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+            const nombreUsuario = selectUsuario.value || "Ejemplo Usuario";
+
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                const left = box.x1 * scale;
+                const top = pageViewport.height - (box.y2 * scale);
+                const width = (box.x2 - box.x1) * scale;
+                const height = (box.y2 - box.y1) * scale;
+
+                const cajaVisual = document.createElement('div');
+                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/40 draggable-box pointer-events-auto' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
+                cajaVisual.style.left = `${left}px`;
+                cajaVisual.style.top = `${top}px`;
+                cajaVisual.style.width = `${width}px`;
+                cajaVisual.style.height = `${height}px`;
+
+                const lowerKey = campo.toLowerCase();
+                let textoAsignado = `[${campo}]`;
+
+                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora')) {
+                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || ["Ej. Actividad Lunes"]).join('<br>');
+                    else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || ["Ej. Actividad Martes"]).join('<br>');
+                    else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || ["Ej. Actividad Miércoles"]).join('<br>');
+                    else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || ["Ej. Actividad Jueves"]).join('<br>');
+                    else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || ["Ej. Actividad Viernes"]).join('<br>');
+                    else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
+                }
+
+                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-gray-500 block mb-0.5">${campo}</span>${textoAsignado}`;
+                cajaVisual.style.fontSize = '4.5px';
+
+                if (modoEdicionActivo) {
+                    cajaVisual.addEventListener('mouseup', () => {
+                        const newLeft = parseFloat(cajaVisual.style.left) / scale;
+                        const newTop = parseFloat(cajaVisual.style.top) / scale;
+                        const newWidth = parseFloat(cajaVisual.style.width) / scale;
+                        const newHeight = parseFloat(cajaVisual.style.height) / scale;
+
+                        coordenadasMap[campo] = {
+                            x1: newLeft,
+                            y1: pageViewport.height / scale - newTop - newHeight,
+                            x2: newLeft + newWidth,
+                            y2: pageViewport.height / scale - newTop
+                        };
+                    });
+                }
+
+                drawingOverlay.appendChild(cajaVisual);
+            }
+        }
+
+        // Guardar nuevas coordenadas en Supabase
+        btnGuardarCoordenadas.addEventListener('click', async () => {
+            if (!escuelaSeleccionadaId) return alert("⚠️ No hay una escuela seleccionada.");
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}`, {
+                    method: 'PATCH',
+                    headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({ coordinates_json: coordenadasMap })
+                });
+
+                if (response.ok) {
+                    alert("💾 ¡Coordenadas actualizadas y guardadas en Supabase con éxito!");
+                    modoEdicionActivo = false;
+                    btnActivarEdicion.textContent = "Activar Edición";
+                    btnGuardarCoordenadas.classList.add('hidden');
+                    redibujarOverlay();
+                } else {
+                    alert("❌ Error al guardar en Supabase.");
+                }
+            } catch (err) { console.error(err); alert("❌ Error de red."); }
+        });
+
+        // Generar y Descargar PDF Final
         btnGenerarPDFDirecto.addEventListener('click', async () => {
-            if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base de la escuela.");
-            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
+            if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el PDF base.");
+            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga o ajusta las coordenadas.");
             const semSeleccionada = selectSemana.value;
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
             try {
-                estadoInfo.textContent = "⏳ Generando documento final...";
-
+                estadoInfo.textContent = "⏳ Generando PDF final...";
                 const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfOriginalBytes);
-                const pages = pdfDocLib.getPages();
-                const firstPage = pages[0];
-                
+                const firstPage = pdfDocLib.getPages()[0];
                 const { height: pdfHeight } = firstPage.getSize();
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
                 const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
@@ -243,42 +378,27 @@
                 for (const [campo, box] of Object.entries(coordenadasMap)) {
                     const lowerKey = campo.toLowerCase();
                     let textoAsignado = '';
-                    let esActividad = false;
 
-                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
-                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                            textoAsignado = (datosSemana.lunes || []).join('\n');
-                            esActividad = true;
-                        } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                            textoAsignado = (datosSemana.dienstag || []).join('\n');
-                            esActividad = true;
-                        } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                            textoAsignado = (datosSemana.mittwoch || []).join('\n');
-                            esActividad = true;
-                        } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                            textoAsignado = (datosSemana.donnerstag || []).join('\n');
-                            esActividad = true;
-                        } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                            textoAsignado = (datosSemana.freitag || []).join('\n');
-                            esActividad = true;
-                        } else if (lowerKey.includes('schueler')) {
-                            textoAsignado = nombreUsuario;
-                        }
+                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora')) {
+                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || []).join('\n');
+                        else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || []).join('\n');
+                        else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || []).join('\n');
+                        else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || []).join('\n');
+                        else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('\n');
+                        else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
                     }
 
                     if (textoAsignado) {
                         const x = box.x1;
                         const y = pdfHeight - box.y2; 
-                        
                         const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
                         const fontSize = esEncabezado ? 7 : 5;
-                        const activeFont = esEncabezado ? fontBold : font;
 
                         firstPage.drawText(textoAsignado, {
                             x: x,
                             y: y + 2,
                             size: fontSize,
-                            font: activeFont,
+                            font: esEncabezado ? fontBold : font,
                             color: PDFLib.rgb(0, 0, 0),
                             maxWidth: box.x2 - box.x1,
                             lineHeight: fontSize * 1.2
@@ -295,9 +415,8 @@
 
                 estadoInfo.textContent = "🎉 ¡PDF generado y descargado con éxito!";
             } catch (err) {
-                console.error("Error al generar el PDF:", err);
+                console.error(err);
                 estadoInfo.textContent = "❌ Error al generar el PDF.";
-                alert("Ocurrió un error al generar el archivo.");
             }
         });
     </script>
