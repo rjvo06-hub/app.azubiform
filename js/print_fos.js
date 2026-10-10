@@ -21,7 +21,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 </div>
             </div>
 
-            <!-- 1. Carga manual del PDF base (Lo único que falta) -->
+            <!-- 1. Carga manual del PDF base -->
             <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
                     <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Cargar Plantilla PDF Base</h3>
@@ -97,10 +97,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         return;
     }
 
-    // Rellenar visualmente el nombre de entrada
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 1. Consultar datos en Supabase (usuarios y profesions)
+    // 1. Consultar datos en Supabase
     try {
         const respUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
@@ -110,15 +109,22 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const dataUsr = await respUsuario.json();
             if (dataUsr.length > 0) {
                 const usuario = dataUsr[0];
+                console.log("📦 Datos completos del usuario en Supabase:", usuario);
+
                 escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
-                claseUsuario = usuario.klasse || usuario.clase || '-';
-                workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
-                if (usuario.teacher || usuario.profesora) {
-                    profesoraUsuario = usuario.teacher || usuario.profesora;
+                
+                // Mapeo flexible para Clase
+                claseUsuario = usuario.klasse || usuario.clase || usuario.curso || usuario.grado || '-';
+                
+                // Mapeo flexible para Workplace
+                workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || usuario.lugar || '-';
+                
+                if (usuario.teacher || usuario.profesora || usuario.lehrer) {
+                    profesoraUsuario = usuario.teacher || usuario.profesora || usuario.lehrer;
                 }
                 
-                // Consultar tabla 'profesions'
-                const idProfesion = usuario.profesion || usuario.ausbildung || usuario.fachrichtung;
+                // Consultar la tabla 'profesions' de forma robusta
+                const idProfesion = usuario.profesion || usuario.profesions || usuario.ausbildung || usuario.fachrichtung || usuario.profesion_id;
                 if (idProfesion) {
                     const respProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?id=eq.${encodeURIComponent(idProfesion)}&select=*`, {
                         headers: { ...headers, 'Range': '0-9' }
@@ -135,7 +141,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Actualizar la tarjeta visual superior con los datos obtenidos
+        // Actualizar la tarjeta visual superior
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
