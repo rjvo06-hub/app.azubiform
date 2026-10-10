@@ -472,10 +472,12 @@
                     const x = Number(box.x1);
                     const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                     
-                    // CONVERSIÓN AUTOMÁTICA: Convertimos de la altura nativa de PDF.js/Visualización a la altura real de PDF-Lib
+                    // Convertimos la coordenada superior (y1) de la vista previa al espacio real de PDF-Lib
                     const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
                     const y1Visual = Number(box.y1);
-                    const yPdfLib = pdfHeight - (heightCanvasPdfJs - y1Visual) - 6;
+                    
+                    // PUNTO DE INICIO FIJO: Comienza exactamente en el borde superior de la caja menos un padding limpio de 8 píxeles hacia abajo
+                    const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 8;
 
                     const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
                     const fontSize = esEncabezado ? 7 : 5;
@@ -504,9 +506,9 @@
                         }
                     });
 
-                    // Dibujamos utilizando la conversión matemática exacta
+                    // Dibujamos comenzando desde el punto superior de la caja hacia abajo
                     lineasFinalesParaDibujar.forEach((linea, index) => {
-                        const yActual = yPdfLib - (index * espaciadoLineas);
+                        const yActual = yPdfLibTop - (index * espaciadoLineas);
 
                         try {
                             firstPage.drawText(linea, {
