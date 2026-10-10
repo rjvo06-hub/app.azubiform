@@ -111,7 +111,8 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const usuario = dataUsr[0];
                 console.log("📦 Datos completos del usuario en Supabase:", usuario);
 
-                escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
+                // Asignamos la escuela del usuario, o por defecto 'fos_holzkirchen' si está vacía
+                escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
                 
                 claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
                 workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
@@ -143,24 +144,31 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         fosResWorkplace.textContent = workplaceUsuario;
         fosResProfesora.textContent = profesoraUsuario;
 
+        // Si por alguna razón sigue vacío, forzamos 'fos_holzkirchen'
         if (!escuelaSeleccionadaId) {
-            const respTemplates = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=file_identifier`, {
-                headers: { ...headers, 'Range': '0-9' }
-            });
-            if (respTemplates.ok) {
-                const templates = await respTemplates.json();
-                if (templates.length > 0) escuelaSeleccionadaId = templates[0].file_identifier;
-            }
+            escuelaSeleccionadaId = 'fos_holzkirchen';
         }
 
-        if (escuelaSeleccionadaId) {
-            const respTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}&select=*`, {
-                headers: { ...headers, 'Range': '0-999' }
-            });
-            if (respTpl.ok) {
-                const tplData = await respTpl.json();
-                if (tplData.length > 0) {
-                    coordenadasMap = tplData[0].coordinates_json || {};
+        // Consultar coordenadas en school_templates usando 'fos_holzkirchen'
+        let respTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}&select=*`, {
+            headers: { ...headers, 'Range': '0-999' }
+        });
+        
+        if (respTpl.ok) {
+            const tplData = await respTpl.json();
+            if (tplData.length > 0) {
+                coordenadasMap = tplData[0].coordinates_json || {};
+                console.log("🗺️ Coordenadas cargadas exitosamente para:", escuelaSeleccionadaId);
+            } else {
+                // Respaldo de emergencia: tomar la primera plantilla disponible en la tabla
+                const respTemplates = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, {
+                    headers: { ...headers, 'Range': '0-9' }
+                });
+                if (respTemplates.ok) {
+                    const templates = await respTemplates.json();
+                    if (templates.length > 0) {
+                        coordenadasMap = templates[0].coordinates_json || {};
+                    }
                 }
             }
         }
