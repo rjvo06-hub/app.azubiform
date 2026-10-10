@@ -434,7 +434,11 @@
 
             try {
                 estadoInfo.textContent = "⏳ Generando PDF final...";
-                const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfOriginalBytes);
+                
+                // SOLUCIÓN: Hacemos una copia independiente del ArrayBuffer para que PDF-Lib no détache el búfer original
+                const pdfBytesCllon = archivoPdfOriginalBytes.slice(0);
+                const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesCllon);
+                
                 const firstPage = pdfDocLib.getPages()[0];
                 const { height: pdfHeight } = firstPage.getSize();
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
