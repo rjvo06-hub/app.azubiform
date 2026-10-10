@@ -11,8 +11,6 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <!-- PDF-Lib -->
-    <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
 
@@ -66,9 +64,14 @@
                         </select>
                     </div>
 
-                    <!-- Botón Único: Pinta y Descarga Automáticamente -->
-                    <button id="btnGenerarVista" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-lg shadow transition">
-                        ⚡ Pintar y Descargar PDF Relleno
+                    <!-- Botón original que pinta los datos en la vista previa -->
+                    <button id="btnGenerarVista" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
+                        ⚡ Pintar Datos en el PDF
+                    </button>
+
+                    <!-- Botón para descargar el canvas actual como imagen/PDF impreso -->
+                    <button id="btnDescargarCanvas" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
+                        📥 Descargar Vista Previa
                     </button>
                 </div>
 
@@ -91,6 +94,7 @@
         const selectUsuario = document.getElementById('selectUsuario');
         const selectSemana = document.getElementById('selectSemana');
         const btnGenerarVista = document.getElementById('btnGenerarVista');
+        const btnDescargarCanvas = document.getElementById('btnDescargarCanvas');
         const estadoInfo = document.getElementById('estadoInfo');
 
         let pdfDoc = null;
@@ -98,7 +102,7 @@
         let scale = 1.2;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
-        let archivoPdfFile = null;
+        let registrosGlobales = [];
 
         async function cargarListaPlantillas() {
             try {
@@ -147,14 +151,15 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            archivoPdfFile = file;
-            const arrayBuffer = await file.arrayBuffer();
-            const typedarray = new Uint8Array(arrayBuffer);
-            
-            const loadingTask = pdfjsLib.getDocument(typedarray);
-            pdfDoc = await loadingTask.promise;
-            await renderPage(1);
-            estadoInfo.textContent = "✅ PDF cargado correctamente.";
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                const loadingTask = pdfjsLib.getDocument(typedarray);
+                pdfDoc = await loadingTask.promise;
+                await renderPage(1);
+                estadoInfo.textContent = "✅ PDF cargado correctamente.";
+            };
+            fileReader.readAsArrayBuffer(file);
         });
 
         async function renderPage(num) {
@@ -167,7 +172,7 @@
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
             if (Object.keys(coordenadasMap).length > 0) {
-                redibujarDatosVisuales([]);
+                redibujarDatos([]);
             }
         }
 
@@ -183,14 +188,14 @@
                     const data = await response.json();
                     if (data.length > 0 && data[0].coordinates_json) {
                         coordenadasMap = data[0].coordinates_json;
-                        alert("✅ Coordenadas de usuario cargadas con éxito.");
+                        alert("✅ Coordenadas cargadas con éxito.");
                     } else {
-                        alert("⚠️ No hay coordenadas guardadas para esta escuela.");
+                        alert("⚠️ No hay coordenadas guardadas.");
                     }
                 }
             } catch (err) {
                 console.error(err);
-                alert("❌ Error al conectar con Supabase para cargar las coordenadas.");
+                alert("❌ Error al cargar coordenadas.");
             }
         });
 
@@ -203,7 +208,7 @@
                     headers: { ...headers, 'Range': '0-999' }
                 });
                 if (response.ok) {
-                    const registrosGlobales = await response.json();
+                    registrosGlobales = await response.json();
                     semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
 
                     selectSemana.innerHTML = '<option value="">-- Selecciona una semana --</option>';
@@ -250,95 +255,22 @@
             return semanas;
         }
 
-        // ACCIÓN UNIFICADA: Pintar vista previa y generar descarga automática del PDF
-        btnGenerarVista.addEventListener('click', async () => {
-            if (!pdfDoc || !archivoPdfFile) return alert("⚠️ Carga primero el archivo PDF base.");
+        // Botón Pintar Datos (mantiene exactamente tu lógica original con los tamaños pedidos)
+        btnGenerarVista.addEventListener('click', () => {
+            if (!pdfDoc) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
             const semSeleccionada = selectSemana.value;
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
-            const datosSemana = semanasAgrupadas[semSeleccionada] || { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
-
-            // 1. Pintar vista previa visual en pantalla
-            redibujarDatosVisuales(datosSemana);
-
-            // 2. Generar y descargar el PDF con pdf-lib usando los tamaños exactos requeridos
-            try {
-                const existingPdfBytes = await archivoPdfFile.arrayBuffer();
-                const pdfDocLib = await PDFLib.PDFDocument.load(existingPdfBytes);
-                const firstPage = pdfDocLib.getPages()[0];
-                const { height: pageHeight } = firstPage.getSize();
-                const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-
-                for (const [campo, box] of Object.entries(coordenadasMap)) {
-                    if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined') continue;
-                    const lowerKey = campo.toLowerCase();
-                    let textoAsignado = '';
-
-                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
-                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                            textoAsignado = (datosSemana.lunes || []).join('\n');
-                        } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                            textoAsignado = (datosSemana.dienstag || []).join('\n');
-                        } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                            textoAsignado = (datosSemana.mittwoch || []).join('\n');
-                        } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                            textoAsignado = (datosSemana.donnerstag || []).join('\n');
-                        } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                            textoAsignado = (datosSemana.freitag || []).join('\n');
-                        } else if (lowerKey.includes('schueler')) {
-                            textoAsignado = selectUsuario.value || '';
-                        }
-                    }
-
-                    if (!textoAsignado) continue;
-
-                    // Tamaños estrictos: 8 px para cabeceras/datos principales, 4.5 px para actividades
-                    const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
-                                                 lowerKey.includes('klasse') || 
-                                                 lowerKey.includes('woche') || 
-                                                 lowerKey.includes('bericht') || 
-                                                 lowerKey.includes('ausbildung');
-
-                    const fontSize = esEncabezadoOSimilar ? 8 : 4.5;
-
-                    const x = Number(box.x1);
-                    const y = pageHeight - Number(box.y2);
-
-                    try {
-                        firstPage.drawText(textoAsignado, {
-                            x: x,
-                            y: y,
-                            size: fontSize,
-                            font: font,
-                            color: PDFLib.rgb(0, 0, 0),
-                            lineHeight: fontSize * 1.2
-                        });
-                    } catch (innerErr) {
-                        console.warn(`Campo omitido: ${campo}`, innerErr);
-                    }
-                }
-
-                const pdfBytesModificados = await pdfDocLib.save();
-                const blob = new Blob([pdfBytesModificados], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `Wochenbericht_${selectUsuario.value || 'Usuario'}_${semSeleccionada.replace(/\//g, '-')}.pdf`;
-                link.click();
-
-                estadoInfo.textContent = "✨ ¡Datos pintados y PDF descargado con éxito!";
-            } catch (err) {
-                console.error("Error al generar PDF:", err);
-                alert("❌ Error al generar el archivo PDF.");
-            }
+            redibujarDatos(semanasAgrupadas[semSeleccionada]);
+            estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en el PDF!";
         });
 
-        function redibujarDatosVisuales(datosSemana) {
+        function redibujarDatos(datosSemana) {
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
-                if (!box) continue;
                 const left = box.x1 * scale;
                 const top = pageViewport.height - (box.y2 * scale);
                 const width = (box.x2 - box.x1) * scale;
@@ -385,13 +317,13 @@
                         textoAsignado = (datosSemana.freitag || []).join('<br>');
                         esActividad = true;
                     } else if (lowerKey.includes('schueler')) {
-                        textoAsignado = selectUsuario.value || '';
+                        textoAsignado = selectUsuario.value;
                     }
                 }
 
                 if (esActividad) {
                     cajaVisual.innerHTML = textoAsignado;
-                    cajaVisual.style.display = 'flex';
+                    cajavisual.style.display = 'flex';
                     cajaVisual.style.flexDirection = 'column';
                     cajaVisual.style.justifyContent = 'flex-start';
                 } else {
@@ -405,6 +337,11 @@
                 drawingOverlay.appendChild(cajaVisual);
             }
         }
+
+        // Opción para imprimir o guardar la vista previa directamente
+        btnDescargarCanvas.addEventListener('click', () => {
+            window.print();
+        });
     </script>
 </body>
 </html>
