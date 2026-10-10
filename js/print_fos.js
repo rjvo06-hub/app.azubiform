@@ -86,7 +86,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let escuelaSeleccionadaId = null;
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     
-    // Variables de perfil extraídas de Supabase
+    // Variables de perfil extraídas directamente de Supabase
     let claseUsuario = '-';
     let profesionUsuario = '-';
     let workplaceUsuario = '-';
@@ -99,7 +99,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 1. CONSULTA DIRECTA Y OBLIGATORIA A LA BASE DE DATOS DE USUARIO EN SUPABASE
+    // 1. CONSULTA DIRECTA A LA BASE DE DATOS DE USUARIO EN SUPABASE
     try {
         estadoInfoModal.textContent = `⏳ Consultando datos de ${nombreUsuarioActual} en Supabase...`;
         
@@ -113,13 +113,16 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const usuario = dataUsr[0];
                 console.log("📦 Datos obtenidos de la tabla 'usuarios':", usuario);
 
-                // Extracción directa de campos desde Supabase
+                // Extracción exhaustiva de campos de la tabla usuarios
                 escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
-                claseUsuario = usuario.clase || usuario.klasse || '-';
-                workplaceUsuario = usuario.betrieb || usuario.workplace || usuario.ausbildungsstaette || '-';
+                
+                // Capturamos la clase probando los nombres de columna más comunes
+                claseUsuario = usuario.klasse || usuario.clase || usuario.curso || usuario.grado || '-';
+                
+                workplaceUsuario = usuario.betrieb || usuario.workplace || usuario.ausbildungsstaette || usuario.lugar || '-';
                 profesoraUsuario = usuario.teacher || usuario.profesora || usuario.lehrer || '-';
                 
-                // Extraer el nombre corto/ID de la profesión (ej. en la columna ausbildung o profesion)
+                // Extraer el nombre corto o ID de la profesión
                 const idProfesion = usuario.ausbildung || usuario.profesion || usuario.fachrichtung;
                 
                 if (idProfesion) {
@@ -139,7 +142,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Reflejar de inmediato los datos extraídos en la tarjeta superior visual
+        // Reflejar inmediatamente los datos en la tarjeta visual superior
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
