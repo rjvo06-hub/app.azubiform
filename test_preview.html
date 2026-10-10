@@ -72,4 +72,441 @@
                     </div>
 
                     <!-- Herramienta de Calibración Global y Manual -->
-                    <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200
+                    <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
+                            <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
+                        </div>
+                        <p class="text-[9px] text-amber-800">Arrastra cajas de forma individual o desplázalas todas juntas abajo:</p>
+                        
+                        <!-- Opción para desplazar todas las coordenadas hacia abajo -->
+                        <div class="flex space-x-1 pt-1">
+                            <input type="number" id="inputDesplazarY" value="30" class="w-20 p-1 text-xs border rounded bg-white text-center" placeholder="Píxeles">
+                            <button id="btnDesplazarTodoAbajo" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1 rounded">⬇️ Mover Todo Abajo</button>
+                        </div>
+
+                        <!-- Botón de guardado -->
+                        <button id="btnGuardarCoordenadas" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold py-2 rounded shadow hidden">💾 Guardar Cambios en Supabase</button>
+                    </div>
+
+                    <button id="btnActualizarVista" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold py-2 rounded shadow transition">
+                        👁️ Actualizar Vista Previa
+                    </button>
+                </div>
+
+                <!-- Botón Final de Descarga -->
+                <div class="space-y-2 pt-2 border-t">
+                    <button id="btnGenerarPDFDirecto" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition uppercase tracking-wide">
+                        🚀 Descargar PDF Definitivo
+                    </button>
+                    <div id="estadoInfo" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
+                        📌 Listo para operar.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { SUPABASE_URL, headers } from './js/config.js';
+
+        const fileInput = document.getElementById('pdfFile');
+        const canvas = document.getElementById('pdfCanvas');
+        const drawingOverlay = document.getElementById('drawingOverlay');
+        const selectPlantillasGuardadas = document.getElementById('selectPlantillasGuardadas');
+        const selectUsuario = document.getElementById('selectUsuario');
+        const selectSemana = document.getElementById('selectSemana');
+        const btnActualizarVista = document.getElementById('btnActualizarVista');
+        const btnActivarEdicion = document.getElementById('btnActivarEdicion');
+        const btnDesplazarTodoAbajo = document.getElementById('btnDesplazarTodoAbajo');
+        const inputDesplazarY = document.getElementById('inputDesplazarY');
+        const btnGuardarCoordenadas = document.getElementById('btnGuardarCoordenadas');
+        const btnGenerarPDFDirecto = document.getElementById('btnGenerarPDFDirecto');
+        const estadoInfo = document.getElementById('estadoInfo');
+
+        let pdfDoc = null;
+        let pageViewport = null;
+        let scale = 1.2;
+        let archivoPdfOriginalBytes = null;
+        let coordenadasMap = {};
+        let semanasAgrupadas = {};
+        let registrosGlobales = [];
+        let modoEdicionActivo = false;
+        let escuelaSeleccionadaId = null;
+
+        async function cargarListaPlantillas() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    selectPlantillasGuardadas.innerHTML = '<option value="">-- Selecciona escuela --</option>';
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.file_identifier;
+                        opt.textContent = item.school_name;
+                        selectPlantillasGuardadas.appendChild(opt);
+                    });
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function cargarListaUsuarios() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id,nombre`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    selectUsuario.innerHTML = '<option value="">-- Selecciona usuario --</option>';
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.nombre;
+                        opt.textContent = item.nombre;
+                        selectUsuario.appendChild(opt);
+                    });
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        cargarListaPlantillas();
+        cargarListaUsuarios();
+
+        selectPlantillasGuardadas.addEventListener('change', async (e) => {
+            escuelaSeleccionadaId = e.target.value;
+            if (!escuelaSeleccionadaId) return;
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}&select=coordinates_json`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.length > 0 && data[0].coordinates_json) {
+                        coordenadasMap = data[0].coordinates_json;
+                        if (pdfDoc) redibujarOverlay();
+                        estadoInfo.textContent = "✅ Coordenadas aplicadas.";
+                    }
+                }
+            } catch (err) { console.error(err); }
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            archivoPdfOriginalBytes = await file.arrayBuffer();
+
+            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes });
+            pdfDoc = await loadingTask.promise;
+            await renderPage(1);
+            estadoInfo.textContent = "✅ PDF base cargado.";
+        });
+
+        async function renderPage(num) {
+            const page = await pdfDoc.getPage(num);
+            pageViewport = page.getViewport({ scale });
+
+            const context = canvas.getContext('2d');
+            canvas.height = pageViewport.height;
+            canvas.width = pageViewport.width;
+
+            await page.render({ canvasContext: context, viewport: pageViewport }).promise;
+            redibujarOverlay();
+        }
+
+        selectUsuario.addEventListener('change', async (e) => {
+            const nombreUsuario = e.target.value;
+            if (!nombreUsuario) return;
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&select=*`, {
+                    headers: { ...headers, 'Range': '0-999' }
+                });
+                if (response.ok) {
+                    registrosGlobales = await response.json();
+                    semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
+
+                    selectSemana.innerHTML = '<option value="">-- Selecciona una semana --</option>';
+                    Object.keys(semanasAgrupadas).forEach(sem => {
+                        const opt = document.createElement('option');
+                        opt.value = sem;
+                        opt.textContent = `Woche: ${sem}`;
+                        selectSemana.appendChild(opt);
+                    });
+                    estadoInfo.textContent = `✅ Registros cargados para ${nombreUsuario}`;
+                }
+            } catch (err) { console.error(err); }
+        });
+
+        selectSemana.addEventListener('change', () => {
+            if (pdfDoc) redibujarOverlay();
+        });
+
+        function agruparRegistrosPorSemana(registros) {
+            const semanas = {};
+            registros.forEach(reg => {
+                if (!reg.fecha) return;
+                const fechaObj = new Date(reg.fecha);
+                const diaSemana = fechaObj.getDay();
+                const diff = fechaObj.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+                const lunes = new Date(new Date(fechaObj).setDate(diff));
+                const viernes = new Date(lunes);
+                viernes.setDate(lunes.getDate() + 4);
+
+                const claveSemana = `${lunes.toLocaleDateString()} bis ${viernes.toLocaleDateString()}`;
+
+                if (!semanas[claveSemana]) {
+                    semanas[claveSemana] = { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
+                }
+
+                const d = new Date(reg.fecha).getDay();
+                const texto = reg.nombre_actividad || '';
+
+                if (d === 1) semanas[claveSemana].lunes.push(texto);
+                else if (d === 2) semanas[claveSemana].dienstag.push(texto);
+                else if (d === 3) semanas[claveSemana].mittwoch.push(texto);
+                else if (d === 4) semanas[claveSemana].donnerstag.push(texto);
+                else if (d === 5) semanas[claveSemana].freitag.push(texto);
+            });
+            return semanas;
+        }
+
+        btnActualizarVista.addEventListener('click', () => {
+            if (!pdfDoc) return;
+            redibujarOverlay();
+            estadoInfo.textContent = "👁️ Vista actualizada.";
+        });
+
+        btnActivarEdicion.addEventListener('click', () => {
+            modoEdicionActivo = !modoEdicionActivo;
+            btnActivarEdicion.textContent = modoEdicionActivo ? "❌ Salir de Edición" : "Activar Edición";
+            btnActivarEdicion.className = modoEdicionActivo ? "bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-1 rounded font-bold" : "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold";
+            btnGuardarCoordenadas.classList.toggle('hidden', !modoEdicionActivo);
+            redibujarOverlay();
+        });
+
+        btnDesplazarTodoAbajo.addEventListener('click', () => {
+            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas.");
+            const offset = parseFloat(inputDesplazarY.value) || 30;
+
+            for (const campo in coordenadasMap) {
+                const box = coordenadasMap[campo];
+                if (box && typeof box.y1 !== 'undefined' && typeof box.y2 !== 'undefined') {
+                    box.y1 = Number(box.y1) - offset;
+                    box.y2 = Number(box.y2) - offset;
+                }
+            }
+
+            redibujarOverlay();
+            btnGuardarCoordenadas.classList.remove('hidden');
+            estadoInfo.textContent = `⬇️ Coordenadas desplazadas ${offset}px. ¡Guarda los cambios!`;
+        });
+
+        function redibujarOverlay() {
+            if (!pageViewport) return;
+            drawingOverlay.innerHTML = '';
+
+            const semSeleccionada = selectSemana.value;
+            const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+            const nombreUsuario = selectUsuario.value || "Ejemplo Usuario";
+
+            for (const [campo, box] of Object.entries(coordenadasMap)) {
+                if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined' || isNaN(box.x1) || isNaN(box.y2)) continue;
+
+                const x1 = Number(box.x1);
+                const y1 = Number(box.y1);
+                const x2 = Number(box.x2);
+                const y2 = Number(box.y2);
+
+                const left = x1 * scale;
+                const top = pageViewport.height - (y2 * scale);
+                const width = Math.max(10, (x2 - x1) * scale);
+                const height = Math.max(10, (y2 - y1) * scale);
+
+                const cajaVisual = document.createElement('div');
+                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md resize' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
+                cajaVisual.style.left = `${left}px`;
+                cajaVisual.style.top = `${top}px`;
+                cajaVisual.style.width = `${width}px`;
+                cajaVisual.style.height = `${height}px`;
+
+                const lowerKey = campo.toLowerCase();
+                let textoAsignado = '';
+
+                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || []).join('<br>');
+                    else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || []).join('<br>');
+                    else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || []).join('<br>');
+                    else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || []).join('<br>');
+                    else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('<br>');
+                    else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
+                }
+
+                const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
+                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
+
+                if (modoEdicionActivo) {
+                    let isDragging = false;
+                    let startX, startY, initialLeft, initialTop;
+
+                    cajaVisual.addEventListener('pointerdown', (e) => {
+                        if (e.offsetX > cajaVisual.offsetWidth - 15 && e.offsetY > cajaVisual.offsetHeight - 15) return;
+                        isDragging = true;
+                        startX = e.clientX;
+                        startY = e.clientY;
+                        initialLeft = parseFloat(cajaVisual.style.left);
+                        initialTop = parseFloat(cajaVisual.style.top);
+                        cajaVisual.setPointerCapture(e.pointerId);
+                        e.stopPropagation();
+                    });
+
+                    cajaVisual.addEventListener('pointermove', (e) => {
+                        if (!isDragging) return;
+                        const dx = e.clientX - startX;
+                        const dy = e.clientY - startY;
+
+                        cajaVisual.style.left = `${initialLeft + dx}px`;
+                        cajaVisual.style.top = `${initialTop + dy}px`;
+                    });
+
+                    const actualizarCoordenadasGlobales = () => {
+                        const newLeft = parseFloat(cajaVisual.style.left) / scale;
+                        const newTop = parseFloat(cajaVisual.style.top) / scale;
+                        const widthPx = cajaVisual.offsetWidth / scale;
+                        const heightPx = cajaVisual.offsetHeight / scale;
+
+                        coordenadasMap[campo] = {
+                            x1: newLeft,
+                            y1: pageViewport.height / scale - newTop - heightPx,
+                            x2: newLeft + widthPx,
+                            y2: pageViewport.height / scale - newTop
+                        };
+                        btnGuardarCoordenadas.classList.remove('hidden');
+                    };
+
+                    cajaVisual.addEventListener('pointerup', (e) => {
+                        if (isDragging) {
+                            isDragging = false;
+                            cajaVisual.releasePointerCapture(e.pointerId);
+                        }
+                        actualizarCoordenadasGlobales();
+                    });
+
+                    const observer = new ResizeObserver(() => {
+                        if (modoEdicionActivo) actualizarCoordenadasGlobales();
+                    });
+                    observer.observe(cajaVisual);
+                }
+
+                drawingOverlay.appendChild(cajaVisual);
+            }
+        }
+
+        btnGuardarCoordenadas.addEventListener('click', async () => {
+            if (!escuelaSeleccionadaId) return alert("⚠️ Selecciona una escuela primero.");
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}`, {
+                    method: 'PATCH',
+                    headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({ coordinates_json: coordenadasMap })
+                });
+
+                if (response.ok) {
+                    modoEdicionActivo = false;
+                    btnActivarEdicion.textContent = "Activar Edición";
+                    btnActivarEdicion.className = "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold";
+                    btnGuardarCoordenadas.classList.add('hidden');
+                    redibujarOverlay();
+                    estadoInfo.textContent = "💾 ¡Coordenadas guardadas correctamente en Supabase!";
+                } else {
+                    alert("❌ Error al guardar en Supabase.");
+                }
+            } catch (err) { console.error(err); alert("❌ Error de red."); }
+        });
+
+        btnGenerarPDFDirecto.addEventListener('click', async () => {
+            if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el PDF base.");
+            if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Selecciona una escuela con coordenadas.");
+            const semSeleccionada = selectSemana.value;
+            if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
+
+            try {
+                estadoInfo.textContent = "⏳ Generando PDF final...";
+                const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfOriginalBytes);
+                const firstPage = pdfDocLib.getPages()[0];
+                const { height: pdfHeight } = firstPage.getSize();
+                const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+                const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
+
+                const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+                const nombreUsuario = selectUsuario.value;
+
+                for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined' || isNaN(box.x1) || isNaN(box.y2)) {
+                        console.warn(`⚠️ Coordenada inválida o vacía para el campo: ${campo}`, box);
+                        continue;
+                    }
+
+                    const lowerKey = campo.toLowerCase();
+                    let lineasAsignadas = [];
+
+                    if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                        if (lowerKey.includes('montag') || lowerKey.includes('lunes')) lineasAsignadas = datosSemana.lunes || [];
+                        else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) lineasAsignadas = datosSemana.dienstag || [];
+                        else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) lineasAsignadas = datosSemana.mittwoch || [];
+                        else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) lineasAsignadas = datosSemana.donnerstag || [];
+                        else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) lineasAsignadas = datosSemana.freitag || [];
+                        else if (lowerKey.includes('schueler')) lineasAsignadas = [nombreUsuario];
+                    }
+
+                    // Filtramos líneas vacías o nulas automáticamente
+                    lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
+                    if (lineasAsignadas.length === 0) continue;
+
+                    const x = Number(box.x1);
+                    let yInicial = pdfHeight - Number(box.y2) + 2; 
+                    const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
+                    const fontSize = esEncabezado ? 7 : 5;
+                    const espaciadoLineas = fontSize * 1.4; // Espacio vertical automático entre líneas
+
+                    // Dibujamos cada actividad de forma individual hacia abajo de manera automática
+                    lineasAsignadas.forEach((linea, index) => {
+                        const yActual = yInicial - (index * espaciadoLineas);
+
+                        try {
+                            const textoSeguro = String(linea).trim();
+                            if (!textoSeguro) return;
+
+                            firstPage.drawText(textoSeguro, {
+                                x: x,
+                                y: yActual,
+                                size: fontSize,
+                                font: esEncabezado ? fontBold : font,
+                                color: PDFLib.rgb(0, 0, 0),
+                                maxWidth: Math.max(10, Number(box.x2) - Number(box.x1))
+                            });
+                        } catch (innerErr) {
+                            console.error(`❌ Error al estampar la línea en el campo "${campo}":`, innerErr);
+                        }
+                    });
+                }
+
+                const pdfBytesFinales = await pdfDocLib.save();
+                const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `Ausbildungsnachweis_${nombreUsuario}_${semSeleccionada}.pdf`;
+                link.click();
+
+                estadoInfo.textContent = "🎉 ¡PDF generado y descargado con éxito!";
+            } catch (err) {
+                console.error("🔥 ERROR GLOBAL PDF-LIB:", err);
+                estadoInfo.textContent = "❌ Error al generar el PDF.";
+                alert("Error crítico: " + err.message);
+            }
+        });
+    </script>
+</body>
+</html>
