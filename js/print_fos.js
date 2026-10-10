@@ -4,7 +4,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. Estructura HTML original completa
+    // 1. Estructura HTML con panel de controles de ajuste de coordenadas añadido
     container.innerHTML = `
         <div class="space-y-4 relative">
             <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS -->
@@ -46,6 +46,23 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition whitespace-nowrap">
                         🚀 Descargar PDF
                     </button>
+                </div>
+            </div>
+
+            <!-- 🎛️ PANEL DE CALIBRACIÓN DE COORDENADAS -->
+            <div class="bg-slate-100 p-2.5 rounded-lg border border-slate-300 text-xs flex flex-wrap items-center justify-between gap-2">
+                <span class="font-bold text-slate-700 uppercase text-[10px]">🛠️ Calibrar Coordenadas:</span>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <label class="flex items-center gap-1 text-[11px]">
+                        ↕️ Y Off: <input type="number" id="fosCalibOffsetY" value="0" step="1" class="w-14 p-1 border rounded text-center bg-white">
+                    </label>
+                    <label class="flex items-center gap-1 text-[11px]">
+                        ↔️ X Off: <input type="number" id="fosCalibOffsetX" value="0" step="1" class="w-14 p-1 border rounded text-center bg-white">
+                    </label>
+                    <label class="flex items-center gap-1 text-[11px]">
+                        🔍 Zoom: <input type="number" id="fosCalibScale" value="1.0" step="0.05" min="0.5" max="2.0" class="w-16 p-1 border rounded text-center bg-white">
+                    </label>
+                    <button id="fosBtnResetCalib" class="bg-slate-600 hover:bg-slate-700 text-white font-bold px-2.5 py-1 rounded text-[10px]">Restablecer</button>
                 </div>
             </div>
 
@@ -102,6 +119,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const canvasModal = document.getElementById('fosPdfCanvasModal');
     const drawingOverlayModal = document.getElementById('fosDrawingOverlayModal');
 
+    // Controles de calibración
+    const calibOffsetY = document.getElementById('fosCalibOffsetY');
+    const calibOffsetX = document.getElementById('fosCalibOffsetX');
+    const calibScale = document.getElementById('fosCalibScale');
+    const btnResetCalib = document.getElementById('fosBtnResetCalib');
+
     // Referencias del Modal
     const fosModalVerificacion = document.getElementById('fosModalVerificacion');
     const fosModalCerrarX = document.getElementById('fosModalCerrarX');
@@ -131,7 +154,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let coordenadasMap = {};
     let semanasAgrupadas = {};
     
-    // 🔐 Recuperación correcta del usuario actual (sesión)
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     if (!nombreUsuarioActual) {
         estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
@@ -140,11 +162,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 🚀 Sincronización optimizada y en paralelo con Supabase (con Plan B de respaldo)
+    // Sincronización con Supabase (con Plan B)
     try {
         estadoInfoModal.textContent = "⏳ Sincronizando datos...";
 
-        // 1. Consultar usuario y registros diarios en paralelo
         const [respUsuario, respReg] = await Promise.all([
             fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
@@ -165,7 +186,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         const profesoraUsuario = usuario.teacher || '-'; 
         const codigoProfesion = usuario.ausbildung;
 
-        // 2. Consultar profesión y plantilla en paralelo
         const [respProf, respTpl] = await Promise.all([
             codigoProfesion 
                 ? fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(codigoProfesion)}&select=*`, { headers: { ...headers, 'Range': '0-0' } })
@@ -188,9 +208,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // 🔄 PLAN B DE RESPALDO: Si las coordenadas siguen vacías, cargamos la primera plantilla disponible
         if (Object.keys(coordenadasMap).length === 0) {
-            console.warn("⚠️ No se hallaron coordenadas con el ID exacto, aplicando plantilla por defecto de Supabase...");
             const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
             });
@@ -215,13 +233,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             });
         }
 
-        // Pintar en el panel visual
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
         fosResProfesora.textContent = profesoraUsuario;
 
-        estadoInfoModal.textContent = "✅ Datos cargados correctamente. Sube el PDF base para comenzar.";
+        estadoInfoModal.textContent = "✅ Datos cargados. Sube el PDF base y usa los controles de calibración si lo necesitas.";
 
     } catch (err) {
         console.error("Error sincronizando con Supabase:", err);
@@ -237,7 +254,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
             pdfDoc = await loadingTask.promise;
             await renderizarPaginaModal(1);
-            estadoInfoModal.textContent = "✅ PDF base cargado. Selecciona la semana para visualizar.";
+            estadoInfoModal.textContent = "✅ PDF base cargado. Ya puedes calibrar y verificar.";
         } catch (err) {
             console.error(err);
             estadoInfoModal.textContent = "❌ Error al procesar el archivo PDF.";
@@ -256,6 +273,20 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         await page.render({ canvasContext: context, viewport: pageViewport }).promise;
         redibujarOverlayModal();
     }
+
+    // Escuchas para recalibrar en tiempo real al mover los inputs
+    [calibOffsetY, calibOffsetX, calibScale].forEach(input => {
+        input.addEventListener('input', () => {
+            if (pdfDoc) redibujarOverlayModal();
+        });
+    });
+
+    btnResetCalib.addEventListener('click', () => {
+        calibOffsetY.value = 0;
+        calibOffsetX.value = 0;
+        calibScale.value = 1.0;
+        if (pdfDoc) redibujarOverlayModal();
+    });
 
     selectSemanaModal.addEventListener('change', (e) => {
         const semSeleccionada = e.target.value;
@@ -299,18 +330,22 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         const semSeleccionada = selectSemanaModal.value;
         const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
+        const offY = Number(calibOffsetY.value) || 0;
+        const offX = Number(calibOffsetX.value) || 0;
+        const userScale = Number(calibScale.value) || 1.0;
+
         for (const [campo, box] of Object.entries(coordenadasMap)) {
             if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined') continue;
 
-            const x1 = Number(box.x1);
-            const y1 = Number(box.y1);
-            const x2 = Number(box.x2);
-            const y2 = Number(box.y2);
+            const x1 = Number(box.x1) + offX;
+            const y1 = Number(box.y1) + offY;
+            const x2 = Number(box.x2) + offX;
+            const y2 = Number(box.y2) + offY;
 
             const left = x1 * scale;
             const top = pageViewport.height - (y2 * scale);
-            const width = Math.max(20, (x2 - x1) * scale);
-            const height = Math.max(10, (y2 - y1) * scale);
+            const width = Math.max(20, (x2 - x1) * scale * userScale);
+            const height = Math.max(10, (y2 - y1) * scale * userScale);
 
             const cajaVisual = document.createElement('div');
             cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 border border-blue-400/30 bg-blue-50/20 pointer-events-none`;
@@ -387,7 +422,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         const semSeleccionada = selectSemanaModal.value;
 
         try {
-            estadoInfoModal.textContent = "⏳ Generando PDF final...";
+            estadoInfoModal.textContent = "⏳ Generando PDF final con ajustes aplicados...";
             
             const pdfBytesClon = archivoPdfOriginalBytes.slice(0);
             const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesClon);
@@ -398,6 +433,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+
+            // Capturamos los valores de calibración actuales para aplicarlos también en la descarga
+            const offY = Number(calibOffsetY.value) || 0;
+            const offX = Number(calibOffsetX.value) || 0;
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
                 if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
@@ -422,11 +461,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
                 if (lineasAsignadas.length === 0) continue;
 
-                const x = Number(box.x1);
+                // Aplicar compensación de ejes X e Y configurada en los inputs
+                const x = Number(box.x1) + offX;
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                 
                 const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
-                const y1Visual = Number(box.y1);
+                const y1Visual = Number(box.y1) + offY;
                 const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
