@@ -78,7 +78,7 @@
                             <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
                             <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
                         </div>
-                        <p class="text-[9px] text-amber-800">Arrastra cajas o estira la esquina inferior derecha para ajustar el ancho:</p>
+                        <p class="text-[9px] text-amber-800">Arrastra desde el centro para mover, o estira desde la esquina inferior derecha para cambiar el ancho:</p>
                         
                         <!-- Opción para desplazar todas las coordenadas hacia abajo -->
                         <div class="flex space-x-1 pt-1">
@@ -354,8 +354,16 @@
                     let startX, startY, initialLeft, initialTop;
 
                     cajaVisual.addEventListener('pointerdown', (e) => {
-                        // Permitir la redimensión nativa si hace clic en la esquina inferior derecha
-                        if (e.offsetX > cajaVisual.offsetWidth - 20 && e.offsetY > cajaVisual.offsetHeight - 20) return;
+                        // EXCLUSIÓN INTELIGENTE: Si estás haciendo clic en los 25 píxeles inferiores/derechos (la esquina de redimensionar), 
+                        // dejamos que actúe el redimensionador nativo del navegador. Si es en el centro, movemos la caja.
+                        const rect = cajaVisual.getBoundingClientRect();
+                        const isNearRightEdge = e.clientX > rect.right - 25;
+                        const isNearBottomEdge = e.clientY > rect.bottom - 25;
+
+                        if (isNearRightEdge && isNearBottomEdge) {
+                            return; // Permite estirar libremente desde la esquina
+                        }
+
                         isDragging = true;
                         startX = e.clientX;
                         startY = e.clientY;
@@ -472,8 +480,6 @@
                     if (lineasAsignadas.length === 0) continue;
 
                     const x = Number(box.x1);
-                    
-                    // ANCHO EXACTO CALIBRADO: Respeta milimétricamente el ancho que estires en la PC
                     const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                     
                     const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
@@ -485,7 +491,6 @@
                     const fuenteUsada = esEncabezado ? fontBold : font;
                     const espaciadoLineas = fontSize * 1.4;
 
-                    // Ajuste automático de texto (Word Wrapping) estrictamente con el ancho que definas
                     let lineasFinalesParaDibujar = [];
                     lineasAsignadas.forEach(parrafo => {
                         const palabras = String(parrafo).trim().split(/\s+/);
@@ -507,7 +512,6 @@
                         }
                     });
 
-                    // Dibujamos respetando el ancho exacto guardado
                     lineasFinalesParaDibujar.forEach((linea, index) => {
                         const yActual = yPdfLibTop - (index * espaciadoLineas);
 
