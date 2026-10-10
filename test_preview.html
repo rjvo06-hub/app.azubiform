@@ -98,7 +98,7 @@
         let scale = 1.2;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
-        let archivoPdfBytes = null;
+        let archivoPdfArrayBuffer = null;
 
         async function cargarListaPlantillas() {
             try {
@@ -143,18 +143,21 @@
         cargarListaPlantillas();
         cargarListaUsuarios();
 
-        fileInput.addEventListener('change', async (e) => {
+        // Lectura robusta mediante FileReader para evitar errores de búfer binario en PDF-Lib
+        fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            const arrayBuffer = await file.arrayBuffer();
-            archivoPdfBytes = new Uint8Array(arrayBuffer);
-
-            const typedarray = new Uint8Array(arrayBuffer);
-            const loadingTask = pdfjsLib.getDocument(typedarray);
-            pdfDoc = await loadingTask.promise;
-            await renderPage(1);
-            estadoInfo.textContent = "✅ PDF cargado correctamente.";
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                archivoPdfArrayBuffer = event.target.result;
+                const typedarray = new Uint8Array(archivoPdfArrayBuffer);
+                const loadingTask = pdfjsLib.getDocument(typedarray);
+                pdfDoc = await loadingTask.promise;
+                await renderPage(1);
+                estadoInfo.textContent = "✅ PDF cargado correctamente.";
+            };
+            reader.readAsArrayBuffer(file);
         });
 
         async function renderPage(num) {
@@ -167,7 +170,7 @@
 
             await page.render({ canvasContext: context, viewport: pageViewport }).promise;
             if (Object.keys(coordenadasMap).length > 0) {
-                redibujarDatos([]);
+                redibujarDatosVisuales([]);
             }
         }
 
@@ -252,7 +255,7 @@
 
         // ACCIÓN UNIFICADA: Pinta en pantalla y genera/descarga automáticamente el PDF
         btnGenerarVista.addEventListener('click', async () => {
-            if (!pdfDoc || !archivoPdfBytes) return alert("⚠️ Carga primero el archivo PDF base.");
+            if (!pdfDoc || !archivoPdfArrayBuffer) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
             const semSeleccionada = selectSemana.value;
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
@@ -264,7 +267,7 @@
 
             // 2. Generar y descargar el PDF de forma automática inmediata
             try {
-                const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfBytes);
+                const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfArrayBuffer);
                 const firstPage = pdfDocLib.getPages()[0];
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
 
