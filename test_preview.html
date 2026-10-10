@@ -472,19 +472,17 @@
                     const x = Number(box.x1);
                     const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                     
-                    // Convertimos la coordenada superior (y1) de la vista previa al espacio real de PDF-Lib
                     const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
                     const y1Visual = Number(box.y1);
-                    
-                    // PUNTO DE INICIO FIJO: Comienza exactamente en el borde superior de la caja menos un padding limpio de 8 píxeles hacia abajo
-                    const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 8;
+                    const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10; // Margen superior interno de 10px
 
+                    // TAMAÑO DE LETRA AMPLIADO SOLO PARA EL PDF FINAL
                     const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
-                    const fontSize = esEncabezado ? 7 : 5;
+                    const fontSize = esEncabezado ? 10 : 8; // Letra más grande y legible en el PDF definitivo
                     const fuenteUsada = esEncabezado ? fontBold : font;
-                    const espaciadoLineas = fontSize * 1.5;
+                    const espaciadoLineas = fontSize * 1.4; // Interlineado proporcional a la nueva letra
 
-                    // Ajuste automático de texto (Word Wrapping)
+                    // Ajuste automático de texto (Word Wrapping) con el nuevo tamaño de fuente
                     let lineasFinalesParaDibujar = [];
                     lineasAsignadas.forEach(parrafo => {
                         const palabras = String(parrafo).trim().split(/\s+/);
@@ -506,7 +504,7 @@
                         }
                     });
 
-                    // Dibujamos comenzando desde el punto superior de la caja hacia abajo
+                    // Dibujamos con el nuevo tamaño de letra
                     lineasFinalesParaDibujar.forEach((linea, index) => {
                         const yActual = yPdfLibTop - (index * espaciadoLineas);
 
