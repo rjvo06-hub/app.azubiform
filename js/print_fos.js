@@ -99,7 +99,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 1. Consultar datos en Supabase de forma optimizada
+    // 1. Consultar datos en Supabase
     try {
         const respUsuario = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, {
             headers: { ...headers, 'Range': '0-999' }
@@ -111,9 +111,8 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const usuario = dataUsr[0];
                 console.log("📦 Datos completos del usuario en Supabase:", usuario);
 
-                escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || '';
+                escuelaSeleccionadaId = usuario.file_identifier || usuario.escuela || '';
                 
-                // Mapeo directo y seguro de columnas reales (class, workplace, teacher)
                 claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
                 workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
                 
@@ -121,7 +120,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     profesoraUsuario = usuario.teacher;
                 }
                 
-                // Consultar la tabla 'profesions' usando el campo ausbildung como código
                 const codigoProfesion = usuario.ausbildung;
                 if (codigoProfesion) {
                     const respProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(codigoProfesion)}&select=*`, {
@@ -130,7 +128,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     if (respProf.ok) {
                         const dataProf = await respProf.json();
                         if (dataProf.length > 0) {
-                            // Se usa nombre_oficial según la estructura real de la tabla profesions
                             profesionUsuario = dataProf[0].nombre_oficial || dataProf[0].codigo || codigoProfesion;
                         } else {
                             profesionUsuario = codigoProfesion;
@@ -140,7 +137,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Actualizar la tarjeta visual superior con la información procesada
+        // Actualizar la tarjeta visual superior
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
