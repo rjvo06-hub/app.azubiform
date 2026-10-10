@@ -11,7 +11,7 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-    <!-- PDF-Lib para modificar y descargar el PDF -->
+    <!-- PDF-Lib -->
     <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
@@ -70,7 +70,6 @@
                         ⚡ Pintar Datos en el PDF
                     </button>
 
-                    <!-- Botón de Descarga -->
                     <button id="btnDescargarPdf" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition">
                         📥 Descargar PDF Relleno
                     </button>
@@ -89,7 +88,6 @@
 
         const fileInput = document.getElementById('pdfFile');
         const canvas = document.getElementById('pdfCanvas');
-        const container = document.getElementById('canvasContainer');
         const drawingOverlay = document.getElementById('drawingOverlay');
         const selectPlantillasGuardadas = document.getElementById('selectPlantillasGuardadas');
         const btnCargarPlantilla = document.getElementById('btnCargarPlantilla');
@@ -104,8 +102,7 @@
         let scale = 1.2;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
-        let registrosGlobales = [];
-        let archivoPdfBytes = null; // Guardar los bytes del PDF original para la descarga
+        let archivoPdfBytes = null;
 
         async function cargarListaPlantillas() {
             try {
@@ -210,7 +207,7 @@
                     headers: { ...headers, 'Range': '0-999' }
                 });
                 if (response.ok) {
-                    registrosGlobales = await response.json();
+                    const registrosGlobales = await response.json();
                     semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
 
                     selectSemana.innerHTML = '<option value="">-- Selecciona una semana --</option>';
@@ -267,12 +264,12 @@
             estadoInfo.textContent = "✨ ¡Datos plasmados con éxito en la vista previa!";
         });
 
-        // Generar vista previa visual en pantalla
         function redibujarDatos(datosSemana) {
             if (!pageViewport) return;
             drawingOverlay.innerHTML = '';
 
             for (const [campo, box] of Object.entries(coordenadasMap)) {
+                if (!box) continue;
                 const left = box.x1 * scale;
                 const top = pageViewport.height - (box.y2 * scale);
                 const width = (box.x2 - box.x1) * scale;
@@ -319,7 +316,7 @@
                         textoAsignado = (datosSemana.freitag || []).join('<br>');
                         esActividad = true;
                     } else if (lowerKey.includes('schueler')) {
-                        textoAsignado = selectUsuario.value;
+                        textoAsignado = selectUsuario.value || '';
                     }
                 }
 
@@ -340,7 +337,6 @@
             }
         }
 
-        // Lógica para descargar el PDF real usando pdf-lib
         btnDescargarPdf.addEventListener('click', async () => {
             if (!archivoPdfBytes) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
@@ -348,44 +344,37 @@
             if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
             try {
-                const datosSemana = semanasAgrupadas[semSeleccionada];
+                const datosSemana = semanasAgrupadas[semSeleccionada] || { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
                 
-                // Cargar el PDF con pdf-lib
                 const pdfDocLib = await PDFLib.PDFDocument.load(archivoPdfBytes);
                 const pages = pdfDocLib.getPages();
-                const firstPage = pages[0]; // Página 1
+                const firstPage = pages[0];
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
 
                 for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    if (!box) continue;
                     const lowerKey = campo.toLowerCase();
                     let textoAsignado = '';
-                    let esActividad = false;
-                    let fontSize = 8; // Predeterminado para encabezados
+                    let fontSize = 8;
 
                     if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
                         if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
                             textoAsignado = (datosSemana.lunes || []).join('\n');
-                            esActividad = true;
                         } else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
                             textoAsignado = (datosSemana.dienstag || []).join('\n');
-                            esActividad = true;
                         } else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
                             textoAsignado = (datosSemana.mittwoch || []).join('\n');
-                            esActividad = true;
                         } else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
                             textoAsignado = (datosSemana.donnerstag || []).join('\n');
-                            esActividad = true;
                         } else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
                             textoAsignado = (datosSemana.freitag || []).join('\n');
-                            esActividad = true;
                         } else if (lowerKey.includes('schueler')) {
-                            textoAsignado = selectUsuario.value;
+                            textoAsignado = selectUsuario.value || '';
                         }
                     }
 
                     if (!textoAsignado) continue;
 
-                    // Definir tamaño según requerimiento
                     const esEncabezadoOSimilar = lowerKey.includes('schueler') || 
                                                  lowerKey.includes('klasse') || 
                                                  lowerKey.includes('woche') || 
@@ -395,34 +384,36 @@
                     if (esEncabezadoOSimilar) {
                         fontSize = 8;
                     } else {
-                        fontSize = 4.5; // Actividades a 4.5 px
+                        fontSize = 4.5;
                     }
 
-                    // Coordenadas PDF-lib (origen abajo a la izquierda)
                     const x = box.x1;
-                    const y = box.y1 + 2; // Pequeño ajuste vertical
+                    const y = box.y1 + 2;
 
-                    firstPage.drawText(textoAsignado, {
-                        x: x,
-                        y: y,
-                        size: fontSize,
-                        font: font,
-                        color: PDFLib.rgb(0, 0, 0),
-                        lineHeight: fontSize * 1.2
-                    });
+                    try {
+                        firstPage.drawText(textoAsignado, {
+                            x: x,
+                            y: y,
+                            size: fontSize,
+                            font: font,
+                            color: PDFLib.rgb(0, 0, 0),
+                            lineHeight: fontSize * 1.2
+                        });
+                    } catch (innerErr) {
+                        console.warn(`No se pudo estampar el campo ${campo}:`, innerErr);
+                    }
                 }
 
-                // Generar el archivo PDF modificado y descargar
                 const pdfBytesModificados = await pdfDocLib.save();
                 const blob = new Blob([pdfBytesModificados], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = `Wochenbericht_${selectUsuario.value}_${semSeleccionada.replace(/\//g, '-')}.pdf`;
+                link.download = `Wochenbericht_${selectUsuario.value || 'Usuario'}_${semSeleccionada.replace(/\//g, '-')}.pdf`;
                 link.click();
 
                 estadoInfo.textContent = "✅ ¡PDF descargado con éxito!";
             } catch (err) {
-                console.error(err);
+                console.error("Error al generar PDF:", err);
                 alert("❌ Error al generar y descargar el PDF.");
             }
         });
