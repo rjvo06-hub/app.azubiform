@@ -115,7 +115,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
                 escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || '';
                 
-                // Columnas exactas vistas en tu captura de Supabase
+                // Extracción segura de los campos de la tabla usuarios
                 claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
                 workplaceUsuario = usuario.workplace || usuario.betrieb || '-';
                 profesoraUsuario = usuario.teacher || usuario.profesora || '-';
@@ -130,8 +130,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     });
                     if (respProf.ok) {
                         const dataProf = await respProf.json();
+                        console.log("📦 Datos obtenidos de la tabla 'profesions':", dataProf);
                         if (dataProf.length > 0) {
-                            profesionUsuario = dataProf[0].nombre || dataProf[0].titulo || dataProf[0].descripcion || idProfesion;
+                            // Verificamos de forma exhaustiva cualquier posible nombre de columna para el texto de la profesión
+                            const p = dataProf[0];
+                            profesionUsuario = p.nombre || p.profesion || p.bezeichnung || p.name || p.titulo || p.descripcion || idProfesion;
                         } else {
                             profesionUsuario = idProfesion;
                         }
