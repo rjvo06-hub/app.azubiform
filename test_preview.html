@@ -82,7 +82,7 @@
                         <!-- Opción para desplazar todas las coordenadas hacia abajo -->
                         <div class="flex space-x-1 pt-1">
                             <input type="number" id="inputDesplazarY" value="30" class="w-20 p-1 text-xs border rounded bg-white text-center" placeholder="Píxeles">
-                            <button id="btnDesplazarTodoAbajo" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1 rounded">⬇️ Mover Todo 30px Abajo</button>
+                            <button id="btnDesplazarTodoAbajo" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1 rounded">⬇️ Mover Todo Abajo</button>
                         </div>
 
                         <!-- Botón de guardado -->
@@ -286,21 +286,19 @@
             redibujarOverlay();
         });
 
-        // Botón para mover TODAS las coordenadas hacia abajo de forma masiva
         btnDesplazarTodoAbajo.addEventListener('click', () => {
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas.");
             const offset = parseFloat(inputDesplazarY.value) || 30;
 
             for (const campo in coordenadasMap) {
                 const box = coordenadasMap[campo];
-                // En el sistema de PDF (origen abajo), restar a y1 y y2 mueve el bloque hacia abajo en la página visual
                 box.y1 -= offset;
                 box.y2 -= offset;
             }
 
             redibujarOverlay();
             btnGuardarCoordenadas.classList.remove('hidden');
-            estadoInfo.textContent = `⬇️ Todas las coordenadas se movieron ${offset}px hacia abajo. ¡Guarda los cambios!`;
+            estadoInfo.textContent = `⬇️ Coordenadas desplazadas ${offset}px. ¡Guarda los cambios!`;
         });
 
         function redibujarOverlay() {
@@ -327,18 +325,20 @@
                 cajaVisual.style.height = `${height}px`;
 
                 const lowerKey = campo.toLowerCase();
-                let textoAsignado = `[${campo}]`;
+                let textoAsignado = '';
 
-                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora')) {
-                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || ["Actividad Lunes"]).join('<br>');
-                    else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || ["Actividad Martes"]).join('<br>');
-                    else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || ["Actividad Miércoles"]).join('<br>');
-                    else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || ["Actividad Jueves"]).join('<br>');
-                    else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || ["Actividad Viernes"]).join('<br>');
+                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || []).join('<br>');
+                    else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || []).join('<br>');
+                    else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || []).join('<br>');
+                    else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || []).join('<br>');
+                    else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('<br>');
                     else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
                 }
 
-                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${textoAsignado}</div>`;
+                // Si está vacío, se muestra limpio en la vista previa
+                const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">(Vacío)</span>`;
+                cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
 
                 if (modoEdicionActivo) {
                     let isDragging = false;
@@ -432,7 +432,7 @@
                 const firstPage = pdfDocLib.getPages()[0];
                 const { height: pdfHeight } = firstPage.getSize();
                 const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-                const fontBold = await PDFLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
                 const datosSemana = semanasAgrupadas[semSeleccionada] || {};
                 const nombreUsuario = selectUsuario.value;
@@ -452,29 +452,30 @@
                         else if (lowerKey.includes('schueler')) textoAsignado = nombreUsuario;
                     }
 
-                    if (textoAsignado) {
-                        const x = box.x1;
-                        const y = pdfHeight - box.y2; 
-                        const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
-                        const fontSize = esEncabezado ? 7 : 5;
+                    // VALIDACIÓN CLAVE: Si el texto está vacío, lo salta por completo y no imprime nada (deja el campo en blanco)
+                    if (!textoAsignado || textoAsignado.trim() === '') continue;
 
-                        firstPage.drawText(textoAsignado, {
-                            x: x,
-                            y: y + 2,
-                            size: fontSize,
-                            font: esEncabezado ? fontBold : font,
-                            color: PDFLib.rgb(0, 0, 0),
-                            maxWidth: box.x2 - box.x1,
-                            lineHeight: fontSize * 1.2
-                        });
-                    }
+                    const x = box.x1;
+                    const y = pdfHeight - box.y2; 
+                    const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
+                    const fontSize = esEncabezado ? 7 : 5;
+
+                    firstPage.drawText(textoAsignado, {
+                        x: x,
+                        y: y + 2,
+                        size: fontSize,
+                        font: esEncabezado ? fontBold : font,
+                        color: PDFLib.rgb(0, 0, 0),
+                        maxWidth: box.x2 - box.x1,
+                        lineHeight: fontSize * 1.2
+                    });
                 }
 
                 const pdfBytesFinales = await pdfDocLib.save();
                 const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = `Ausbildungsnachweis_${nombreNode || nombreUsuario}_${semSeleccionada}.pdf`;
+                link.download = `Ausbildungsnachweis_${nombreUsuario}_${semSeleccionada}.pdf`;
                 link.click();
 
                 estadoInfo.textContent = "🎉 ¡PDF generado y descargado con éxito!";
