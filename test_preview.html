@@ -183,14 +183,14 @@
                     const data = await response.json();
                     if (data.length > 0 && data[0].coordinates_json) {
                         coordenadasMap = data[0].coordinates_json;
-                        alert("✅ Coordenadas cargadas con éxito.");
+                        alert("✅ Coordenadas de usuario cargadas con éxito.");
                     } else {
-                        alert("⚠️ No hay coordenadas guardadas.");
+                        alert("⚠️ No hay coordenadas guardadas para esta escuela.");
                     }
                 }
             } catch (err) {
                 console.error(err);
-                alert("❌ Error al cargar coordenadas.");
+                alert("❌ Error al conectar con Supabase para cargar las coordenadas.");
             }
         });
 
@@ -250,7 +250,7 @@
             return semanas;
         }
 
-        // ACCIÓN UNIFICADA: Pinta en pantalla y genera/descarga automáticamente el PDF
+        // ACCIÓN UNIFICADA: Pinta visualmente y descarga de forma robusta
         btnGenerarVista.addEventListener('click', async () => {
             if (!pdfDoc || !archivoPdfFile) return alert("⚠️ Carga primero el archivo PDF base.");
             if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ Carga la plantilla de coordenadas.");
@@ -325,7 +325,7 @@
                 estadoInfo.textContent = "✨ ¡Datos pintados y PDF descargado con éxito!";
             } catch (err) {
                 console.error("Error al generar PDF:", err);
-                alert("❌ Error al generar el archivo PDF.");
+                alert("❌ Error al generar el archivo PDF. Asegúrate de haber seleccionado una plantilla de coordenadas válida.");
             }
         });
 
