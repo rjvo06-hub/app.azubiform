@@ -108,6 +108,13 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
+    // Función auxiliar para formatear números con coma y un decimal (ej: 8,5)
+    function formatarDecimalAleman(valor) {
+        const num = Number(valor);
+        if (isNaN(num) || num <= 0) return '';
+        return num.toFixed(1).replace('.', ',');
+    }
+
     try {
         estadoInfoModal.textContent = "⏳ Vorlage wird geladen und Daten werden synchronisiert...";
 
@@ -279,11 +286,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
         const datosSemana = semanasAgrupadas[semSeleccionada] || {};
         const dias = [
-            { nombre: 'Montag', items: datosSemana.lunes, horas: datosSemana.horasLunes },
-            { nombre: 'Dienstag', items: datosSemana.dienstag, horas: datosSemana.horasDienstag },
-            { nombre: 'Mittwoch', items: datosSemana.mittwoch, horas: datosSemana.horasMittwoch },
-            { nombre: 'Donnerstag', items: datosSemana.donnerstag, horas: datosSemana.horasDonnerstag },
-            { nombre: 'Freitag', items: datosSemana.freitag, horas: datosSemana.horasFreitag }
+            { nombre: 'Montag', items: datosSemana.lunes, horas: formatarDecimalAleman(datosSemana.horasLunes) },
+            { nombre: 'Dienstag', items: datosSemana.dienstag, horas: formatarDecimalAleman(datosSemana.horasDienstag) },
+            { nombre: 'Mittwoch', items: datosSemana.mittwoch, horas: formatarDecimalAleman(datosSemana.horasMittwoch) },
+            { nombre: 'Donnerstag', items: datosSemana.donnerstag, horas: formatarDecimalAleman(datosSemana.horasDonnerstag) },
+            { nombre: 'Freitag', items: datosSemana.freitag, horas: formatarDecimalAleman(datosSemana.horasFreitag) }
         ];
 
         let htmlActividades = '';
@@ -328,19 +335,19 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const esHora = lowerKey.includes('stunden') || lowerKey.includes('hora') || lowerKey.includes('zeit');
 
                 if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
-                    lineasAsignadas = esHora ? [String(datosSemana.horasLunes || '')] : (datosSemana.lunes || []);
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasLunes)] : (datosSemana.lunes || []);
                 } 
                 else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
-                    lineasAsignadas = esHora ? [String(datosSemana.horasDienstag || '')] : (datosSemana.dienstag || []);
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasDienstag)] : (datosSemana.dienstag || []);
                 } 
                 else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
-                    lineasAsignadas = esHora ? [String(datosSemana.horasMittwoch || '')] : (datosSemana.mittwoch || []);
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasMittwoch)] : (datosSemana.mittwoch || []);
                 } 
                 else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
-                    lineasAsignadas = esHora ? [String(datosSemana.horasDonnerstag || '')] : (datosSemana.donnerstag || []);
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasDonnerstag)] : (datosSemana.donnerstag || []);
                 } 
                 else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
-                    lineasAsignadas = esHora ? [String(datosSemana.horasFreitag || '')] : (datosSemana.freitag || []);
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasFreitag)] : (datosSemana.freitag || []);
                 } 
                 else if (lowerKey.includes('schueler') || lowerKey.includes('name')) {
                     lineasAsignadas = [nombreUsuarioActual];
@@ -358,16 +365,15 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     lineasAsignadas = [fosResProfesora.textContent];
                 } 
                 else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) {
-                    // AQUÍ ESTÁ EL CAMBIO: Ya no ponemos el rango de fechas, sino la suma total de las horas de la semana
                     const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
-                    lineasAsignadas = [totalSemana > 0 ? String(totalSemana) : ''];
+                    lineasAsignadas = [totalSemana > 0 ? formatarDecimalAleman(totalSemana) : ''];
                 } 
                 else if (esHora) {
                     const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
-                    lineasAsignadas = [totalSemana > 0 ? String(totalSemana) : ''];
+                    lineasAsignadas = [totalSemana > 0 ? formatarDecimalAleman(totalSemana) : ''];
                 }
 
-                lineasAsignadas = lineasAsignadas.filter(l => l && l !== '' && l !== '0');
+                lineasAsignadas = lineasAsignadas.filter(l => l && l !== '' && l !== '0' && l !== '0,0');
                 if (lineasAsignadas.length === 0) continue;
 
                 const x = Number(box.x1);
