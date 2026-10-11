@@ -433,7 +433,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
-                const color = PDFLib.rgb(0.4, 0,4, 0,4)
 
                 let lineasFinalesParaDibujar = [];
                 lineasAsignadas.forEach(parrafo => {
@@ -476,7 +475,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Taetigkeitsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
+            link.download = `Ausbildungsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
             link.click();
 
             estadoInfoModal.textContent = "🎉 ¡PDF generado y descargado con éxito!";
