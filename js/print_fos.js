@@ -431,7 +431,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
-                const fuenteUsada = esEncabezado ? fontBold : font;
+                const fuenteUsada = font;
                 const espaciadoLineas = fontSize * 1.4;
 
                 let lineasFinalesParaDibujar = [];
@@ -463,7 +463,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                             y: yActual,
                             size: fontSize,
                             font: fuenteUsada,
-                            color: PDFLib.rgb(0.4, 0.4, 0.4)
+                            color: PDFLib.rgb(0, 0, 0)
                         });
                     } catch (innerErr) {
                         console.error(`❌ Error al estampar en el campo "${campo}":`, innerErr);
