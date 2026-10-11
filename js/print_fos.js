@@ -4,7 +4,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. Estructura HTML reducida: Solo panel azul integrado con selección de semana y botón de descarga
+    // 1. Estructura HTML reducida: Panel azul integrado con selector de semana y botón de descarga
     container.innerHTML = `
         <div class="space-y-4 relative">
             <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS + SELECTOR DE SEMANA -->
@@ -12,7 +12,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-indigo-700 pb-2.5 gap-2">
                     <span class="font-bold uppercase tracking-wider text-indigo-200">👤 Datos del Reporte Activo</span>
                     
-                    <!-- Selector de Semana y Botón integrados arriba -->
+                    <!-- Selector de Semana y Botón integrados -->
                     <div class="flex items-center gap-2 w-full sm:w-auto">
                         <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium flex-1 sm:flex-initial focus:outline-none focus:ring-1 focus:ring-emerald-400">
                             <option value="">-- Selecciona semana --</option>
@@ -100,6 +100,8 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let archivoPdfOriginalBytes = null;
     let coordenadasMap = {};
     let semanasAgrupadas = {};
+    let pageViewportGlobal = null;
+    let escalaGlobal = 1.0;
     
     // 🔐 Recuperación del usuario actual (sesión)
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
@@ -183,25 +185,17 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
 
             selectSemanaModal.innerHTML = '<option value="">-- Selecciona una semana --</option>';
-            let semanaEncontradaParaPredeterminar = '';
 
             Object.keys(semanasAgrupadas).forEach(sem => {
                 const opt = document.createElement('option');
                 opt.value = sem;
                 opt.textContent = `Woche: ${sem}`;
                 
-                // Comprobar si coincide con la semana actual
                 if (sem === claveSemanaActual) {
                     opt.selected = true;
-                    semanaEncontradaParaPredeterminar = sem;
                 }
                 selectSemanaModal.appendChild(opt);
             });
-
-            // Si la semana actual no tiene registros exactos pero existe en el select, o si deseas forzarla
-            if (!semanaEncontradaParaPredeterminar && semanasAgrupadas[claveSemanaIdCercana(semanasAgrupadas, hoy)]) {
-                // Opcional
-            }
         }
 
         // Pintar datos en el panel
@@ -219,6 +213,13 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             if (!respuestaPdf.ok) throw new Error(`No se encontró el archivo en la ruta: ${rutaPdfRepositorio}`);
             
             archivoPdfOriginalBytes = await respuestaPdf.arrayBuffer();
+
+            // Inicializar metadatos del viewport en segundo plano para el cálculo correcto de coordenadas
+            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
+            const pdfDocJs = await loadingTask.promise;
+            const page = await pdfDocJs.getPage(1);
+            pageViewportGlobal = page.getViewport({ scale: escalaGlobal });
+
             estadoInfoModal.textContent = "✅ Listo para generar reportes. Semana actual seleccionada automáticamente.";
         } catch (errorPdfRepo) {
             console.error("Error al cargar la plantilla automática:", errorPdfRepo);
@@ -311,7 +312,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             
             const firstPage = pdfDocLib.getPages()[0];
             const { height: pdfHeight } = firstPage.getSize();
-            const font = await PDFLib.StandardFonts ? await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica) : await pdfDocLib.embedStandardFont('Helvetica');
+            const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
@@ -341,8 +342,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const x = Number(box.x1);
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                 
+                // 🎯 FÓRMULA ORIGINAL EXACTA RESTAURADA
+                const heightCanvasPdfJs = pageViewportGlobal ? (pageViewportGlobal.height / escalaGlobal) : pdfHeight;
                 const y1Visual = Number(box.y1);
-                const yPdfLibTop = pdfHeight - y1Visual - 10;
+                const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
