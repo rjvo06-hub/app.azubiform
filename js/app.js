@@ -106,7 +106,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
 
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100 text-sm';
-                // Ocultamos el texto de las horas individuales, solo mostramos la actividad y el botón de eliminar
                 div.innerHTML = `
                     <span class="text-gray-700 font-medium">${item.nombre_actividad}</span>
                     <div class="flex items-center gap-2">
@@ -188,7 +187,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
 
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-sm';
-                // Ocultamos el texto de las horas individuales en la lista de hoy
                 div.innerHTML = `
                     <span class="text-gray-700 font-medium">${item.nombre_actividad}</span>
                     <div class="flex items-center gap-2">
@@ -197,7 +195,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 listaActividades.appendChild(div);
             });
 
-            // Mostramos el total de horas acumuladas del día en el contador superior
             contador.textContent = `${data.length} erfasst (${totalHoras} Std.)`;
             if (contenedorHorasGlobal) contenedorHorasGlobal.classList.remove('hidden');
         } catch (err) { console.error(err); }
