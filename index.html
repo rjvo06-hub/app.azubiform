@@ -191,22 +191,21 @@
         </div>
     </div>
 
-    <!-- MODAL "MEIN KONTO" OPTIMIZADO PARA MÓVIL Y ESCRITORIO -->
-    <div id="modalKonto" class="fixed inset-0 bg-black/75 flex items-center justify-center hidden z-50 p-2 sm:p-4">
-        <div class="w-full max-w-xl bg-white rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden">
+    <!-- SECCIÓN INTEGRADA "MEIN KONTO" (Ya no es un modal flotante) -->
+    <div id="seccionKontoPrincipal" class="w-full max-w-md hidden space-y-4 mb-6">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200 flex flex-col">
             <div class="p-3.5 bg-gray-900 text-white flex justify-between items-center flex-shrink-0">
                 <h2 class="font-bold text-xs sm:text-sm flex items-center gap-1.5"><span>⚙️</span> Mein Konto • Übersicht</h2>
-                <button onclick="cerrarModalKonto()" class="text-gray-400 hover:text-white font-bold text-xl px-2 py-0.5">&times;</button>
+                <button onclick="cerrarModalKonto()" class="text-gray-400 hover:text-white font-bold text-lg px-2 py-0.5">&times;</button>
             </div>
 
-            <!-- Pestañas superiores mejor ajustadas y flexibles -->
             <div class="grid grid-cols-3 border-b border-gray-200 bg-gray-100 p-1.5 gap-1 flex-shrink-0">
                 <button type="button" id="tabBtnConsulta" onclick="cambiarTabKonto('consulta')" class="py-2 px-1 text-[11px] sm:text-xs font-bold text-indigo-700 bg-white rounded-xl shadow-sm transition text-center flex items-center justify-center gap-1"><span>📊</span> Abfrage</button>
                 <button type="button" id="tabBtnPdf" onclick="cambiarTabKonto('pdf')" class="py-2 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1"><span>📄</span> PDF Gen.</button>
                 <button type="button" id="tabBtnDatos" onclick="cambiarTabKonto('datos')" class="py-2 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1"><span>✏️</span> Stammdaten</button>
             </div>
 
-            <div class="p-3.5 sm:p-5 overflow-y-auto space-y-3 flex-1 bg-gray-50 text-xs">
+            <div class="p-3.5 sm:p-5 space-y-3 bg-gray-50 text-xs">
                 <div id="seccionTabConsulta" class="space-y-3">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <h3 class="text-xs font-bold text-indigo-700 uppercase mb-2.5 flex items-center gap-1"><span>📊</span> Aktivitäten-Abfrage (Wöchentlich)</h3>
@@ -227,10 +226,10 @@
 
                 <div id="seccionTabPdf" class="space-y-3 hidden">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <span class="text-2xl">📄</span>
-                            <h3 class="text-xs sm:text-sm font-bold text-gray-800 mt-1">Tätigkeitsnachweis Erstellen</h3>
-                            <p class="text-[11px] text-gray-500 mt-0.5">Erstelle und lade dein offizielles Berichts-PDF direkt herunter.</p>
+                            <h3 class="text-xs sm:text-sm font-bold text-gray-800 mt-0.5">Tätigkeitsnachweis Erstellen</h3>
+                            <p class="text-[11px] text-gray-500">Erstelle und lade dein offizielles Berichts-PDF direkt herunter.</p>
                         </div>
                         <div id="contenedorPdfManagerApp" class="text-left"></div>
                     </div>
@@ -294,7 +293,6 @@
                 <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen (+)</button>
             </form>
 
-            <!-- BLOQUE DE TIEMPO GLOBAL PARA EL DÍA PASADO -->
             <div id="contenedorHorasGlobalPasada" class="mb-4 bg-amber-50 p-4 rounded-2xl border border-amber-100 space-y-3 hidden">
                 <label for="horasGlobalPasada" class="block text-xs font-bold text-amber-900 uppercase">Gesamtstunden für diesen Tag verteilen</label>
                 <div class="flex gap-2">
@@ -395,7 +393,9 @@
         let kontoInicializado = false;
 
         window.abrirModalKonto = async function() {
-            document.getElementById('modalKonto').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('seccionKontoPrincipal').classList.remove('hidden');
+
             const usuarioActual = localStorage.getItem('usuario_actual');
 
             const selectUsr = document.getElementById('selectUsuarioConsulta');
@@ -431,7 +431,10 @@
             }
         };
 
-        window.cerrarModalKonto = function() { document.getElementById('modalKonto').classList.add('hidden'); };
+        window.cerrarModalKonto = function() {
+            document.getElementById('seccionKontoPrincipal').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+        };
 
         window.cambiarTabKonto = function(tab) {
             const secConsulta = document.getElementById('seccionTabConsulta');
