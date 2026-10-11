@@ -388,7 +388,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const firstPage = pdfDocLib.getPages()[0];
             const { height: pdfHeight } = firstPage.getSize();
             const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-            // Ya no es estrictamente necesario cargar fontBold a menos que lo uses en otra parte, pero lo dejamos disponible si hace falta
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
@@ -422,9 +421,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
-                
-                // 🛑 FUENTE ESTÁNDAR (NORMAL) PARA TODO, EVITANDO NEGRITAS EN ENCABEZADOS
-                const fuenteUsada = font; 
+                const fuenteUsada = font; // Fuente normal (Helvetica) para todo
                 const espaciadoLineas = fontSize * 1.4;
 
                 let lineasFinalesParaDibujar = [];
