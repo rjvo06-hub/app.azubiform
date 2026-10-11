@@ -463,7 +463,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                             y: yActual,
                             size: fontSize,
                             font: fuenteUsada,
-                            color: PDFLib.rgb(0, 0, 0)
+                            color: PDFLib.rgb(0.4, 0.4, 0.4)
                         });
                     } catch (innerErr) {
                         console.error(`❌ Error al estampar en el campo "${campo}":`, innerErr);
