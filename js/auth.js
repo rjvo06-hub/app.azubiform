@@ -1,15 +1,177 @@
-if (formRegistro) {
+import { SUPABASE_URL, headers } from './config.js';
+
+export function inicializarAuth(onLoginExitoso) {
+    const loginSection = document.getElementById('loginSection');
+    const loginMensaje = document.getElementById('loginMensaje');
+    const tituloAuth = document.getElementById('tituloAuth');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabRegistro = document.getElementById('tabRegistro');
+    const formLogin = document.getElementById('formLogin');
+    const formRegistro = document.getElementById('formRegistro');
+    const selectTipoPrograma = document.getElementById('regTipoPrograma'); 
+    const selectAusbildung = document.getElementById('regAusbildung'); 
+    const contenedorFachrichtung = document.getElementById('contenedorFachrichtung');
+    const labelFachrichtung = document.getElementById('labelRegFachrichtung');
+
+    // Evento para el selector principal de tipo (Ausbildung / FOS)
+    if (selectTipoPrograma) {
+        selectTipoPrograma.addEventListener('change', (e) => {
+            const tipoSeleccionado = e.target.value;
+            
+            if (tipoSeleccionado) {
+                // Mostrar el campo de profesión/rama cuando ya eligió una opción
+                if (contenedorFachrichtung) contenedorFachrichtung.classList.remove('hidden');
+                if (selectAusbildung) selectAusbildung.setAttribute('required', 'required');
+
+                // Cambiar la etiqueta según corresponda
+                if (labelFachrichtung) {
+                    if (tipoSeleccionado === 'fos') {
+                        labelFachrichtung.textContent = "FOS-Fachrichtung (Fachbereich)";
+                    } else {
+                        labelFachrichtung.textContent = "Fachrichtung / Beruf";
+                    }
+                }
+
+                cargarProfesionesPorTipo(tipoSeleccionado);
+            } else {
+                // Ocultar si no hay selección válida
+                if (contenedorFachrichtung) contenedorFachrichtung.classList.add('hidden');
+                if (selectAusbildung) selectAusbildung.removeAttribute('required');
+            }
+        });
+    }
+
+    function generarToken() {
+        return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    }
+
+    async function cargarProfesionesPorTipo(tipo) {
+        if (!selectAusbildung) return;
+        try {
+            const responseUrl = `${SUPABASE_URL}/rest/v1/profesions?tipo=eq.${tipo}&select=*`;
+            const res = await fetch(responseUrl, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!res.ok) {
+                selectAusbildung.innerHTML = '<option value="" disabled>Fehler beim Laden</option>';
+                return;
+            }
+            
+            const data = await res.json();
+            selectAusbildung.innerHTML = '<option value="" disabled selected>-- Wähle deine Option --</option>';
+
+            if (data && data.length > 0) {
+                data.forEach((prof) => {
+                    const option = document.createElement('option');
+                    option.value = prof.codigo; 
+                    option.textContent = prof.nombre_oficial || prof.codigo;
+                    selectAusbildung.appendChild(option);
+                });
+            } else {
+                selectAusbildung.innerHTML = '<option value="" disabled>Keine Einträge gefunden</option>';
+            }
+        } catch (error) {
+            console.error('Excepción:', error);
+            if (selectAusbildung) {
+                selectAusbildung.innerHTML = '<option value="" disabled>Netzwerkfehler</option>';
+            }
+        }
+    }
+
+    window.cambiarTab = function(tipo) {
+        if (!loginMensaje) return;
+        loginMensaje.classList.add('hidden');
+        if (tipo === 'login') {
+            if (tabLogin) tabLogin.className = "w-1/2 pb-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none transition";
+            if (tabRegistro) tabRegistro.className = "w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition";
+            if (formLogin) formLogin.classList.remove('hidden');
+            if (formRegistro) formRegistro.classList.add('hidden');
+            if (tituloAuth) tituloAuth.textContent = "Anmelden";
+            if (formLogin) formLogin.reset();
+        } else {
+            if (tabRegistro) tabRegistro.className = "w-1/2 pb-2 text-sm font-bold text-amber-600 border-b-2 border-amber-600 focus:outline-none transition";
+            if (tabLogin) tabLogin.className = "w-1/2 pb-2 text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition";
+            if (formRegistro) formRegistro.classList.remove('hidden');
+            if (formLogin) formLogin.classList.add('hidden');
+            if (tituloAuth) tituloAuth.textContent = "Neuen Benutzer registrieren";
+            if (formRegistro) formRegistro.reset();
+            
+            // Ocultar el selector de especialidad al abrir/resetear el registro
+            if (contenedorFachrichtung) contenedorFachrichtung.classList.add('hidden');
+            if (selectAusbildung) {
+                selectAusbildung.removeAttribute('required');
+                selectAusbildung.innerHTML = '<option value="" disabled selected>-- Wähle deine Option --</option>';
+            }
+            if (labelFachrichtung) {
+                labelFachrichtung.textContent = "Fachrichtung / Beruf";
+            }
+        }
+    };
+
+    window.togglePassword = function(idInput, idIcono) {
+        const input = document.getElementById(idInput);
+        const icono = document.getElementById(idIcono);
+        if (!input || !icono) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            icono.textContent = '🔒';
+        } else {
+            input.type = 'password';
+            icono.textContent = '👁️';
+        }
+    };
+
+    if (formLogin) {
+        formLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            if (loginMensaje) loginMensaje.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?email=ilike.${encodeURIComponent(email)}`, {
+                    method: 'GET', 
+                    headers: headers
+                });
+                if (!response.ok) throw new Error('Fehler beim Verbinden mit der Datenbank');
+                const usuarios = await response.json();
+                if (usuarios.length === 0) {
+                    mostrarMensaje('❌ Diese E-Mail-Adresse ist nicht registriert.');
+                    return;
+                }
+                const usuarioExistente = usuarios[0];
+                if (usuarioExistente.password !== password) {
+                    mostrarMensaje('❌ Falsches Passwort.');
+                    return;
+                }
+
+                if (!usuarioExistente.verificado) {
+                    mostrarMensaje('⚠ Bitte bestätige zuerst deine E-Mail-Adresse über den Link in deinem Postfach.');
+                    return;
+                }
+
+                localStorage.setItem('usuario_actual', usuarioExistente.nombre);
+                localStorage.setItem('usuario_ausbildung', usuarioExistente.ausbildung || '');
+                localStorage.setItem('usuario_acceso', usuarioExistente.acceso ? Number(usuarioExistente.acceso) : 0);
+                
+                onLoginExitoso(usuarioExistente.nombre);
+            } catch (error) {
+                mostrarMensaje('❌ Netzwerkfehler (Prüfe deine mobile Verbindung): ' + error.message);
+            }
+        });
+    }
+
+    if (formRegistro) {
         formRegistro.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nombre = document.getElementById('regNombre').value.trim();
             const email = document.getElementById('regEmail').value.trim();
             const ausbildung = document.getElementById('regAusbildung').value.trim(); 
             
-            // 1. CAPTURAR CORRECTAMENTE EL TIPO DE PROGRAMA SELECCIONADO
             const selectTipo = document.getElementById('regTipoPrograma');
             const tipoPrograma = selectTipo ? selectTipo.value.trim().toLowerCase() : '';
-            
-            console.log("Programa seleccionado en el formulario:", tipoPrograma); // Esto saldrá en F12 -> Console
 
             const password = document.getElementById('regPassword').value;
             const passwordConfirm = document.getElementById('regPasswordConfirm').value;
@@ -54,10 +216,7 @@ if (formRegistro) {
                     return;
                 }
 
-                // 2. SELECCIÓN DINÁMICA DEL ENDPOINT DE CORREO
-                // Si el valor contiene 'fos', usa el archivo de FOS; de lo contrario, el de Ausbildung
                 const endpointCorreo = (tipoPrograma.includes('fos')) ? '/api/send-fos-email' : '/api/enviar-correo';
-                console.log("Endpoint de correo que se va a invocar:", endpointCorreo);
 
                 const emailRes = await fetch(endpointCorreo, {
                     method: 'POST',
@@ -79,7 +238,19 @@ if (formRegistro) {
                 }
 
             } catch (error) {
-                mostrarMensaje('❌ Netzwerkfehler auf Mobilfunknetz: ' + error.message);
+                mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
             }
         });
     }
+
+    function mostrarMensaje(texto, tipo = 'error') {
+        if (!loginMensaje) return;
+        loginMensaje.textContent = texto;
+        if (tipo === 'exito') {
+            loginMensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-emerald-100 text-emerald-700';
+        } else {
+            loginMensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
+        }
+        loginMensaje.classList.remove('hidden');
+    }
+}
