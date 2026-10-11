@@ -234,17 +234,32 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const claveSemana = `${lunes.toLocaleDateString('de-DE')} bis ${viernes.toLocaleDateString('de-DE')}`;
 
             if (!semanas[claveSemana]) {
-                semanas[claveSemana] = { lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [] };
+                semanas[claveSemana] = { 
+                    lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [],
+                    horasLunes: 0, horasDienstag: 0, horasMittwoch: 0, horasDonnerstag: 0, horasFreitag: 0
+                };
             }
 
             const d = new Date(reg.fecha).getDay();
             const texto = reg.nombre_actividad || '';
+            const horasReg = Number(reg.horas) || 0;
 
-            if (d === 1) semanas[claveSemana].lunes.push(texto);
-            else if (d === 2) semanas[claveSemana].dienstag.push(texto);
-            else if (d === 3) semanas[claveSemana].mittwoch.push(texto);
-            else if (d === 4) semanas[claveSemana].donnerstag.push(texto);
-            else if (d === 5) semanas[claveSemana].freitag.push(texto);
+            if (d === 1) {
+                semanas[claveSemana].lunes.push(texto);
+                semanas[claveSemana].horasLunes += horasReg;
+            } else if (d === 2) {
+                semanas[claveSemana].dienstag.push(texto);
+                semanas[claveSemana].horasDienstag += horasReg;
+            } else if (d === 3) {
+                semanas[claveSemana].mittwoch.push(texto);
+                semanas[claveSemana].horasMittwoch += horasReg;
+            } else if (d === 4) {
+                semanas[claveSemana].donnerstag.push(texto);
+                semanas[claveSemana].horasDonnerstag += horasReg;
+            } else if (d === 5) {
+                semanas[claveSemana].freitag.push(texto);
+                semanas[claveSemana].horasFreitag += horasReg;
+            }
         });
         return semanas;
     }
@@ -264,11 +279,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
         const datosSemana = semanasAgrupadas[semSeleccionada] || {};
         const dias = [
-            { nombre: 'Montag', items: datosSemana.lunes },
-            { nombre: 'Dienstag', items: datosSemana.dienstag },
-            { nombre: 'Mittwoch', items: datosSemana.mittwoch },
-            { nombre: 'Donnerstag', items: datosSemana.donnerstag },
-            { nombre: 'Freitag', items: datosSemana.freitag }
+            { nombre: 'Montag', items: datosSemana.lunes, horas: datosSemana.horasLunes },
+            { nombre: 'Dienstag', items: datosSemana.dienstag, horas: datosSemana.horasDienstag },
+            { nombre: 'Mittwoch', items: datosSemana.mittwoch, horas: datosSemana.horasMittwoch },
+            { nombre: 'Donnerstag', items: datosSemana.donnerstag, horas: datosSemana.horasDonnerstag },
+            { nombre: 'Freitag', items: datosSemana.freitag, horas: datosSemana.horasFreitag }
         ];
 
         let htmlActividades = '';
@@ -276,7 +291,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const listado = (dia.items || []).filter(i => i && i.trim() !== '');
             htmlActividades += `
                 <div>
-                    <span class="font-semibold text-indigo-900">${dia.nombre}:</span>
+                    <span class="font-semibold text-indigo-900">${dia.nombre} (${dia.horas} Std.):</span>
                     <span class="text-gray-600">${listado.length > 0 ? listado.join(' | ') : '<span class="italic text-gray-400">Keine Aktivitäten</span>'}</span>
                 </div>
             `;
@@ -310,21 +325,47 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const lowerKey = campo.toLowerCase();
                 let lineasAsignadas = [];
 
-                if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
-                    if (lowerKey.includes('montag') || lowerKey.includes('lunes')) lineasAsignadas = datosSemana.lunes || [];
-                    else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) lineasAsignadas = datosSemana.dienstag || [];
-                    else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) lineasAsignadas = datosSemana.mittwoch || [];
-                    else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) lineasAsignadas = datosSemana.donnerstag || [];
-                    else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) lineasAsignadas = datosSemana.freitag || [];
-                    else if (lowerKey.includes('schueler') || lowerKey.includes('name')) lineasAsignadas = [nombreUsuarioActual];
-                    else if (lowerKey.includes('klasse') || lowerKey.includes('class')) lineasAsignadas = [fosResClase.textContent];
-                    else if (lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('fachrichtung') || (lowerKey.includes('ausbildung') && !lowerKey.includes('staette') && !lowerKey.includes('betrieb')) || lowerKey.includes('beruf') || lowerKey.includes('profesion')) lineasAsignadas = [fosResProfesion.textContent];
-                    else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) lineasAsignadas = [fosResWorkplace.textContent];
-                    else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) lineasAsignadas = [fosResProfesora.textContent];
-                    else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) lineasAsignadas = [semSeleccionada];
+                const esHora = lowerKey.includes('stunden') || lowerKey.includes('hora') || lowerKey.includes('zeit');
+
+                if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                    lineasAsignadas = esHora ? [String(datosSemana.horasLunes || '')] : (datosSemana.lunes || []);
+                } 
+                else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                    lineasAsignadas = esHora ? [String(datosSemana.horasDienstag || '')] : (datosSemana.dienstag || []);
+                } 
+                else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                    lineasAsignadas = esHora ? [String(datosSemana.horasMittwoch || '')] : (datosSemana.mittwoch || []);
+                } 
+                else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                    lineasAsignadas = esHora ? [String(datosSemana.horasDonnerstag || '')] : (datosSemana.donnerstag || []);
+                } 
+                else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                    lineasAsignadas = esHora ? [String(datosSemana.horasFreitag || '')] : (datosSemana.freitag || []);
+                } 
+                else if (lowerKey.includes('schueler') || lowerKey.includes('name')) {
+                    lineasAsignadas = [nombreUsuarioActual];
+                } 
+                else if (lowerKey.includes('klasse') || lowerKey.includes('class')) {
+                    lineasAsignadas = [fosResClase.textContent];
+                } 
+                else if (lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('fachrichtung') || (lowerKey.includes('ausbildung') && !lowerKey.includes('staette') && !lowerKey.includes('betrieb')) || lowerKey.includes('beruf') || lowerKey.includes('profesion')) {
+                    lineasAsignadas = [fosResProfesion.textContent];
+                } 
+                else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) {
+                    lineasAsignadas = [fosResWorkplace.textContent];
+                } 
+                else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) {
+                    lineasAsignadas = [fosResProfesora.textContent];
+                } 
+                else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) {
+                    lineasAsignadas = [semSeleccionada];
+                } 
+                else if (esHora) {
+                    const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
+                    lineasAsignadas = [totalSemana > 0 ? String(totalSemana) : ''];
                 }
 
-                lineasAsignadas = lineasAsignadas.filter(l => l && l.trim() !== '');
+                lineasAsignadas = lineasAsignadas.filter(l => l && l !== '' && l !== '0');
                 if (lineasAsignadas.length === 0) continue;
 
                 const x = Number(box.x1);
