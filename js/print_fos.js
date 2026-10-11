@@ -1,4 +1,4 @@
-import { SUPABASE_URL, headers } from './config.js';
+Import { SUPABASE_URL, headers } from './config.js';
 
 export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPreseleccionado = null) {
     const container = document.getElementById(containerId);
@@ -131,6 +131,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let coordenadasMap = {};
     let semanasAgrupadas = {};
     
+    // 🔐 Recuperación correcta del usuario actual (sesión)
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     if (!nombreUsuarioActual) {
         estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
@@ -139,9 +140,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
+    // 🚀 Sincronización optimizada y en paralelo con Supabase (con Plan B de respaldo)
     try {
         estadoInfoModal.textContent = "⏳ Sincronizando datos...";
 
+        // 1. Consultar usuario y registros diarios en paralelo
         const [respUsuario, respReg] = await Promise.all([
             fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
@@ -162,6 +165,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         const profesoraUsuario = usuario.teacher || '-'; 
         const codigoProfesion = usuario.ausbildung;
 
+        // 2. Consultar profesión y plantilla en paralelo
         const [respProf, respTpl] = await Promise.all([
             codigoProfesion 
                 ? fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(codigoProfesion)}&select=*`, { headers: { ...headers, 'Range': '0-0' } })
@@ -184,7 +188,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
+        // 🔄 PLAN B DE RESPALDO: Si las coordenadas siguen vacías, cargamos la primera plantilla disponible
         if (Object.keys(coordenadasMap).length === 0) {
+            console.warn("⚠️ No se hallaron coordenadas con el ID exacto, aplicando plantilla por defecto de Supabase...");
             const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
             });
@@ -209,6 +215,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             });
         }
 
+        // Pintar en el panel visual
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
@@ -388,6 +395,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const firstPage = pdfDocLib.getPages()[0];
             const { height: pdfHeight } = firstPage.getSize();
             const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+            const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
@@ -417,11 +425,13 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const x = Number(box.x1);
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                 
-                const yPdfLibTop = pdfHeight - Number(box.y1) - 10;
+                const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
+                const y1Visual = Number(box.y1);
+                const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
-                const fuenteUsada = font; // Fuente normal (Helvetica) para todo
+                const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
 
                 let lineasFinalesParaDibujar = [];
