@@ -4,67 +4,67 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Estructura simplificada con la selección de semana integrada en el panel azul
+    // Estructura adaptada y completamente en alemán
     container.innerHTML = `
         <div class="space-y-4 relative">
-            <!-- PANEL DE RESUMEN E INTEGRACIÓN DE SEMANA (Recuadro Azul) -->
+            <!-- PANEL DE RESUMEN E INTEGRACIÓN DE SEMANA -->
             <div class="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md space-y-3 text-xs">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-indigo-700 pb-2 gap-2">
-                    <span class="font-bold uppercase tracking-wider text-indigo-200">👤 Datos del Reporte Activo</span>
+                <div class="border-b border-indigo-700 pb-2 space-y-2">
+                    <span class="font-bold uppercase tracking-wider text-indigo-200 block">👤 Aktive Berichtsdaten</span>
                     
-                    <!-- Selector de Semana y Botón integrados en el recuadro azul -->
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <select id="fosSelectSemanaModal" class="p-1 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium flex-1 sm:flex-initial">
-                            <option value="">-- Selecciona semana --</option>
+                    <!-- Selector de Semana y Botón optimizados para móviles -->
+                    <div class="flex flex-col gap-2 w-full pt-1">
+                        <select id="fosSelectSemanaModal" class="w-full p-2 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium">
+                            <option value="">-- Woche auswählen --</option>
                         </select>
-                        <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded shadow transition whitespace-nowrap">
-                            🚀 Descargar PDF
+                        <button id="btnGenerarPdfModal" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded shadow transition flex items-center justify-center gap-1">
+                            <span>🚀 PDF herunterladen</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Nombre:</span><strong id="fosResNombre" class="text-white">Cargando...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Clase:</span><strong id="fosResClase" class="text-white">Cargando...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Profesión:</span><strong id="fosResProfesion" class="text-white">Cargando...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Lugar (Betrieb):</span><strong id="fosResWorkplace" class="text-white">Cargando...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Profesora:</span><strong id="fosResProfesora" class="text-white">Cargando...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Name:</span><strong id="fosResNombre" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Klasse:</span><strong id="fosResClase" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Ausbildung:</span><strong id="fosResProfesion" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Betrieb:</span><strong id="fosResWorkplace" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosResProfesora" class="text-white">Wird geladen...</strong></div>
                 </div>
             </div>
 
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
-                📌 Sincronizando datos y cargando plantilla del repositorio...
+                📌 Daten werden synchronisiert und Vorlage wird geladen...
             </div>
 
             <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN -->
             <div id="fosModalVerificacion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
                 <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
                     <div class="bg-indigo-900 text-white px-4 py-3 flex justify-between items-center">
-                        <h3 class="text-sm font-bold uppercase tracking-wider">🔍 Verificar Datos del Ausbildungsnachweis</h3>
+                        <h3 class="text-sm font-bold uppercase tracking-wider">🔍 Ausbildungsnachweis überprüfen</h3>
                         <button id="fosModalCerrarX" class="text-indigo-200 hover:text-white font-bold text-lg">&times;</button>
                     </div>
                     <div class="p-4 overflow-y-auto space-y-3 text-xs text-gray-700 flex-1">
-                        <p class="text-[11px] text-gray-500">Por favor, revisa que los datos y las actividades a imprimir sean correctos antes de generar el documento final:</p>
+                        <p class="text-[11px] text-gray-500">Bitte überprüfen Sie, ob die Daten und Aktivitäten korrekt sind, bevor Sie das finale Dokument generieren:</p>
                         
                         <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 grid grid-cols-2 gap-2">
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Estudiante:</span><strong id="fosValNombre" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Clase:</span><strong id="fosValClase" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Semana:</span><strong id="fosValSemana" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Profesión:</span><strong id="fosValProfesion" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Lugar de Trabajo:</span><strong id="fosValWorkplace" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Profesora:</span><strong id="fosValProfesora" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Schüler/in:</span><strong id="fosValNombre" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Klasse:</span><strong id="fosValClase" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Woche:</span><strong id="fosValSemana" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Ausbildung:</span><strong id="fosValProfesion" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Betrieb:</span><strong id="fosValWorkplace" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosValProfesora" class="text-indigo-900">-</strong></div>
                         </div>
 
                         <div>
-                            <h4 class="font-bold text-gray-800 uppercase text-[10px] mb-1">📋 Actividades Registradas para esta Semana:</h4>
+                            <h4 class="font-bold text-gray-800 uppercase text-[10px] mb-1">📋 Erfasste Aktivitäten für diese Woche:</h4>
                             <div id="fosValActividades" class="bg-gray-50 p-2.5 rounded-lg border border-gray-200 space-y-1 text-[11px] max-h-40 overflow-y-auto">
                                 <!-- Se llena dinámicamente -->
                             </div>
                         </div>
                     </div>
                     <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
-                        <button id="fosModalBtnCancelar" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold px-3 py-1.5 rounded text-xs transition">Cancelar</button>
-                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded text-xs transition shadow">Confirmar y Descargar</button>
+                        <button id="fosModalBtnCancelar" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold px-3 py-1.5 rounded text-xs transition">Abbrechen</button>
+                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded text-xs transition shadow">Bestätigen & Herunterladen</button>
                     </div>
                 </div>
             </div>
@@ -102,19 +102,19 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     if (!nombreUsuarioActual) {
-        estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
+        estadoInfoModal.textContent = "❌ Kein aktiver Benutzer gefunden.";
         return;
     }
 
     fosResNombre.textContent = nombreUsuarioActual;
 
     try {
-        estadoInfoModal.textContent = "⏳ Cargando plantilla y sincronizando datos...";
+        estadoInfoModal.textContent = "⏳ Vorlage wird geladen und Daten werden synchronisiert...";
 
         // 1. Carga automática del PDF desde la carpeta 'form' del repositorio
         const rutaPdfRepositorio = './form/Berufliche Oberschule Holzkirchen.pdf';
         const responsePdf = await fetch(rutaPdfRepositorio);
-        if (!responsePdf.ok) throw new Error("No se pudo cargar el archivo PDF desde la carpeta form.");
+        if (!responsePdf.ok) throw new Error("Die PDF-Datei konnte nicht aus dem Ordner 'form' geladen werden.");
         archivoPdfOriginalBytes = await responsePdf.arrayBuffer();
 
         // 2. Consultar usuario y registros diarios en paralelo
@@ -127,9 +127,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             })
         ]);
         
-        if (!respUsuario.ok) throw new Error("Error al consultar el perfil.");
+        if (!respUsuario.ok) throw new Error("Fehler beim Abrufen des Profils.");
         const dataUsr = await respUsuario.json();
-        if (dataUsr.length === 0) throw new Error("Usuario no encontrado.");
+        if (dataUsr.length === 0) throw new Error("Benutzer nicht gefunden.");
 
         const usuario = dataUsr[0];
         const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
@@ -176,7 +176,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const registrosGlobales = await respReg.json();
             semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
 
-            selectSemanaModal.innerHTML = '<option value="">-- Selecciona una semana --</option>';
+            selectSemanaModal.innerHTML = '<option value="">-- Woche auswählen --</option>';
             
             let claveSemanaActual = '';
             const hoy = new Date();
@@ -213,11 +213,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         fosResWorkplace.textContent = workplaceUsuario;
         fosResProfesora.textContent = profesoraUsuario;
 
-        estadoInfoModal.textContent = "✅ Plantilla cargada y listo para generar el PDF.";
+        estadoInfoModal.textContent = "✅ Vorlage geladen. Bereit zur PDF-Generierung.";
 
     } catch (err) {
-        console.error("Error en la inicialización:", err);
-        estadoInfoModal.textContent = `❌ ${err.message || "Error al inicializar el componente."}`;
+        console.error("Fehler bei der Initialisierung:", err);
+        estadoInfoModal.textContent = `❌ ${err.message || "Fehler beim Laden der Komponente."}`;
     }
 
     function agruparRegistrosPorSemana(registros) {
@@ -250,10 +250,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     }
 
     btnGenerarPdfModal.addEventListener('click', () => {
-        if (!archivoPdfOriginalBytes) return alert("⚠️ La plantilla PDF aún no se ha cargado desde el repositorio.");
-        if (Object.keys(coordenadasPdfMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
+        if (!archivoPdfOriginalBytes) return alert("⚠️ Die PDF-Vorlage wurde noch nicht geladen.");
+        if (Object.keys(coordenadasPdfMap).length === 0) return alert("⚠️ Keine Koordinaten aus Supabase geladen.");
         const semSeleccionada = selectSemanaModal.value;
-        if (!semSeleccionada) return alert("⚠️ Selecciona una semana válida.");
+        if (!semSeleccionada) return alert("⚠️ Bitte wählen Sie eine gültige Woche aus.");
 
         fosValNombre.textContent = nombreUsuarioActual;
         fosValClase.textContent = fosResClase.textContent;
@@ -264,11 +264,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
         const datosSemana = semanasAgrupadas[semSeleccionada] || {};
         const dias = [
-            { nombre: 'Montag (Lunes)', items: datosSemana.lunes },
-            { nombre: 'Dienstag (Martes)', items: datosSemana.dienstag },
-            { nombre: 'Mittwoch (Miércoles)', items: datosSemana.mittwoch },
-            { nombre: 'Donnerstag (Jueves)', items: datosSemana.donnerstag },
-            { nombre: 'Freitag (Viernes)', items: datosSemana.freitag }
+            { nombre: 'Montag', items: datosSemana.lunes },
+            { nombre: 'Dienstag', items: datosSemana.dienstag },
+            { nombre: 'Mittwoch', items: datosSemana.mittwoch },
+            { nombre: 'Donnerstag', items: datosSemana.donnerstag },
+            { nombre: 'Freitag', items: datosSemana.freitag }
         ];
 
         let htmlActividades = '';
@@ -277,7 +277,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             htmlActividades += `
                 <div>
                     <span class="font-semibold text-indigo-900">${dia.nombre}:</span>
-                    <span class="text-gray-600">${listado.length > 0 ? listado.join(' | ') : '<span class="italic text-gray-400">Sin actividades</span>'}</span>
+                    <span class="text-gray-600">${listado.length > 0 ? listado.join(' | ') : '<span class="italic text-gray-400">Keine Aktivitäten</span>'}</span>
                 </div>
             `;
         });
@@ -294,7 +294,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         const semSeleccionada = selectSemanaModal.value;
 
         try {
-            estadoInfoModal.textContent = "⏳ Generando PDF final...";
+            estadoInfoModal.textContent = "⏳ PDF wird generiert...";
             
             const pdfBytesClon = archivoPdfOriginalBytes.slice(0);
             const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesClon);
@@ -367,7 +367,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                             color: PDFLib.rgb(0, 0, 0)
                         });
                     } catch (innerErr) {
-                        console.error(`❌ Error al estampar en el campo "${campo}":`, innerErr);
+                        console.error(`❌ Fehler beim Drucken im Feld "${campo}":`, innerErr);
                     }
                 });
             }
@@ -379,11 +379,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             link.download = `Taetigkeitsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
             link.click();
 
-            estadoInfoModal.textContent = "🎉 ¡PDF generado y descargado con éxito!";
+            estadoInfoModal.textContent = "🎉 ¡PDF generiert und erfolgreich heruntergeladen!";
         } catch (err) {
-            console.error("🔥 ERROR PDF-LIB:", err);
-            estadoInfoModal.textContent = "❌ Error al generar el PDF.";
-            alert("Error crítico: " + err.message);
+            console.error("🔥 PDF-LIB FEHLER:", err);
+            estadoInfoModal.textContent = "❌ Fehler beim Generieren des PDFs.";
+            alert("Kritischer Fehler: " + err.message);
         }
     });
 }
