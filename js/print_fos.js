@@ -433,6 +433,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const fuenteUsada = esEncabezado ? fontBold : font;
                 const espaciadoLineas = fontSize * 1.4;
+                const color = PDFLib.rgb(0.4, 0,4, 0,4)
 
                 let lineasFinalesParaDibujar = [];
                 lineasAsignadas.forEach(parrafo => {
@@ -463,7 +464,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                             y: yActual,
                             size: fontSize,
                             font: fuenteUsada,
-                            color: PDFLib.rgb(0.4, 0.4, 0.4)
+                            color: PDFLib.rgb(0, 0, 0)
                         });
                     } catch (innerErr) {
                         console.error(`❌ Error al estampar en el campo "${campo}":`, innerErr);
