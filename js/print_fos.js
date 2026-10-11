@@ -4,25 +4,15 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. Estructura HTML reducida: Panel azul integrado con selector de semana y botón de descarga
+    // 1. Estructura HTML original completa
     container.innerHTML = `
         <div class="space-y-4 relative">
-            <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS + SELECTOR DE SEMANA -->
-            <div class="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md space-y-3 text-xs">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-indigo-700 pb-2.5 gap-2">
+            <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS -->
+            <div class="bg-indigo-900 text-white p-3 rounded-xl shadow-md space-y-2 text-xs">
+                <div class="flex justify-between items-center border-b border-indigo-700 pb-1.5">
                     <span class="font-bold uppercase tracking-wider text-indigo-200">👤 Datos del Reporte Activo</span>
-                    
-                    <!-- Selector de Semana y Botón integrados -->
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium flex-1 sm:flex-initial focus:outline-none focus:ring-1 focus:ring-emerald-400">
-                            <option value="">-- Selecciona semana --</option>
-                        </select>
-                        <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition whitespace-nowrap">
-                            🚀 Descargar PDF
-                        </button>
-                    </div>
+                    <span id="fosLblSemanaActual" class="bg-emerald-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">Semana: No seleccionada</span>
                 </div>
-
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                     <div><span class="text-indigo-300 block text-[10px] uppercase">Nombre:</span><strong id="fosResNombre" class="text-white">Cargando...</strong></div>
                     <div><span class="text-indigo-300 block text-[10px] uppercase">Clase:</span><strong id="fosResClase" class="text-white">Cargando...</strong></div>
@@ -32,9 +22,42 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 </div>
             </div>
 
-            <!-- Información de estado discreta -->
+            <!-- 1. Carga manual del PDF base -->
+            <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div>
+                    <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Cargar Plantilla PDF Base</h3>
+                    <p class="text-[10px] text-amber-700">Selecciona el archivo PDF original de la escuela.</p>
+                </div>
+                <div class="w-full sm:w-auto">
+                    <input type="file" id="fosPdfFileInput" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-amber-100 file:text-amber-800 w-full cursor-pointer">
+                </div>
+            </div>
+
+            <!-- 2. Selección de Semana y Descarga -->
+            <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div>
+                    <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ 2. Generar Ausbildungsnachweis</h3>
+                    <p class="text-[10px] text-indigo-700">Selecciona la semana para estampar toda la información.</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium flex-1 sm:flex-initial">
+                        <option value="">-- Selecciona semana --</option>
+                    </select>
+                    <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition whitespace-nowrap">
+                        🚀 Descargar PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visor / Canvas -->
+            <div class="bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[45vh] relative border border-gray-300">
+                <div class="relative inline-block shadow-2xl" id="fosCanvasContainerModal">
+                    <canvas id="fosPdfCanvasModal" class="block"></canvas>
+                    <div id="fosDrawingOverlayModal" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
-                📌 Sincronizando datos y preparando plantilla...
+                📌 Datos cargados correctamente. Sube el PDF base para comenzar.
             </div>
 
             <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN -->
@@ -72,9 +95,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         </div>
     `;
 
+    const fosPdfFileInput = document.getElementById('fosPdfFileInput');
     const selectSemanaModal = document.getElementById('fosSelectSemanaModal');
     const btnGenerarPdfModal = document.getElementById('btnGenerarPdfModal');
     const estadoInfoModal = document.getElementById('fosEstadoInfoModal');
+    const canvasModal = document.getElementById('fosPdfCanvasModal');
+    const drawingOverlayModal = document.getElementById('fosDrawingOverlayModal');
 
     // Referencias del Modal
     const fosModalVerificacion = document.getElementById('fosModalVerificacion');
@@ -96,12 +122,16 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const fosResProfesion = document.getElementById('fosResProfesion');
     const fosResWorkplace = document.getElementById('fosResWorkplace');
     const fosResProfesora = document.getElementById('fosResProfesora');
+    const fosLblSemanaActual = document.getElementById('fosLblSemanaActual');
 
+    let pdfDoc = null;
+    let pageViewport = null;
+    let scale = 1.0;
     let archivoPdfOriginalBytes = null;
     let coordenadasMap = {};
     let semanasAgrupadas = {};
     
-    // 🔐 Recuperación del usuario actual (sesión)
+    // 🔐 Recuperación correcta del usuario actual (sesión)
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
     if (!nombreUsuarioActual) {
         estadoInfoModal.textContent = "❌ No se encontró un usuario activo.";
@@ -110,10 +140,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 🚀 Sincronización optimizada con Supabase y carga automática del PDF desde la carpeta form
+    // 🚀 Sincronización optimizada y en paralelo con Supabase (con Plan B de respaldo)
     try {
-        estadoInfoModal.textContent = "⏳ Sincronizando datos y cargando plantilla...";
+        estadoInfoModal.textContent = "⏳ Sincronizando datos...";
 
+        // 1. Consultar usuario y registros diarios en paralelo
         const [respUsuario, respReg] = await Promise.all([
             fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
@@ -128,12 +159,13 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         if (dataUsr.length === 0) throw new Error("Usuario no encontrado.");
 
         const usuario = dataUsr[0];
-        const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'Berufliche Oberschule Holzkirchen';
+        const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
         const claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
         const workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
         const profesoraUsuario = usuario.teacher || '-'; 
         const codigoProfesion = usuario.ausbildung;
 
+        // 2. Consultar profesión y plantilla en paralelo
         const [respProf, respTpl] = await Promise.all([
             codigoProfesion 
                 ? fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(codigoProfesion)}&select=*`, { headers: { ...headers, 'Range': '0-0' } })
@@ -156,8 +188,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Respaldo de coordenadas si están vacías
+        // 🔄 PLAN B DE RESPALDO: Si las coordenadas siguen vacías, cargamos la primera plantilla disponible
         if (Object.keys(coordenadasMap).length === 0) {
+            console.warn("⚠️ No se hallaron coordenadas con el ID exacto, aplicando plantilla por defecto de Supabase...");
             const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
             });
@@ -169,58 +202,66 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // Obtener la clave de la semana actual (Lunes a Viernes) para preseleccionar
-        const hoy = new Date();
-        const diaSemanaHoy = hoy.getDay();
-        const diffHoy = hoy.getDate() - diaSemanaHoy + (diaSemanaHoy === 0 ? -6 : 1);
-        const lunesActualObj = new Date(new Date(hoy).setDate(diffHoy));
-        const viernesActualObj = new Date(lunesActualObj);
-        viernesActualObj.setDate(lunesActualObj.getDate() + 4);
-        const claveSemanaActual = `${lunesActualObj.toLocaleDateString('de-DE')} bis ${viernesActualObj.toLocaleDateString('de-DE')}`;
-
         if (respReg.ok) {
             const registrosGlobales = await respReg.json();
             semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
 
             selectSemanaModal.innerHTML = '<option value="">-- Selecciona una semana --</option>';
-
             Object.keys(semanasAgrupadas).forEach(sem => {
                 const opt = document.createElement('option');
                 opt.value = sem;
                 opt.textContent = `Woche: ${sem}`;
-                
-                if (sem === claveSemanaActual) {
-                    opt.selected = true;
-                }
                 selectSemanaModal.appendChild(opt);
             });
         }
 
-        // Pintar datos en el panel
+        // Pintar en el panel visual
         fosResClase.textContent = claseUsuario;
         fosResProfesion.textContent = profesionUsuario;
         fosResWorkplace.textContent = workplaceUsuario;
         fosResProfesora.textContent = profesoraUsuario;
 
-        // 📥 Carga automática del PDF desde la carpeta 'form' del repositorio
-        const nombreArchivoPdf = `${escuelaSeleccionadaId}.pdf`;
-        const rutaPdfRepositorio = `./form/${encodeURIComponent(nombreArchivoPdf)}`;
-
-        try {
-            const respuestaPdf = await fetch(rutaPdfRepositorio);
-            if (!respuestaPdf.ok) throw new Error(`No se encontró el archivo en la ruta: ${rutaPdfRepositorio}`);
-            
-            archivoPdfOriginalBytes = await respuestaPdf.arrayBuffer();
-            estadoInfoModal.textContent = "✅ Listo para generar reportes. Semana actual seleccionada automáticamente.";
-        } catch (errorPdfRepo) {
-            console.error("Error al cargar la plantilla automática:", errorPdfRepo);
-            estadoInfoModal.textContent = "⚠️ No se encontró la plantilla PDF en la carpeta 'form'.";
-        }
+        estadoInfoModal.textContent = "✅ Datos cargados correctamente. Sube el PDF base para comenzar.";
 
     } catch (err) {
         console.error("Error sincronizando con Supabase:", err);
         estadoInfoModal.textContent = `❌ ${err.message || "Error al conectar con Supabase."}`;
     }
+
+    fosPdfFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            archivoPdfOriginalBytes = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
+            pdfDoc = await loadingTask.promise;
+            await renderizarPaginaModal(1);
+            estadoInfoModal.textContent = "✅ PDF base cargado. Selecciona la semana para visualizar.";
+        } catch (err) {
+            console.error(err);
+            estadoInfoModal.textContent = "❌ Error al procesar el archivo PDF.";
+        }
+    });
+
+    async function renderizarPaginaModal(num) {
+        if (!pdfDoc) return;
+        const page = await pdfDoc.getPage(num);
+        pageViewport = page.getViewport({ scale });
+
+        const context = canvasModal.getContext('2d');
+        canvasModal.height = pageViewport.height;
+        canvasModal.width = pageViewport.width;
+
+        await page.render({ canvasContext: context, viewport: pageViewport }).promise;
+        redibujarOverlayModal();
+    }
+
+    selectSemanaModal.addEventListener('change', (e) => {
+        const semSeleccionada = e.target.value;
+        fosLblSemanaActual.textContent = semSeleccionada ? `Semana: ${semSeleccionada}` : "Semana: No seleccionada";
+        if (pdfDoc) redibujarOverlayModal();
+    });
 
     function agruparRegistrosPorSemana(registros) {
         const semanas = {};
@@ -251,11 +292,61 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         return semanas;
     }
 
+    function redibujarOverlayModal() {
+        if (!pageViewport) return;
+        drawingOverlayModal.innerHTML = '';
+
+        const semSeleccionada = selectSemanaModal.value;
+        const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+
+        for (const [campo, box] of Object.entries(coordenadasMap)) {
+            if (!box || typeof box.x1 === 'undefined' || typeof box.y2 === 'undefined') continue;
+
+            const x1 = Number(box.x1);
+            const y1 = Number(box.y1);
+            const x2 = Number(box.x2);
+            const y2 = Number(box.y2);
+
+            const left = x1 * scale;
+            const top = pageViewport.height - (y2 * scale);
+            const width = Math.max(20, (x2 - x1) * scale);
+            const height = Math.max(10, (y2 - y1) * scale);
+
+            const cajaVisual = document.createElement('div');
+            cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 border border-blue-400/30 bg-blue-50/20 pointer-events-none`;
+            cajaVisual.style.left = `${left}px`;
+            cajaVisual.style.top = `${top}px`;
+            cajaVisual.style.width = `${width}px`;
+            cajaVisual.style.height = `${height}px`;
+
+            const lowerKey = campo.toLowerCase();
+            let textoAsignado = '';
+
+            if (!lowerKey.includes('stunden') && !lowerKey.includes('hora') && !lowerKey.includes('zeit')) {
+                if (lowerKey.includes('montag') || lowerKey.includes('lunes')) textoAsignado = (datosSemana.lunes || []).join('<br>');
+                else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) textoAsignado = (datosSemana.dienstag || []).join('<br>');
+                else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) textoAsignado = (datosSemana.mittwoch || []).join('<br>');
+                else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) textoAsignado = (datosSemana.donnerstag || []).join('<br>');
+                else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) textoAsignado = (datosSemana.freitag || []).join('<br>');
+                else if (lowerKey.includes('schueler') || lowerKey.includes('name')) textoAsignado = nombreUsuarioActual;
+                else if (lowerKey.includes('klasse') || lowerKey.includes('class')) textoAsignado = fosResClase.textContent;
+                else if (lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('fachrichtung') || (lowerKey.includes('ausbildung') && !lowerKey.includes('staette') && !lowerKey.includes('betrieb')) || lowerKey.includes('beruf') || lowerKey.includes('profesion')) textoAsignado = fosResProfesion.textContent;
+                else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) textoAsignado = fosResWorkplace.textContent;
+                else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) textoAsignado = fosResProfesora.textContent;
+                else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) textoAsignado = semSeleccionada;
+            }
+
+            const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
+            cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
+            drawingOverlayModal.appendChild(cajaVisual);
+        }
+    }
+
     btnGenerarPdfModal.addEventListener('click', () => {
-        if (!archivoPdfOriginalBytes) return alert("⚠️ La plantilla PDF base aún no se ha cargado del repositorio.");
+        if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
         const semSeleccionada = selectSemanaModal.value;
-        if (!semSeleccionada) return alert("⚠️ Por favor, selecciona una semana.");
+        if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
 
         fosValNombre.textContent = nombreUsuarioActual;
         fosValClase.textContent = fosResClase.textContent;
@@ -304,6 +395,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const firstPage = pdfDocLib.getPages()[0];
             const { height: pdfHeight } = firstPage.getSize();
             const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+            const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
@@ -333,9 +425,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const x = Number(box.x1);
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                 
-                // 🔄 INVERSIÓN CORRECTA DEL EJE Y: Convertimos el origen superior-izquierdo a inferior-izquierdo de PDF-Lib
+                const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
                 const y1Visual = Number(box.y1);
-                const yPdfLibTop = pdfHeight - y1Visual;
+                const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
