@@ -512,30 +512,33 @@
             });
         };
 
-        const usuarioGuardado = localStorage.getItem('usuario_actual');
-        if (usuarioGuardado) {
-            document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('appSection').classList.remove('hidden');
-            document.body.classList.remove('justify-center');
-            const lbl = document.getElementById('lblUsuario');
-            if(lbl) lbl.textContent = usuarioGuardado;
-            iniciarAppPrincipal(usuarioGuardado);
-            inicializarHistorial();
-            inicializarImpresion();
-        } else {
-            document.getElementById('loginSection').classList.add('hidden');
-            document.body.classList.add('justify-center');
-            inicializarAuth((nombre) => {
+        // DOMContentLoaded para asegurar que el DOM esté listo antes de iniciar la app en móviles
+        document.addEventListener('DOMContentLoaded', () => {
+            const usuarioGuardado = localStorage.getItem('usuario_actual');
+            if (usuarioGuardado) {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
                 document.body.classList.remove('justify-center');
                 const lbl = document.getElementById('lblUsuario');
-                if(lbl) lbl.textContent = nombre;
-                iniciarAppPrincipal(nombre);
+                if(lbl) lbl.textContent = usuarioGuardado;
+                iniciarAppPrincipal(usuarioGuardado);
                 inicializarHistorial();
                 inicializarImpresion();
-            });
-        }
+            } else {
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.body.classList.add('justify-center');
+                inicializarAuth((nombre) => {
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('appSection').classList.remove('hidden');
+                    document.body.classList.remove('justify-center');
+                    const lbl = document.getElementById('lblUsuario');
+                    if(lbl) lbl.textContent = nombre;
+                    iniciarAppPrincipal(nombre);
+                    inicializarHistorial();
+                    inicializarImpresion();
+                });
+            }
+        });
     </script>
 </body>
 </html>
