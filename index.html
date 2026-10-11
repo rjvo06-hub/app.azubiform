@@ -161,9 +161,7 @@
             <div class="space-x-1.5 flex items-center">
                 <button id="btnMenuConsulta" onclick="abrirModalConsulta()" class="text-indigo-600 font-semibold hover:underline">📊 Abfragen</button>
                 <span class="text-gray-300">|</span>
-                <button id="btnMenuImpresion" onclick="abrirModalImpresionAusbildung()" class="text-emerald-600 font-semibold hover:underline hidden">🖨 Drucken</button>
-                <span id="sepMenuImpresion" class="text-gray-300 hidden">|</span>
-                <button id="btnMenuPdfManager" onclick="abrirModalPdfManager()" class="text-amber-600 font-semibold hover:underline hidden">📄 PDF Manager</button>
+                <button id="btnMenuPdfManager" onclick="abrirModalPdfManager()" class="text-amber-600 font-semibold hover:underline hidden">PDF Generieren</button>
                 <span id="sepMenuPdfManager" class="text-gray-300 hidden">|</span>
                 <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
             </div>
@@ -220,7 +218,7 @@
     <div id="modalPdfManager" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-4">
         <div class="w-full max-w-5xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[90vh]">
             <div class="p-4 bg-gray-900 text-white rounded-t-xl flex justify-between items-center">
-                <h2 class="font-bold text-sm">Gestor y Extractor de Datos PDF (Plantillas & Clientes)</h2>
+                <h2 class="font-bold text-sm">PDF Generieren</h2>
                 <button onclick="cerrarModalPdfManager()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6 flex-1">
@@ -238,40 +236,6 @@
             </div>
             <div class="p-6 overflow-y-auto space-y-6 flex-1 bg-gray-50">
                 <div id="contenedorFosPreviewApp"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL IMPRESIÓN AUSBILDUNGSNACHWEIS -->
-    <div id="modalImpresionAusbildung" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-2 overflow-y-auto">
-        <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[95vh]">
-            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex flex-wrap justify-between items-center gap-3 no-print">
-                <div class="flex items-center space-x-3">
-                    <h2 class="font-bold text-sm">A4-Druckgenerator</h2>
-                    <select id="selectUsuarioImpresion" lang="de" class="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded text-xs focus:outline-none"><option value="">Benutzer werden geladen...</option></select>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="cambiarSemanaImpresion(-1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">◀ Vorherige Woche</button>
-                    <span id="lblSemanaImpresion" class="text-xs font-semibold text-emerald-400">Wird berechnet...</span>
-                    <button onclick="cambiarSemanaImpresion(1)" class="bg-gray-800 hover:bg-gray-700 text-xs px-2.5 py-1.5 rounded">Nächste Woche ▶</button>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-1.5 rounded shadow">🖨 Blatt drucken</button>
-                    <button onclick="cerrarModalImpresionAusbildung()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
-                </div>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 bg-gray-200 flex justify-center">
-                <div class="page-print shadow-2xl bg-white">
-                    <div id="pr_nombre"></div>
-                    <div id="pr_semana_inicio"></div>
-                    <div id="pr_semana_fin"></div>
-                    <div id="pr_ano_fin"></div>
-                    <div id="pr_m1" class="linea-impresion"></div><div id="pr_m2" class="linea-impresion"></div><div id="pr_m3" class="linea-impresion"></div><div id="pr_m4" class="linea-impresion"></div><div id="pr_m5" class="linea-impresion"></div><div id="pr_m6" class="linea-impresion"></div>
-                    <div id="pr_di1" class="linea-impresion"></div><div id="pr_di2" class="linea-impresion"></div><div id="pr_di3" class="linea-impresion"></div><div id="pr_di4" class="linea-impresion"></div><div id="pr_di5" class="linea-impresion"></div><div id="pr_di6" class="linea-impresion"></div>
-                    <div id="pr_mi1" class="linea-impresion"></div><div id="pr_mi2" class="linea-impresion"></div><div id="pr_mi3" class="linea-impresion"></div><div id="pr_mi4" class="linea-impresion"></div><div id="pr_mi5" class="linea-impresion"></div><div id="pr_mi6" class="linea-impresion"></div>
-                    <div id="pr_do1" class="linea-impresion"></div><div id="pr_do2" class="linea-impresion"></div><div id="pr_do3" class="linea-impresion"></div><div id="pr_do4" class="linea-impresion"></div><div id="pr_do5" class="linea-impresion"></div><div id="pr_do6" class="linea-impresion"></div>
-                    <div id="pr_fr1" class="linea-impresion"></div><div id="pr_fr2" class="linea-impresion"></div><div id="pr_fr3" class="linea-impresion"></div><div id="pr_fr4" class="linea-impresion"></div><div id="pr_fr5" class="linea-impresion"></div><div id="pr_fr6" class="linea-impresion"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -322,7 +286,6 @@
             <button type="button" onclick="cerrarModalConsulta()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
             <div class="flex justify-between items-center mb-1">
                 <h2 class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Steuerungs-Panel</h2>
-                <!-- NUEVO BOTÓN DIRECTO PARA VISTA PREVIA DE IMPRESIÓN -->
                 <button type="button" onclick="abrirVistaPreviaDesdeConsulta()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow transition flex items-center space-x-1">
                     <span>🖨️</span>
                     <span>Druck-Vorschau</span>
@@ -525,20 +488,14 @@
         function verificarPermisosAdmin() {
             const acceso = localStorage.getItem('usuario_acceso');
             const esAdmin = Number(acceso) === 1;
+            
+            const btnPdf = document.getElementById('btnMenuPdfManager');
+            const sepPdf = document.getElementById('sepMenuPdfManager');
+
             if (esAdmin) {
-                document.getElementById('btnMenuImpresion').classList.remove('hidden');
-                document.getElementById('sepMenuImpresion').classList.remove('hidden');
-                
-                const btnPdf = document.getElementById('btnMenuPdfManager');
-                const sepPdf = document.getElementById('sepMenuPdfManager');
                 if (btnPdf) btnPdf.classList.remove('hidden');
                 if (sepPdf) sepPdf.classList.remove('hidden');
             } else {
-                document.getElementById('btnMenuImpresion').classList.add('hidden');
-                document.getElementById('sepMenuImpresion').classList.add('hidden');
-                
-                const btnPdf = document.getElementById('btnMenuPdfManager');
-                const sepPdf = document.getElementById('sepMenuPdfManager');
                 if (btnPdf) btnPdf.classList.add('hidden');
                 if (sepPdf) sepPdf.classList.add('hidden');
             }
@@ -566,26 +523,6 @@
                 inicializarImpresion();
             });
         };
-
-        // INTEGRACIÓN MODIFICADA PARA SELECCIÓN DE CORREO SEGÚN PROGRAMA (Ausbildung vs FOS/Pass)
-        document.addEventListener('DOMContentLoaded', () => {
-            const formRegistro = document.getElementById('formRegistro');
-            if (formRegistro) {
-                // Interceptar o complementar el evento de submit del registro para el envío dinámico de correos
-                formRegistro.addEventListener('submit', async function(e) {
-                    const tipoPrograma = document.getElementById('regTipoPrograma')?.value;
-                    const email = document.getElementById('regEmail')?.value;
-                    const nombre = document.getElementById('regNombre')?.value;
-
-                    // Determinar dinámicamente el endpoint del correo según lo seleccionado
-                    // Ausbildung -> /api/enviar-correo | FOS / Pass -> /api/send-fos-email
-                    const endpointCorreo = (tipoPrograma === 'fos') ? '/api/send-fos-email' : '/api/enviar-correo';
-                    
-                    // Almacenamos globalmente o pasamos el endpoint que auth.js utilizará tras registrar exitosamente en backend
-                    window.endpointCorreoSeleccionado = endpointCorreo;
-                }, true);
-            }
-        });
 
         const usuarioGuardado = localStorage.getItem('usuario_actual');
         
