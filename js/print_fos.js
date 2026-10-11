@@ -22,11 +22,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 </div>
             </div>
 
-            <!-- 1. Carga manual del PDF base -->
+            <!-- 1. Carga manual opcional de respaldo para el PDF base -->
             <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div>
-                    <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Cargar Plantilla PDF Base</h3>
-                    <p class="text-[10px] text-amber-700">Selecciona el archivo PDF original de la escuela.</p>
+                    <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Plantilla PDF Base (Automática / Respaldo)</h3>
+                    <p class="text-[10px] text-amber-700">Se carga desde la carpeta 'form' o puedes seleccionar un respaldo local.</p>
                 </div>
                 <div class="w-full sm:w-auto">
                     <input type="file" id="fosPdfFileInput" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-amber-100 file:text-amber-800 w-full cursor-pointer">
@@ -57,7 +57,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 </div>
             </div>
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
-                📌 Datos cargados correctamente. Sube el PDF base para comenzar.
+                📌 Inicializando y cargando plantilla desde el repositorio...
             </div>
 
             <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN -->
@@ -140,9 +140,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 🚀 Sincronización optimizada y en paralelo con Supabase (con Plan B de respaldo)
+    // 🚀 Sincronización optimizada y en paralelo con Supabase
     try {
-        estadoInfoModal.textContent = "⏳ Sincronizando datos...";
+        estadoInfoModal.textContent = "⏳ Sincronizando datos y descargando plantilla...";
 
         // 1. Consultar usuario y registros diarios en paralelo
         const [respUsuario, respReg] = await Promise.all([
@@ -159,7 +159,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         if (dataUsr.length === 0) throw new Error("Usuario no encontrado.");
 
         const usuario = dataUsr[0];
-        const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
+        const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'Berufliche Oberschule Holzkirchen';
         const claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
         const workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
         const profesoraUsuario = usuario.teacher || '-'; 
@@ -188,7 +188,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             }
         }
 
-        // 🔄 PLAN B DE RESPALDO: Si las coordenadas siguen vacías, cargamos la primera plantilla disponible
+        // 🔄 PLAN B DE RESPALDO: Coordenadas por defecto si están vacías
         if (Object.keys(coordenadasMap).length === 0) {
             console.warn("⚠️ No se hallaron coordenadas con el ID exacto, aplicando plantilla por defecto de Supabase...");
             const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
@@ -221,13 +221,31 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         fosResWorkplace.textContent = workplaceUsuario;
         fosResProfesora.textContent = profesoraUsuario;
 
-        estadoInfoModal.textContent = "✅ Datos cargados correctamente. Sube el PDF base para comenzar.";
+        // 📥 CARGA AUTOMÁTICA DEL PDF DESDE LA CARPETA 'form' DEL REPOSITORIO
+        const nombreArchivoPdf = `${escuelaSeleccionadaId}.pdf`;
+        const rutaPdfRepositorio = `./form/${encodeURIComponent(nombreArchivoPdf)}`;
+
+        try {
+            const respuestaPdf = await fetch(rutaPdfRepositorio);
+            if (!respuestaPdf.ok) throw new Error(`No se encontró el archivo en la ruta: ${rutaPdfRepositorio}`);
+            
+            archivoPdfOriginalBytes = await respuestaPdf.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
+            pdfDoc = await loadingTask.promise;
+            await renderizarPaginaModal(1);
+            
+            estadoInfoModal.textContent = "✅ Plantilla cargada automáticamente desde el repositorio. Selecciona la semana.";
+        } catch (errorPdfRepo) {
+            console.warn("⚠️ No se pudo cargar automáticamente desde la carpeta form. Usa el selector manual de arriba si es necesario.", errorPdfRepo);
+            estadoInfoModal.textContent = "⚠️ Plantilla automática no hallada. Sube el archivo PDF manualmente en la opción superior.";
+        }
 
     } catch (err) {
         console.error("Error sincronizando con Supabase:", err);
         estadoInfoModal.textContent = `❌ ${err.message || "Error al conectar con Supabase."}`;
     }
 
+    // Evento de respaldo para carga manual de archivo local
     fosPdfFileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -237,10 +255,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
             pdfDoc = await loadingTask.promise;
             await renderizarPaginaModal(1);
-            estadoInfoModal.textContent = "✅ PDF base cargado. Selecciona la semana para visualizar.";
+            estadoInfoModal.textContent = "✅ PDF base cargado manualmente. Selecciona la semana para visualizar.";
         } catch (err) {
             console.error(err);
-            estadoInfoModal.textContent = "❌ Error al procesar el archivo PDF.";
+            estadoInfoModal.textContent = "❌ Error al procesar el archivo PDF local.";
         }
     });
 
@@ -343,7 +361,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     }
 
     btnGenerarPdfModal.addEventListener('click', () => {
-        if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
+        if (!archivoPdfOriginalBytes) return alert("⚠️ No se ha cargado ningún archivo PDF base.");
         if (Object.keys(coordenadasMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
         const semSeleccionada = selectSemanaModal.value;
         if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
@@ -395,7 +413,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const firstPage = pdfDocLib.getPages()[0];
             const { height: pdfHeight } = firstPage.getSize();
             const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-            const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
