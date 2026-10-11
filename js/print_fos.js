@@ -4,15 +4,15 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Estructura adaptada y completamente en alemán
+    // Estructura optimizada y adaptativa para móviles y escritorio
     container.innerHTML = `
-        <div class="space-y-4 relative">
+        <div class="space-y-3 relative">
             <!-- PANEL DE RESUMEN E INTEGRACIÓN DE SEMANA -->
             <div class="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md space-y-3 text-xs">
                 <div class="border-b border-indigo-700 pb-2 space-y-2">
-                    <span class="font-bold uppercase tracking-wider text-indigo-200 block">👤 Aktive Berichtsdaten</span>
+                    <span class="font-bold uppercase tracking-wider text-indigo-200 block text-[11px]">👤 Aktive Berichtsdaten</span>
                     
-                    <!-- Selector de Semana y Botón optimizados para móviles (evita zoom con text-base en móvil) -->
+                    <!-- Selector de Semana y Botón optimizados (text-base en móvil evita el zoom automático de iOS/Android) -->
                     <div class="flex flex-col gap-2 w-full pt-1">
                         <select id="fosSelectSemanaModal" class="w-full p-2.5 border border-indigo-500 rounded-xl text-base sm:text-xs bg-indigo-950 text-white font-medium focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                             <option value="">-- Woche auswählen --</option>
@@ -23,48 +23,48 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Name:</span><strong id="fosResNombre" class="text-white">Wird geladen...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Klasse:</span><strong id="fosResClase" class="text-white">Wird geladen...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Ausbildung:</span><strong id="fosResProfesion" class="text-white">Wird geladen...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Betrieb:</span><strong id="fosResWorkplace" class="text-white">Wird geladen...</strong></div>
-                    <div><span class="text-indigo-300 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosResProfesora" class="text-white">Wird geladen...</strong></div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Name:</span><strong id="fosResNombre" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Klasse:</span><strong id="fosResClase" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Ausbildung:</span><strong id="fosResProfesion" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Betrieb:</span><strong id="fosResWorkplace" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Lehrkraft:</span><strong id="fosResProfesora" class="text-white text-xs">Wird geladen...</strong></div>
                 </div>
             </div>
 
-            <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 text-center">
+            <div id="fosEstadoInfoModal" class="text-[11px] font-medium text-indigo-600 bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 text-center">
                 📌 Daten werden synchronisiert und Vorlage wird geladen...
             </div>
 
-            <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN -->
-            <div id="fosModalVerificacion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
-                    <div class="bg-indigo-900 text-white px-4 py-3.5 flex justify-between items-center">
-                        <h3 class="text-sm font-bold uppercase tracking-wider">🔍 Ausbildungsnachweis überprüfen</h3>
-                        <button id="fosModalCerrarX" class="text-indigo-200 hover:text-white font-bold text-lg px-2 py-1">&times;</button>
+            <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN RESPONSIVA -->
+            <div id="fosModalVerificacion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[88vh]">
+                    <div class="bg-indigo-900 text-white px-4 py-3 flex justify-between items-center">
+                        <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider">🔍 Ausbildungsnachweis überprüfen</h3>
+                        <button id="fosModalCerrarX" class="text-indigo-200 hover:text-white font-bold text-xl px-2 py-0.5">&times;</button>
                     </div>
-                    <div class="p-4 sm:p-5 overflow-y-auto space-y-3 text-xs text-gray-700 flex-1">
+                    <div class="p-3.5 sm:p-5 overflow-y-auto space-y-3 text-xs text-gray-700 flex-1">
                         <p class="text-[11px] text-gray-500">Bitte überprüfen Sie, ob die Daten und Aktivitäten korrekt sind, bevor Sie das finale Dokument generieren:</p>
                         
-                        <div class="bg-indigo-50 p-3.5 rounded-xl border border-indigo-100 grid grid-cols-2 gap-2">
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Schüler/in:</span><strong id="fosValNombre" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Klasse:</span><strong id="fosValClase" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Woche:</span><strong id="fosValSemana" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Ausbildung:</span><strong id="fosValProfesion" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Betrieb:</span><strong id="fosValWorkplace" class="text-indigo-900">-</strong></div>
-                            <div><span class="text-gray-500 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosValProfesora" class="text-indigo-900">-</strong></div>
+                        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 grid grid-cols-2 gap-2">
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Schüler/in:</span><strong id="fosValNombre" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Klasse:</span><strong id="fosValClase" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Woche:</span><strong id="fosValSemana" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Ausbildung:</span><strong id="fosValProfesion" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Betrieb:</span><strong id="fosValWorkplace" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosValProfesora" class="text-indigo-900 text-xs">-</strong></div>
                         </div>
 
                         <div>
                             <h4 class="font-bold text-gray-800 uppercase text-[10px] mb-1">📋 Erfasste Aktivitäten für diese Woche:</h4>
-                            <div id="fosValActividades" class="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-1.5 text-[11px] max-h-40 overflow-y-auto">
+                            <div id="fosValActividades" class="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-1.5 text-[11px] max-h-36 overflow-y-auto">
                                 <!-- Se llena dinámicamente -->
                             </div>
                         </div>
                     </div>
-                    <div class="bg-gray-50 px-4 py-3.5 border-t border-gray-200 flex justify-end gap-2">
-                        <button id="fosModalBtnCancelar" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-4 py-2 rounded-xl text-xs transition">Abbrechen</button>
-                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow">Bestätigen & Herunterladen</button>
+                    <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+                        <button id="fosModalBtnCancelar" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-3.5 py-2 rounded-xl text-xs transition">Abbrechen</button>
+                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow">Bestätigen & Herunterladen</button>
                     </div>
                 </div>
             </div>
@@ -108,7 +108,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // Función auxiliar para formatear números con coma y un decimal (ej: 8,5)
     function formatarDecimalAleman(valor) {
         const num = Number(valor);
         if (isNaN(num) || num <= 0) return '';
@@ -118,13 +117,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     try {
         estadoInfoModal.textContent = "⏳ Vorlage wird geladen und Daten werden synchronisiert...";
 
-        // 1. Carga automática del PDF desde la carpeta 'form' del repositorio
         const rutaPdfRepositorio = './form/Berufliche Oberschule Holzkirchen.pdf';
         const responsePdf = await fetch(rutaPdfRepositorio);
         if (!responsePdf.ok) throw new Error("Die PDF-Datei konnte nicht aus dem Ordner 'form' geladen werden.");
         archivoPdfOriginalBytes = await responsePdf.arrayBuffer();
 
-        // 2. Consultar usuario y registros diarios en paralelo
         const [respUsuario, respReg] = await Promise.all([
             fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
@@ -194,7 +191,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 opt.textContent = `Woche: ${sem}`;
                 selectSemanaModal.appendChild(opt);
 
-                // Detección automática de la semana actual
                 const partes = sem.split(' bis ');
                 if (partes.length === 2) {
                     const [diaL, mesL, anioL] = partes[0].split('.').map(Number);
@@ -209,7 +205,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 }
             });
 
-            // Seleccionar por defecto la semana actual si existe
             if (claveSemanaActual) {
                 selectSemanaModal.value = claveSemanaActual;
             }
