@@ -161,8 +161,8 @@
             <div class="space-x-1.5 flex items-center">
                 <button id="btnMenuConsulta" onclick="abrirModalConsulta()" class="text-indigo-600 font-semibold hover:underline">📊 Abfragen</button>
                 <span class="text-gray-300">|</span>
-                <button id="btnMenuPdfManager" onclick="abrirModalPdfManager()" class="text-amber-600 font-semibold hover:underline hidden">PDF Generieren</button>
-                <span id="sepMenuPdfManager" class="text-gray-300 hidden">|</span>
+                <button id="btnMenuPdfManager" onclick="abrirModalPdfManager()" class="text-amber-600 font-semibold hover:underline">PDF Generieren</button>
+                <span class="text-gray-300">|</span>
                 <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
             </div>
         </div>
@@ -214,28 +214,15 @@
         </div>
     </div>
 
-    <!-- MODAL GESTOR Y EXTRACTOR DE PDF -->
+    <!-- MODAL PDF GENERIEREN (Conectado a print_fos.js) -->
     <div id="modalPdfManager" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-4">
         <div class="w-full max-w-5xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[90vh]">
             <div class="p-4 bg-gray-900 text-white rounded-t-xl flex justify-between items-center">
                 <h2 class="font-bold text-sm">PDF Generieren</h2>
                 <button onclick="cerrarModalPdfManager()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
             </div>
-            <div class="p-6 overflow-y-auto space-y-6 flex-1">
-                <div id="contenedorPdfManagerApp"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL VISTA PREVIA FOS (Integrado en Consulta) -->
-    <div id="modalFosPreview" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-4">
-        <div class="w-full max-w-5xl bg-white rounded-xl shadow-2xl relative flex flex-col max-h-[90vh]">
-            <div class="p-4 bg-gray-900 text-white rounded-t-xl flex justify-between items-center">
-                <h2 class="font-bold text-sm" id="tituloModalFosPreview">Vorschau des Ausbildungsnachweises</h2>
-                <button onclick="cerrarModalFosPreview()" class="text-gray-400 hover:text-white font-bold text-lg px-2">✕</button>
-            </div>
             <div class="p-6 overflow-y-auto space-y-6 flex-1 bg-gray-50">
-                <div id="contenedorFosPreviewApp"></div>
+                <div id="contenedorPdfManagerApp"></div>
             </div>
         </div>
     </div>
@@ -280,16 +267,12 @@
         </div>
     </div>
 
-    <!-- MODAL CONSULTA CON BOTÓN DE VISTA PREVIA DE IMPRESIÓN -->
+    <!-- MODAL CONSULTA -->
     <div id="modalConsulta" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
         <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-xl relative max-h-[90vh] flex flex-col">
             <button type="button" onclick="cerrarModalConsulta()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
             <div class="flex justify-between items-center mb-1">
                 <h2 class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Steuerungs-Panel</h2>
-                <button type="button" onclick="abrirVistaPreviaDesdeConsulta()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow transition flex items-center space-x-1">
-                    <span>🖨️</span>
-                    <span>Druck-Vorschau</span>
-                </button>
             </div>
             <h1 class="text-xl font-bold text-gray-800 mb-4">Aktivitätsabfrage</h1>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -446,15 +429,18 @@
         import { inicializarHistorial } from './js/history.js';
         import { inicializarImpresion } from './js/print.js';
         import { inicializarGeneradorCodigos } from './js/admin.js';
-        import { inicializarLectorYAnalizadorPdf } from './js/pdf-extractor.js';
         import { inicializarVistaPreviaSemanasFos } from './js/print_fos.js';
 
         let pdfManagerInicializado = false;
 
+        // APUNTA DIRECTAMENTE A print_fos.js
         window.abrirModalPdfManager = function() {
             document.getElementById('modalPdfManager').classList.remove('hidden');
             if (!pdfManagerInicializado) {
-                inicializarLectorYAnalizadorPdf('contenedorPdfManagerApp');
+                // Obtenemos el usuario actual logueado para pasárselo al generador FOS
+                const usuarioActual = localStorage.getItem('usuario_actual');
+                // Inicializa el programa print_fos.js en el contenedor del modal
+                inicializarVistaPreviaSemanasFos('contenedorPdfManagerApp', null);
                 pdfManagerInicializado = true;
             }
         };
@@ -463,42 +449,9 @@
             document.getElementById('modalPdfManager').classList.add('hidden');
         };
 
-        window.abrirModalFosPreview = function(usuarioIdPreseleccionado = null) {
-            document.getElementById('modalFosPreview').classList.remove('hidden');
-            inicializarVistaPreviaSemanasFos('contenedorFosPreviewApp', usuarioIdPreseleccionado);
-        };
-
-        window.cerrarModalFosPreview = function() {
-            document.getElementById('modalFosPreview').classList.add('hidden');
-        };
-
-        window.abrirVistaPreviaDesdeConsulta = function() {
-            const selectUsr = document.getElementById('selectUsuarioConsulta');
-            const usuarioId = selectUsr ? selectUsr.value : null;
-
-            if (!usuarioId) {
-                alert("Bitte wähle zuerst einen Benutzer in der Abfrage aus.");
-                return;
-            }
-
-            document.getElementById('modalConsulta').classList.add('hidden');
-            abrirModalFosPreview(usuarioId);
-        };
-
         function verificarPermisosAdmin() {
             const acceso = localStorage.getItem('usuario_acceso');
             const esAdmin = Number(acceso) === 1;
-            
-            const btnPdf = document.getElementById('btnMenuPdfManager');
-            const sepPdf = document.getElementById('sepMenuPdfManager');
-
-            if (esAdmin) {
-                if (btnPdf) btnPdf.classList.remove('hidden');
-                if (sepPdf) sepPdf.classList.remove('hidden');
-            } else {
-                if (btnPdf) btnPdf.classList.add('hidden');
-                if (sepPdf) sepPdf.classList.add('hidden');
-            }
             inicializarGeneradorCodigos(esAdmin);
         }
 
