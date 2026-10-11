@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Azubiform.de</title>
     
     <!-- 📱 Configuración para dispositivos móviles y PWA -->
@@ -27,6 +27,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 
     <style>
+        /* Evita el zoom automático en móviles forzando 16px en inputs y selects */
+        @media screen and (max-width: 768px) {
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+
         button, input, select {
             -webkit-tap-highlight-color: transparent;
         }
@@ -541,3 +548,888 @@
     </script>
 </body>
 </html>
+```[cite: 1]
+
+---
+
+### 2. `app.js`
+
+```javascript
+import { SUPABASE_URL, headers } from './config.js';
+
+export function iniciarAppPrincipal(nombreUsuario) {
+    const loginSection = document.getElementById('loginSection');
+    const appSection = document.getElementById('appSection');
+    const lblUsuario = document.getElementById('lblUsuario');
+
+    loginSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
+    document.body.classList.remove('justify-center');
+    lblUsuario.textContent = nombreUsuario;
+
+    const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
+    let ausbildungenPermitidos = [ausbildungUsuario];
+
+    async function inicializarFiltrosCategoria() {
+        if (!ausbildungUsuario) return;
+        try {
+            const resProf = await fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(ausbildungUsuario)}&select=categoria`, { headers });
+            const dataProf = await resProf.json();
+            if (dataProf && dataProf.length > 0 && dataProf[0].categoria) {
+                const categoria = dataProf[0].categoria;
+                const resCat = await fetch(`${SUPABASE_URL}/rest/v1/profesions?categoria=eq.${encodeURIComponent(categoria)}&select=codigo`, { headers });
+                const dataCat = await resCat.json();
+                if (dataCat && dataCat.length > 0) {
+                    ausbildungenPermitidos = dataCat.map(p => p.codigo);
+                }
+            }
+        } catch (err) {
+            console.error("Error al cargar ausbildungen relacionados:", err);
+        }
+    }
+
+    inicializarFiltrosCategoria();
+
+    const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const fechaHoyStr = new Date().toLocaleDateString('de-DE', opcionesFecha);
+    document.getElementById('fechaActual').textContent = fechaHoyStr.charAt(0).toUpperCase() + fechaHoyStr.slice(1);
+    const hoyISO = new Date().toISOString().split('T')[0];
+
+    const formulario = document.getElementById('registroForm');
+    const inputActividad = document.getElementById('actividad');
+    const btnSubmitActividad = document.getElementById('btnSubmitActividad');
+    const contenedorSugerencias = document.getElementById('sugerencias');
+    const listaActividades = document.getElementById('listaActividades');
+    const contador = document.getElementById('contador');
+    const mensaje = document.getElementById('mensaje');
+
+    const contenedorHorasGlobal = document.getElementById('contenedorHorasGlobal');
+    const inputHorasGlobal = document.getElementById('horasGlobal');
+    const btnRepartirHoras = document.getElementById('btnRepartirHoras');
+
+    const modalPasado = document.getElementById('modalPasado');
+    const inputFechaPasada = document.getElementById('fechaPasada');
+    const inputActividadPasada = document.getElementById('actividadPasada');
+    const sugerenciasPasadas = document.getElementById('sugerenciasPasadas');
+    const formPasado = document.getElementById('formPasado');
+    const btnSubmitPasado = document.getElementById('btnSubmitPasado');
+    const mensajePasado = document.getElementById('mensajePasado');
+    const listaActividadesPasadas = document.getElementById('listaActividadesPasadas');
+    const contadorPasado = document.getElementById('contadorPasado');
+    const contenedorHorasGlobalPasada = document.getElementById('contenedorHorasGlobalPasada');
+    const inputHorasGlobalPasada = document.getElementById('horasGlobalPasada');
+    const btnRepartirHorasPasadas = document.getElementById('btnRepartirHorasPasadas');
+
+    window.abrirModalPasado = function() {
+        modalPasado.classList.remove('hidden');
+        const ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        const fechaAyerStr = ayer.toISOString().split('T')[0];
+        inputFechaPasada.value = fechaAyerStr;
+        inputActividadPasada.value = '';
+        cargarActividadesPasadas(fechaAyerStr);
+        inputActividadPasada.focus();
+    };
+
+    window.cerrarModalPasado = function() {
+        modalPasado.classList.add('hidden');
+        mensajePasado.classList.add('hidden');
+        cargarActividadesHoy();
+    };
+
+    inputFechaPasada.addEventListener('change', (e) => {
+        cargarActividadesPasadas(e.target.value);
+    });
+
+    async function cargarActividadesPasadas(fecha) {
+        if (!fecha) return;
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${fecha}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, {
+                method: 'GET', headers: headers
+            });
+            const data = await res.json();
+            if (!data || data.length === 0) {
+                listaActividadesPasadas.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Keine Aktivitäten für dieses Datum erfasst.</p>';
+                contadorPasado.textContent = '0 erfasst (0 Std.)';
+                if (contenedorHorasGlobalPasada) contenedorHorasGlobalPasada.classList.add('hidden');
+                return;
+            }
+            
+            let totalHoras = 0;
+            listaActividadesPasadas.innerHTML = '';
+            data.forEach((item) => {
+                const horasItem = parseFloat(item.horas) || 0;
+                totalHoras += horasItem;
+
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100 text-sm';
+                div.innerHTML = `
+                    <span class="text-gray-700 font-medium">${item.nombre_actividad}</span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="window.eliminarActividadPasada('${item.id}', '${fecha}')" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+                    </div>`;
+                listaActividadesPasadas.appendChild(div);
+            });
+            contadorPasado.textContent = `${data.length} erfasst (${totalHoras} Std.)`;
+            if (contenedorHorasGlobalPasada) contenedorHorasGlobalPasada.classList.remove('hidden');
+        } catch (err) { console.error(err); }
+    }
+
+    async function buscarActividades(textoBusqueda, contenedorSugerenciasEl, inputEl) {
+        if (textoBusqueda.length < 2) { 
+            contenedorSugerenciasEl.classList.add('hidden'); 
+            return; 
+        }
+        try {
+            let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
+            if (ausbildungenPermitidos.length > 0) {
+                url += `&ausbildung=in.(${ausbildungenPermitidos.join(',')})`;
+            }
+            url += `&limit=5`;
+
+            let res = await fetch(url, { headers });
+            let data = await res.json();
+
+            if (!data || data.length === 0) {
+                contenedorSugerenciasEl.classList.add('hidden');
+                return;
+            }
+
+            contenedorSugerenciasEl.innerHTML = '';
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer border-b border-gray-100';
+                div.textContent = item.nombre_actividad;
+                div.addEventListener('click', () => { 
+                    inputEl.value = item.nombre_actividad; 
+                    contenedorSugerenciasEl.classList.add('hidden'); 
+                });
+                contenedorSugerenciasEl.appendChild(div);
+            });
+            contenedorSugerenciasEl.classList.remove('hidden');
+        } catch (err) { console.error(err); }
+    }
+
+    let temporizadorBusqueda;
+    inputActividad.addEventListener('input', (e) => {
+        clearTimeout(temporizadorBusqueda);
+        const texto = e.target.value.trim();
+        temporizadorBusqueda = setTimeout(() => buscarActividades(texto, contenedorSugerencias, inputActividad), 150);
+    });
+
+    let temporizadorBusquedaPasada;
+    inputActividadPasada.addEventListener('input', (e) => {
+        clearTimeout(temporizadorBusquedaPasada);
+        const texto = e.target.value.trim();
+        temporizadorBusquedaPasada = setTimeout(() => buscarActividades(texto, sugerenciasPasadas, inputActividadPasada), 150);
+    });
+
+    async function cargarActividadesHoy() {
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, { headers });
+            const data = await res.json();
+            
+            if (!data || data.length === 0) {
+                listaActividades.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>';
+                contador.textContent = '0 erfasst (0 Std.)';
+                if (contenedorHorasGlobal) contenedorHorasGlobal.classList.add('hidden');
+                return;
+            }
+
+            let totalHoras = 0;
+            listaActividades.innerHTML = '';
+            data.forEach((item) => {
+                const horasItem = parseFloat(item.horas) || 0;
+                totalHoras += horasItem;
+
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-sm';
+                div.innerHTML = `
+                    <span class="text-gray-700 font-medium">${item.nombre_actividad}</span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="window.eliminarActividad('${item.id}')" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+                    </div>`;
+                listaActividades.appendChild(div);
+            });
+
+            contador.textContent = `${data.length} erfasst (${totalHoras} Std.)`;
+            if (contenedorHorasGlobal) contenedorHorasGlobal.classList.remove('hidden');
+        } catch (err) { console.error(err); }
+    }
+
+    formulario.onsubmit = async (e) => {
+        e.preventDefault();
+        const nombreActividad = inputActividad.value.trim();
+        if (!nombreActividad) return;
+        btnSubmitActividad.disabled = true;
+        btnSubmitActividad.textContent = 'Wird gespeichert...';
+        const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
+                method: 'POST', 
+                headers: headers,
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad, 
+                    horas: 0,
+                    fecha: hoyISO, 
+                    hora: horaActual, 
+                    usuario: nombreUsuario,
+                    ausbildung: ausbildungUsuario 
+                })
+            });
+
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({ nombre_actividad: nombreActividad, ausbildung: ausbildungUsuario })
+            });
+
+            inputActividad.value = '';
+            contenedorSugerencias.classList.add('hidden');
+
+            btnSubmitActividad.disabled = false;
+            btnSubmitActividad.textContent = 'Aktivität hinzufügen (+)';
+            mensaje.textContent = '✓ Aktivität hinzugefügt!';
+            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-green-100 text-green-700';
+            mensaje.classList.remove('hidden');
+            inputActividad.focus();
+            setTimeout(() => mensaje.classList.add('hidden'), 2000);
+            cargarActividadesHoy();
+        } catch (err) {
+            alert("⚠️ " + err.message);
+            btnSubmitActividad.disabled = false;
+            btnSubmitActividad.textContent = 'Aktivität hinzufügen (+)';
+        }
+    };
+
+    window.eliminarActividad = async function(id) {
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            cargarActividadesHoy();
+        } catch (e) { console.error(e); }
+    };
+
+    window.eliminarActividadPasada = async function(id, fecha) {
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            cargarActividadesPasadas(fecha);
+        } catch (e) { console.error(e); }
+    };
+
+    if (btnRepartirHoras) {
+        btnRepartirHoras.addEventListener('click', async () => {
+            const horasTotales = parseFloat(inputHorasGlobal.value);
+            if (isNaN(horasTotales) || horasTotales <= 0) {
+                alert("Bitte gib gültige Gesamtstunden ein.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&usuario=eq.${encodeURIComponent(nombreUsuario)}`, { headers });
+                const data = await res.json();
+
+                if (!data || data.length === 0) return;
+
+                const horasPorActividad = Number((horasTotales / data.length).toFixed(2));
+
+                for (const item of data) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?id=eq.${item.id}`, {
+                        method: 'PATCH',
+                        headers: { ...headers, 'Prefer': 'return=minimal' },
+                        body: JSON.stringify({ horas: horasPorActividad })
+                    });
+                }
+
+                inputHorasGlobal.value = '';
+                alert("✓ Stunden erfolgreich für heute verteilt!");
+                cargarActividadesHoy();
+            } catch (err) {
+                alert("⚠️ Fehler: " + err.message);
+            }
+        });
+    }
+
+    if (btnRepartirHorasPasadas) {
+        btnRepartirHorasPasadas.addEventListener('click', async () => {
+            const fechaElegida = inputFechaPasada.value;
+            const horasTotales = parseFloat(inputHorasGlobalPasada.value);
+            if (!fechaElegida || isNaN(horasTotales) || horasTotales <= 0) {
+                alert("Bitte gib gültige Gesamtstunden ein.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${fechaElegida}&usuario=eq.${encodeURIComponent(nombreUsuario)}`, { headers });
+                const data = await res.json();
+
+                if (!data || data.length === 0) return;
+
+                const horasPorActividad = Number((horasTotales / data.length).toFixed(2));
+
+                for (const item of data) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?id=eq.${item.id}`, {
+                        method: 'PATCH',
+                        headers: { ...headers, 'Prefer': 'return=minimal' },
+                        body: JSON.stringify({ horas: horasPorActividad })
+                    });
+                }
+
+                inputHorasGlobalPasada.value = '';
+                alert(`✓ Stunden für den ${fechaElegida} erfolgreich verteilt!`);
+                cargarActividadesPasadas(fechaElegida);
+            } catch (err) {
+                alert("⚠️ Fehler: " + err.message);
+            }
+        });
+    }
+
+    formPasado.onsubmit = async (e) => {
+        e.preventDefault();
+        const fechaElegida = inputFechaPasada.value;
+        const nombreActividad = inputActividadPasada.value.trim();
+        if (!fechaElegida || !nombreActividad) return;
+        btnSubmitPasado.disabled = true;
+        btnSubmitPasado.textContent = 'Wird gespeichert...';
+
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario`, {
+                method: 'POST', 
+                headers: headers,
+                body: JSON.stringify({ 
+                    nombre_actividad: nombreActividad, 
+                    horas: 0,
+                    fecha: fechaElegida, 
+                    hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+                    usuario: nombreUsuario,
+                    ausbildung: ausbildungUsuario 
+                })
+            });
+
+            await fetch(`${SUPABASE_URL}/rest/v1/actividades_catalogo?on_conflict=nombre_actividad,ausbildung`, {
+                method: 'POST', 
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({ nombre_actividad: nombreActividad, ausbildung: ausbildungUsuario })
+            });
+
+            inputActividadPasada.value = '';
+            sugerenciasPasadas.classList.add('hidden');
+
+            btnSubmitPasado.disabled = false;
+            btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen (+)';
+            mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
+            mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-green-100 text-green-700';
+            mensajePasado.classList.remove('hidden');
+            setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
+            cargarActividadesPasadas(fechaElegida);
+        } catch (err) {
+            alert("⚠ " + err.message);
+            btnSubmitPasado.disabled = false;
+            btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen (+)';
+        }
+    };
+
+    cargarActividadesHoy();
+}
+```[cite: 2]
+
+---
+
+### 3. `print_fos.js`
+
+```javascript
+import { SUPABASE_URL, headers } from './config.js';
+
+export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPreseleccionado = null) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="space-y-4 relative">
+            <div class="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md space-y-3 text-xs">
+                <div class="border-b border-indigo-700 pb-2 space-y-2">
+                    <span class="font-bold uppercase tracking-wider text-indigo-200 block">👤 Aktive Berichtsdaten</span>
+                    
+                    <div class="flex flex-col gap-2 w-full pt-1">
+                        <select id="fosSelectSemanaModal" class="w-full p-2 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium">
+                            <option value="">-- Woche auswählen --</option>
+                        </select>
+                        <button id="btnGenerarPdfModal" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded shadow transition flex items-center justify-center gap-1">
+                            <span>🚀 PDF herunterladen</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Name:</span><strong id="fosResNombre" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Klasse:</span><strong id="fosResClase" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Ausbildung:</span><strong id="fosResProfesion" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Betrieb:</span><strong id="fosResWorkplace" class="text-white">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosResProfesora" class="text-white">Wird geladen...</strong></div>
+                </div>
+            </div>
+
+            <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
+                📌 Daten werden synchronisiert und Vorlage wird geladen...
+            </div>
+
+            <div id="fosModalVerificacion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+                <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
+                    <div class="bg-indigo-900 text-white px-4 py-3 flex justify-between items-center">
+                        <h3 class="text-sm font-bold uppercase tracking-wider">🔍 Ausbildungsnachweis überprüfen</h3>
+                        <button id="fosModalCerrarX" class="text-indigo-200 hover:text-white font-bold text-lg">&times;</button>
+                    </div>
+                    <div class="p-4 overflow-y-auto space-y-3 text-xs text-gray-700 flex-1">
+                        <p class="text-[11px] text-gray-500">Bitte überprüfen Sie, ob die Daten und Aktivitäten korrekt sind, bevor Sie das finale Dokument generieren:</p>
+                        
+                        <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 grid grid-cols-2 gap-2">
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Schüler/in:</span><strong id="fosValNombre" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Klasse:</span><strong id="fosValClase" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Woche:</span><strong id="fosValSemana" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Ausbildung:</span><strong id="fosValProfesion" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Betrieb:</span><strong id="fosValWorkplace" class="text-indigo-900">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosValProfesora" class="text-indigo-900">-</strong></div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-gray-800 uppercase text-[10px] mb-1">📋 Erfasste Aktivitäten für diese Woche:</h4>
+                            <div id="fosValActividades" class="bg-gray-50 p-2.5 rounded-lg border border-gray-200 space-y-1 text-[11px] max-h-40 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+                        <button id="fosModalBtnCancelar" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold px-3 py-1.5 rounded text-xs transition">Abbrechen</button>
+                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded text-xs transition shadow">Bestätigen & Herunterladen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const selectSemanaModal = document.getElementById('fosSelectSemanaModal');
+    const btnGenerarPdfModal = document.getElementById('btnGenerarPdfModal');
+    const estadoInfoModal = document.getElementById('fosEstadoInfoModal');
+
+    const fosModalVerificacion = document.getElementById('fosModalVerificacion');
+    const fosModalCerrarX = document.getElementById('fosModalCerrarX');
+    const fosModalBtnCancelar = document.getElementById('fosModalBtnCancelar');
+    const fosModalBtnConfirmar = document.getElementById('fosModalBtnConfirmar');
+
+    const fosValNombre = document.getElementById('fosValNombre');
+    const fosValClase = document.getElementById('fosValClase');
+    const fosValSemana = document.getElementById('fosValSemana');
+    const fosValProfesion = document.getElementById('fosValProfesion');
+    const fosValWorkplace = document.getElementById('fosValWorkplace');
+    const fosValProfesora = document.getElementById('fosValProfesora');
+    const fosValActividades = document.getElementById('fosValActividades');
+
+    const fosResNombre = document.getElementById('fosResNombre');
+    const fosResClase = document.getElementById('fosResClase');
+    const fosResProfesion = document.getElementById('fosResProfesion');
+    const fosResWorkplace = document.getElementById('fosResWorkplace');
+    const fosResProfesora = document.getElementById('fosResProfesora');
+
+    let archivoPdfOriginalBytes = null;
+    let coordenadasPdfMap = {}; 
+    let semanasAgrupadas = {};
+    
+    let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
+    if (!nombreUsuarioActual) {
+        estadoInfoModal.textContent = "❌ Kein aktiver Benutzer gefunden.";
+        return;
+    }
+
+    fosResNombre.textContent = nombreUsuarioActual;
+
+    function formatarDecimalAleman(valor) {
+        const num = Number(valor);
+        if (isNaN(num) || num <= 0) return '';
+        return num.toFixed(1).replace('.', ',');
+    }
+
+    try {
+        estadoInfoModal.textContent = "⏳ Vorlage wird geladen und Daten werden synchronisiert...";
+
+        const rutaPdfRepositorio = './form/Berufliche Oberschule Holzkirchen.pdf';
+        const responsePdf = await fetch(rutaPdfRepositorio);
+        if (!responsePdf.ok) throw new Error("Die PDF-Datei konnte nicht aus dem Ordner 'form' geladen werden.");
+        archivoPdfOriginalBytes = await responsePdf.arrayBuffer();
+
+        const [respUsuario, respReg] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
+                headers: { ...headers, 'Range': '0-0' } 
+            }),
+            fetch(`${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
+                headers: { ...headers, 'Range': '0-999' } 
+            })
+        ]);
+        
+        if (!respUsuario.ok) throw new Error("Fehler beim Abrufen des Profils.");
+        const dataUsr = await respUsuario.json();
+        if (dataUsr.length === 0) throw new Error("Benutzer nicht gefunden.");
+
+        const usuario = dataUsr[0];
+        const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
+        const claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
+        const workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
+        const profesoraUsuario = usuario.teacher || '-'; 
+        const codigoProfesion = usuario.ausbildung;
+
+        const [respProf, respTpl] = await Promise.all([
+            codigoProfesion 
+                ? fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(codigoProfesion)}&select=*`, { headers: { ...headers, 'Range': '0-0' } })
+                : Promise.resolve(null),
+            fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}&select=*`, { headers: { ...headers, 'Range': '0-0' } })
+        ]);
+
+        let profesionUsuario = codigoProfesion || '-';
+        if (respProf && respProf.ok) {
+            const dataProf = await respProf.json();
+            if (dataProf.length > 0) {
+                profesionUsuario = dataProf[0].nombre_oficial || dataProf[0].codigo || codigoProfesion;
+            }
+        }
+
+        if (respTpl && respTpl.ok) {
+            const tplData = await respTpl.json();
+            if (tplData.length > 0) {
+                coordenadasPdfMap = tplData[0].coordinates_pdf_json || {};
+            }
+        }
+
+        if (Object.keys(coordenadasPdfMap).length === 0) {
+            const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
+                headers: { ...headers, 'Range': '0-0' } 
+            });
+            if (respFallbackTpl.ok) {
+                const fallbackData = await respFallbackTpl.json();
+                if (fallbackData.length > 0) {
+                    coordenadasPdfMap = fallbackData[0].coordinates_pdf_json || fallbackData[0].coordinates_json || {};
+                }
+            }
+        }
+
+        if (respReg.ok) {
+            const registrosGlobales = await respReg.json();
+            semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
+
+            selectSemanaModal.innerHTML = '<option value="">-- Woche auswählen --</option>';
+            
+            let claveSemanaActual = '';
+            const hoy = new Date();
+
+            Object.keys(semanasAgrupadas).forEach(sem => {
+                const opt = document.createElement('option');
+                opt.value = sem;
+                opt.textContent = `Woche: ${sem}`;
+                selectSemanaModal.appendChild(opt);
+
+                const partes = sem.split(' bis ');
+                if (partes.length === 2) {
+                    const [diaL, mesL, anioL] = partes[0].split('.').map(Number);
+                    const [diaV, mesV, anioV] = partes[1].split('.').map(Number);
+                    const inicioSemana = new Date(anioL, mesL - 1, diaL);
+                    const finSemana = new Date(anioV, mesV - 1, diaV);
+                    finSemana.setHours(23, 59, 59);
+
+                    if (hoy >= inicioSemana && hoy <= finSemana) {
+                        claveSemanaActual = sem;
+                    }
+                }
+            });
+
+            if (claveSemanaActual) {
+                selectSemanaModal.value = claveSemanaActual;
+            }
+        }
+
+        fosResClase.textContent = claseUsuario;
+        fosResProfesion.textContent = profesionUsuario;
+        fosResWorkplace.textContent = workplaceUsuario;
+        fosResProfesora.textContent = profesoraUsuario;
+
+        estadoInfoModal.textContent = "✅ Vorlage geladen. Bereit zur PDF-Generierung.";
+
+    } catch (err) {
+        console.error("Fehler bei der Initialisierung:", err);
+        estadoInfoModal.textContent = `❌ ${err.message || "Fehler beim Laden der Komponente."}`;
+    }
+
+    function agruparRegistrosPorSemana(registros) {
+        const semanas = {};
+        registros.forEach(reg => {
+            if (!reg.fecha) return;
+            const fechaObj = new Date(reg.fecha);
+            const diaSemana = fechaObj.getDay();
+            const diff = fechaObj.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+            const lunes = new Date(new Date(fechaObj).setDate(diff));
+            const viernes = new Date(lunes);
+            viernes.setDate(lunes.getDate() + 4);
+
+            const claveSemana = `${lunes.toLocaleDateString('de-DE')} bis ${viernes.toLocaleDateString('de-DE')}`;
+
+            if (!semanas[claveSemana]) {
+                semanas[claveSemana] = { 
+                    lunes: [], dienstag: [], mittwoch: [], donnerstag: [], freitag: [],
+                    horasLunes: 0, horasDienstag: 0, horasMittwoch: 0, horasDonnerstag: 0, horasFreitag: 0
+                };
+            }
+
+            const d = new Date(reg.fecha).getDay();
+            const texto = reg.nombre_actividad || '';
+            const horasReg = Number(reg.horas) || 0;
+
+            if (d === 1) {
+                semanas[claveSemana].lunes.push(texto);
+                semanas[claveSemana].horasLunes += horasReg;
+            } else if (d === 2) {
+                semanas[claveSemana].dienstag.push(texto);
+                semanas[claveSemana].horasDienstag += horasReg;
+            } else if (d === 3) {
+                semanas[claveSemana].mittwoch.push(texto);
+                semanas[claveSemana].horasMittwoch += horasReg;
+            } else if (d === 4) {
+                semanas[claveSemana].donnerstag.push(texto);
+                semanas[claveSemana].horasDonnerstag += horasReg;
+            } else if (d === 5) {
+                semanas[claveSemana].freitag.push(texto);
+                semanas[claveSemana].horasFreitag += horasReg;
+            }
+        });
+        return semanas;
+    }
+
+    btnGenerarPdfModal.addEventListener('click', () => {
+        if (!archivoPdfOriginalBytes) return alert("⚠️ Die PDF-Vorlage wurde noch nicht geladen.");
+        if (Object.keys(coordenadasPdfMap).length === 0) return alert("⚠️ Keine Koordinaten aus Supabase geladen.");
+        const semSeleccionada = selectSemanaModal.value;
+        if (!semSeleccionada) return alert("⚠️ Bitte wählen Sie eine gültige Woche aus.");
+
+        fosValNombre.textContent = nombreUsuarioActual;
+        fosValClase.textContent = fosResClase.textContent;
+        fosValSemana.textContent = semSeleccionada;
+        fosValProfesion.textContent = fosResProfesion.textContent;
+        fosValWorkplace.textContent = fosResWorkplace.textContent;
+        fosValProfesora.textContent = fosResProfesora.textContent;
+
+        const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+        const dias = [
+            { nombre: 'Montag', items: datosSemana.lunes, horas: formatarDecimalAleman(datosSemana.horasLunes) },
+            { nombre: 'Dienstag', items: datosSemana.dienstag, horas: formatarDecimalAleman(datosSemana.horasDienstag) },
+            { nombre: 'Mittwoch', items: datosSemana.mittwoch, horas: formatarDecimalAleman(datosSemana.horasMittwoch) },
+            { nombre: 'Donnerstag', items: datosSemana.donnerstag, horas: formatarDecimalAleman(datosSemana.horasDonnerstag) },
+            { nombre: 'Freitag', items: datosSemana.freitag, horas: formatarDecimalAleman(datosSemana.horasFreitag) }
+        ];
+
+        let htmlActividades = '';
+        dias.forEach(dia => {
+            const listado = (dia.items || []).filter(i => i && i.trim() !== '');
+            htmlActividades += `
+                <div>
+                    <span class="font-semibold text-indigo-900">${dia.nombre} (${dia.horas} Std.):</span>
+                    <span class="text-gray-600">${listado.length > 0 ? listado.join(' | ') : '<span class="italic text-gray-400">Keine Aktivitäten</span>'}</span>
+                </div>
+            `;
+        });
+        fosValActividades.innerHTML = htmlActividades;
+        fosModalVerificacion.classList.remove('hidden');
+    });
+
+    const cerrarModal = () => fosModalVerificacion.classList.add('hidden');
+    fosModalCerrarX.addEventListener('click', cerrarModal);
+    fosModalBtnCancelar.addEventListener('click', cerrarModal);
+
+    fosModalBtnConfirmar.addEventListener('click', async () => {
+        cerrarModal();
+        const semSeleccionada = selectSemanaModal.value;
+
+        try {
+            estadoInfoModal.textContent = "⏳ PDF wird generiert...";
+            
+            const pdfBytesClon = archivoPdfOriginalBytes.slice(0);
+            const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesClon);
+            
+            const firstPage = pdfDocLib.getPages()[0];
+            const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+
+            const datosSemana = semanasAgrupadas[semSeleccionada] || {};
+
+            for (const [campo, box] of Object.entries(coordenadasPdfMap)) {
+                if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
+
+                const lowerKey = campo.toLowerCase();
+                let lineasAsignadas = [];
+
+                const esHora = lowerKey.includes('stunden') || lowerKey.includes('hora') || lowerKey.includes('zeit');
+
+                if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasLunes)] : (datosSemana.lunes || []);
+                } 
+                else if (lowerKey.includes('dienstag') || lowerKey.includes('martes')) {
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasDienstag)] : (datosSemana.dienstag || []);
+                } 
+                else if (lowerKey.includes('mittwoch') || lowerKey.includes('miercoles')) {
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasMittwoch)] : (datosSemana.mittwoch || []);
+                } 
+                else if (lowerKey.includes('donnerstag') || lowerKey.includes('jueves')) {
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasDonnerstag)] : (datosSemana.donnerstag || []);
+                } 
+                else if (lowerKey.includes('freitag') || lowerKey.includes('viernes')) {
+                    lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasFreitag)] : (datosSemana.freitag || []);
+                } 
+                else if (lowerKey.includes('schueler') || lowerKey.includes('name')) {
+                    lineasAsignadas = [nombreUsuarioActual];
+                } 
+                else if (lowerKey.includes('klasse') || lowerKey.includes('class')) {
+                    lineasAsignadas = [fosResClase.textContent];
+                } 
+                else if (lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('fachrichtung') || (lowerKey.includes('ausbildung') && !lowerKey.includes('staette') && !lowerKey.includes('betrieb')) || lowerKey.includes('beruf') || lowerKey.includes('profesion')) {
+                    lineasAsignadas = [fosResProfesion.textContent];
+                } 
+                else if (lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lugar')) {
+                    lineasAsignadas = [fosResWorkplace.textContent];
+                } 
+                else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) {
+                    lineasAsignadas = [fosResProfesora.textContent];
+                } 
+                else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) {
+                    const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
+                    lineasAsignadas = [totalSemana > 0 ? formatarDecimalAleman(totalSemana) : ''];
+                } 
+                else if (esHora) {
+                    const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
+                    lineasAsignadas = [totalSemana > 0 ? formatarDecimalAleman(totalSemana) : ''];
+                }
+
+                lineasAsignadas = lineasAsignadas.filter(l => l && l !== '' && l !== '0' && l !== '0,0');
+                if (lineasAsignadas.length === 0) continue;
+
+                const x = Number(box.x1);
+                const yPdfLibTop = Number(box.y1);
+                const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
+
+                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette');
+                const fontSize = esEncabezado ? 10.5 : 8.5;
+                const espaciadoLineas = fontSize * 1.4;
+
+                let lineasFinalesParaDibujar = [];
+                lineasAsignadas.forEach(parrafo => {
+                    const palabras = String(parrafo).trim().split(/\s+/);
+                    let lineaActual = '';
+
+                    palabras.forEach(palabra => {
+                        const pruebaLinea = lineaActual ? `${lineaActual} ${palabra}` : palabra;
+                        const anchoPrueba = font.widthOfTextAtSize(pruebaLinea, fontSize);
+
+                        if (anchoPrueba > anchoCaja && lineaActual !== '') {
+                            lineasFinalesParaDibujar.push(lineaActual);
+                            lineaActual = palabra;
+                        } else {
+                            lineaActual = pruebaLinea;
+                        }
+                    });
+                    if (lineaActual) {
+                        lineasFinalesParaDibujar.push(lineaActual);
+                    }
+                });
+
+                lineasFinalesParaDibujar.forEach((linea, index) => {
+                    const yActual = yPdfLibTop - (index * espaciadoLineas);
+                    try {
+                        firstPage.drawText(linea, {
+                            x: x,
+                            y: yActual,
+                            size: fontSize,
+                            font: font,
+                            color: PDFLib.rgb(0, 0, 0)
+                        });
+                    } catch (innerErr) {
+                        console.error(`❌ Fehler beim Drucken im Feld "${campo}":`, innerErr);
+                    }
+                });
+            }
+
+            const pdfBytesFinales = await pdfDocLib.save();
+            const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Taetigkeitsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
+            link.click();
+
+            estadoInfoModal.textContent = "🎉 ¡PDF generiert und erfolgreich heruntergeladen!";
+        } catch (err) {
+            console.error("🔥 PDF-LIB FEHLER:", err);
+            estadoInfoModal.textContent = "❌ Fehler beim Generieren des PDFs.";
+            alert("Kritischer Fehler: " + err.message);
+        }
+    });
+}
+```[cite: 3]
+
+---
+
+### 4. `history.js`
+
+```javascript
+import { SUPABASE_URL, headers } from './config.js';
+
+export function inicializarHistorial() {
+    const modalConsulta = document.getElementById('modalConsulta');
+    const selectUsuarioConsulta = document.getElementById('selectUsuarioConsulta');
+    const selectVistaConsulta = document.getElementById('selectVistaConsulta');
+    const lblRangoPeriodoConsulta = document.getElementById('lblRangoPeriodoConsulta');
+    const btnAnteriorConsulta = document.getElementById('btnAnteriorConsulta');
+    const btnSiguienteConsulta = document.getElementById('btnSiguienteConsulta');
+    const contenedorResultadosConsulta = document.getElementById('contenedorResultadosConsulta');
+    let fechaActualPivote = new Date();
+
+    window.abrirModalConsulta = async function() {
+        modalConsulta.classList.remove('hidden');
+        await cargarUsuariosEnSelect(selectUsuarioConsulta, consultarDatosModal);
+    };
+
+    window.cerrarModalConsulta = function() { 
+        modalConsulta.classList.add('hidden'); 
+    };
+
+    async function cargarUsuariosEnSelect(elementoSelect, callbackDespues) {
+        try {
+            const usuarioActual = localStorage.getItem('usuario_actual');
+            const accesoActual = Number(localStorage.getItem('usuario_acceso'));
+
+            if (accesoActual !== 1) {
+                elementoSelect.innerHTML = '';
+                const opt = document.createElement('option');
+                opt.value = usuarioActual;
+                opt.textContent = usuarioActual;
+                elementoSelect.appendChild(opt);
+                elementoSelect.value = usuarioActual;
+                elementoSelect.disabled = true;
+            } else {
+                elementoSelect.disabled = false;
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=nombre,email`, { headers });
+                const usuarios = await res.json();
+                elementoSelect.innerHTML = '<option value="">-- Auswählen --</option>';
+                usuarios.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.nombre;
+                    opt.textContent = u.nombre;
+                    elementoSelect.appendChild(opt);
+                });
+                if (usuarioActual) elementoSelect.value = usuarioActual;
+                else if (usuarios.length > 0) elementoSelect.value = usuarios[0].nombre;
+            }
+
+            if (callbackDespues) callbackDespues();
+        } catch (err) { console.error(err); }
+    }
+
+    function obtenerRangoSemana(d) {
+        d = new Date(d);
+        const day = d.getDay();
+        const diff = d.getDate() - day +
