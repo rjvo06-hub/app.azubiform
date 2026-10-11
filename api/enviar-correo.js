@@ -14,11 +14,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, token, nombre } = req.method === 'POST' && req.body ? req.body : {};
+    const { email, token, nombre, tipo } = req.method === 'POST' && req.body ? req.body : {};
 
     const urlVerificacion = `https://app.azubiform.de/verificar.html?token=${token}`;
     const saludo = nombre ? `Hallo ${nombre}!` : `Hallo!`;
     const destinatario = email || 'info@azubiform.de';
+
+    const esFos = tipo && tipo.toLowerCase() === 'fos';
+
+    // Textos dinámicos adaptados según programa
+    const subtituloHeader = esFos 
+      ? 'Digitale Führung deines FOS-Praktikumsberichts' 
+      : 'Digitale Führung deines Ausbildungsnachweises';
+
+    const textoBienvenida = esFos
+      ? 'Vielen Dank für deine Registrierung bei Azubiform. Wir freuen uns sehr, dich bei der Dokumentation deines FOS-Praktikums zu begleiten.'
+      : 'Vielen Dank für deine Registrierung bei Azubiform. Wir freuen uns sehr, dich bei der Verwaltung deiner Ausbildung zu begleiten.';
+
+    const tipTexto = esFos
+      ? '💡 <b>Tipp:</b> Trage deine täglichen Aktivitäten aus deinem Praktikum ein und behalte deinen gesamten Verlauf im Blick. So kannst du deine Einträge jederzeit bequem abrufen!'
+      : '💡 <b>Tipp:</b> Trage deine täglichen Aktivitäten ein und behalte deinen gesamten Verlauf im Blick. So kannst du deine Einträge jederzeit Monat für Monat ganz bequem abrufen!';
 
     const data = await resend.emails.send({
       from: 'Azubiform <info@azubiform.de>',
@@ -31,13 +46,13 @@ export default async function handler(req, res) {
             <!-- Encabezado en Azul -->
             <div style="background-color: #2563eb; padding: 30px; text-align: center; color: #ffffff;">
               <h1 style="margin: 0; font-size: 24px; font-weight: bold;">Azubiform</h1>
-              <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Digitale Führung deines Ausbildungsnachweises</p>
+              <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">${subtituloHeader}</p>
             </div>
 
             <!-- Cuerpo del mensaje -->
             <div style="padding: 40px 30px; color: #374151; line-height: 1.6;">
               <h2 style="color: #111827; font-size: 20px; margin-top: 0;">${saludo}</h2>
-              <p style="margin-bottom: 25px;">Vielen Dank für deine Registrierung bei Azubiform. Wir freuen uns sehr, dich bei der Verwaltung deiner Ausbildung zu begleiten.</p>
+              <p style="margin-bottom: 25px;">${textoBienvenida}</p>
               
               <p style="margin-bottom: 25px;">Um dein Konto zu aktivieren und deine E-Mail-Adresse zu bestätigen, klicke bitte einfach auf den folgenden Button:</p>
               
@@ -48,7 +63,7 @@ export default async function handler(req, res) {
 
               <!-- Bloque informativo optimizado -->
               <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; border-radius: 4px; margin: 30px 0; font-size: 14px; color: #1e40af;">
-                💡 <b>Tipp:</b> Trage deine täglichen Aktivitäten ein und behalte deinen gesamten Verlauf im Blick. So kannst du deine Einträge jederzeit Monat für Monat ganz bequem abrufen!
+                ${tipTexto}
               </div>
 
               <p style="font-size: 14px; color: #6b7280; margin-bottom: 10px;">Falls der Button nicht funktioniert, kannst du auch den folgenden Link in deinen Browser kopieren:</p>
