@@ -169,6 +169,7 @@ export function inicializarAuth(onLoginExitoso) {
             const nombre = document.getElementById('regNombre').value.trim();
             const email = document.getElementById('regEmail').value.trim();
             const ausbildung = document.getElementById('regAusbildung').value.trim(); 
+            const tipoPrograma = document.getElementById('regTipoPrograma').value; // <-- CAPTURAMOS EL TIPO SELECCIONADO
             const password = document.getElementById('regPassword').value;
             const passwordConfirm = document.getElementById('regPasswordConfirm').value;
             if (loginMensaje) loginMensaje.classList.add('hidden');
@@ -212,7 +213,10 @@ export function inicializarAuth(onLoginExitoso) {
                     return;
                 }
 
-                const emailRes = await fetch('/api/enviar-correo', {
+                // SELECCIÓN DINÁMICA DEL ENDPOINT SEGÚN EL PROGRAMA
+                const endpointCorreo = (tipoPrograma === 'fos') ? '/api/send-fos-email' : '/api/enviar-correo';
+
+                const emailRes = await fetch(endpointCorreo, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, nombre, token })
