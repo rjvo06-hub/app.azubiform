@@ -10,6 +10,14 @@ export function inicializarHistorial() {
     const contenedorResultadosConsulta = document.getElementById('contenedorResultadosConsulta');
     let fechaActualPivote = new Date();
 
+    // Asegurar clases en los selectores para prevenir el zoom automático en móviles
+    if (selectUsuarioConsulta) {
+        selectUsuarioConsulta.className = "w-full p-2.5 border border-gray-300 rounded-xl text-base sm:text-xs bg-white text-gray-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none";
+    }
+    if (selectVistaConsulta) {
+        selectVistaConsulta.className = "w-full p-2.5 border border-gray-300 rounded-xl text-base sm:text-xs bg-white text-gray-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none";
+    }
+
     window.abrirModalConsulta = async function() {
         modalConsulta.classList.remove('hidden');
         await cargarUsuariosEnSelect(selectUsuarioConsulta, consultarDatosModal);
@@ -102,9 +110,9 @@ export function inicializarHistorial() {
             const fechaStr = formatearISO(diaActual);
             const actsDelDia = registros.filter(r => r.fecha === fechaStr);
             const divDia = document.createElement('div');
-            divDia.className = 'bg-gray-50 border border-gray-200 rounded-lg p-2.5';
+            divDia.className = 'bg-gray-50 border border-gray-200 rounded-xl p-3';
             let htmlActividades = actsDelDia.length > 0 
-                ? actsDelDia.map(a => `<div class="flex justify-between items-center bg-white p-2 rounded border border-gray-100 text-xs mb-1"><span class="text-gray-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-gray-400">${a.hora || ''}</span></div>`).join('')
+                ? actsDelDia.map(a => `<div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-100 text-xs mb-1"><span class="text-gray-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-gray-400">${a.hora || ''}</span></div>`).join('')
                 : '<p class="text-[11px] text-gray-400 italic">Keine Einträge.</p>';
             divDia.innerHTML = `<div class="flex justify-between items-center mb-1.5"><h3 class="font-bold text-gray-800 text-xs uppercase text-indigo-600">${nombreDia} (${diaActual.toLocaleDateString('de-DE')})</h3><span class="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">${actsDelDia.length} Eintr.</span></div><div class="space-y-1">${htmlActividades}</div>`;
             contenedorResultadosConsulta.appendChild(divDia);
@@ -119,9 +127,9 @@ export function inicializarHistorial() {
         Object.keys(agrupados).sort().forEach(fecha => {
             const acts = agrupados[fecha];
             const divFecha = document.createElement('div');
-            divFecha.className = 'bg-gray-50 border border-gray-200 rounded-lg p-2.5';
+            divFecha.className = 'bg-gray-50 border border-gray-200 rounded-xl p-3';
             const fechaFormateada = new Date(fecha + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            let htmlActs = acts.map(a => `<div class="flex justify-between items-center bg-white p-2 rounded border border-gray-100 text-xs mb-1"><span class="text-gray-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-gray-400">${a.hora || ''}</span></div>`).join('');
+            let htmlActs = acts.map(a => `<div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-100 text-xs mb-1"><span class="text-gray-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-gray-400">${a.hora || ''}</span></div>`).join('');
             divFecha.innerHTML = `<div class="flex justify-between items-center mb-1.5"><h3 class="font-bold text-gray-800 text-xs capitalize text-indigo-600">${fechaFormateada}</h3><span class="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">${acts.length} Eintr.</span></div><div class="space-y-1">${htmlActs}</div>`;
             contenedorResultadosConsulta.appendChild(divFecha);
         });
