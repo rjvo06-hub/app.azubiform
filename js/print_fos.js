@@ -358,7 +358,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     lineasAsignadas = [fosResProfesora.textContent];
                 } 
                 else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) {
-                    lineasAsignadas = [semSeleccionada];
+                    // AQUÍ ESTÁ EL CAMBIO: Ya no ponemos el rango de fechas, sino la suma total de las horas de la semana
+                    const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
+                    lineasAsignadas = [totalSemana > 0 ? String(totalSemana) : ''];
                 } 
                 else if (esHora) {
                     const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
@@ -372,7 +374,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const yPdfLibTop = Number(box.y1);
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
 
-                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
+                const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
                 const espaciadoLineas = fontSize * 1.4;
 
