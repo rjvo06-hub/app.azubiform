@@ -13,7 +13,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
     console.log("Ausbildung del usuario actual en localStorage:", ausbildungUsuario);
 
-    let ausbildungsPermitidos = [ausbildungUsuario];
+    let ausbildungenPermitidos = [ausbildungUsuario];
 
     async function inicializarFiltrosCategoria() {
         if (!ausbildungUsuario) return;
@@ -25,8 +25,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 const resCat = await fetch(`${SUPABASE_URL}/rest/v1/profesions?categoria=eq.${encodeURIComponent(categoria)}&select=codigo`, { headers });
                 const dataCat = await resCat.json();
                 if (dataCat && dataCat.length > 0) {
-                    ausbildungsPermitidos = dataCat.map(p => p.codigo);
-                    console.log("Ausbildungen permitidos actualizados para la categoría:", ausbildungsPermitidos);
+                    ausbildungenPermitidos = dataCat.map(p => p.codigo);
+                    console.log("Ausbildungen permitidos actualizados para la categoría:", ausbildungenPermitidos);
                 }
             }
         } catch (err) {
@@ -48,6 +48,11 @@ export function iniciarAppPrincipal(nombreUsuario) {
     const listaActividades = document.getElementById('listaActividades');
     const contador = document.getElementById('contador');
     const mensaje = document.getElementById('mensaje');
+
+    // Elementos para el control global de horas del día
+    const contenedorHorasGlobal = document.getElementById('contenedorHorasGlobal');
+    const inputHorasGlobal = document.getElementById('horasGlobal');
+    const btnRepartirHoras = document.getElementById('btnRepartirHoras');
 
     const modalPasado = document.getElementById('modalPasado');
     const inputFechaPasada = document.getElementById('fechaPasada');
@@ -106,24 +111,28 @@ export function iniciarAppPrincipal(nombreUsuario) {
     async function cargarActividadesPasadas(fecha) {
         if (!fecha) return;
         try {
-            // Filtrado estricto por usuario y por fecha en el registro diario
             const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${fecha}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, {
                 method: 'GET', headers: headers
             });
             const data = await res.json();
             if (!data || data.length === 0) {
                 listaActividadesPasadas.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Keine Aktivitäten für dieses Datum erfasst.</p>';
-                contadorPasado.textContent = '0 erfasst';
+                contadorPasado.textContent = '0 erfasst (0 Std.)';
                 return;
             }
-            contadorPasado.textContent = `${data.length} erfasst`;
+            
+            let totalHoras = 0;
             listaActividadesPasadas.innerHTML = '';
             data.forEach((item) => {
+                const horasItem = parseFloat(item.horas) || 0;
+                totalHoras += horasItem;
+
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100 text-sm';
-                div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><span class="text-[10px] text-gray-400">${item.hora || ''}</span>`;
+                div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><div class="text-right"><span class="text-xs font-bold text-indigo-600 mr-2">${horasItem} Std.</span><span class="text-[10px] text-gray-400">${item.hora || ''}</span></div>`;
                 listaActividadesPasadas.appendChild(div);
             });
+            contadorPasado.textContent = `${data.length} erfasst (${totalHoras} Std.)`;
         } catch (err) { console.error(err); }
     }
 
@@ -135,8 +144,8 @@ export function iniciarAppPrincipal(nombreUsuario) {
         try {
             let url = `${SUPABASE_URL}/rest/v1/actividades_catalogo?nombre_actividad=ilike.${encodeURIComponent('%' + textoBusqueda + '%')}`;
             
-            if (ausbildungsPermitidos.length > 0) {
-                url += `&ausbildung=in.(${ausbildungsPermitidos.join(',')})`;
+            if (ausbildungenPermitidos.length > 0) {
+                url += `&ausbildung=in.(${ausbildungenPermitidos.join(',')})`;
             }
             url += `&limit=5`;
 
@@ -183,7 +192,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
         }, 150);
     });
 
-    // CORREGIDO: Carga exclusivamente las actividades de hoy hechas por el USUARIO ACTUAL
+    // Carga exclusiva de las actividades de hoy del usuario actual con cálculo de horas
     async function cargarActividadesHoy() {
         try {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&usuario=eq.${encodeURIComponent(nombreUsuario)}&order=created_at.desc`, { headers });
@@ -191,20 +200,34 @@ export function iniciarAppPrincipal(nombreUsuario) {
             
             if (!data || data.length === 0) {
                 listaActividades.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>';
-                contador.textContent = '0 erfasst';
+                contador.textContent = '0 erfasst (0 Std.)';
+                if (contenedorHorasGlobal) contenedorHorasGlobal.classList.add('hidden');
                 return;
             }
-            contador.textContent = `${data.length} erfasst`;
+
+            let totalHoras = 0;
             listaActividades.innerHTML = '';
             data.forEach((item) => {
+                const horasItem = parseFloat(item.horas) || 0;
+                totalHoras += horasItem;
+
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-sm';
-                div.innerHTML = `<span class="text-gray-700 font-medium">${item.nombre_actividad}</span><span class="text-[10px] text-gray-400">${item.hora || ''}</span>`;
+                div.innerHTML = `
+                    <span class="text-gray-700 font-medium">${item.nombre_actividad}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-indigo-600">${horasItem} Std.</span>
+                        <button type="button" onclick="window.eliminarActividad('${item.id}')" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+                    </div>`;
                 listaActividades.appendChild(div);
             });
+
+            contador.textContent = `${data.length} erfasst (${totalHoras} Std.)`;
+            if (contenedorHorasGlobal) contenedorHorasGlobal.classList.remove('hidden');
         } catch (err) { console.error("Error cargando actividades de hoy:", err); }
     }
 
+    // Guardado inmediato en Supabase (con 0 horas iniciales por seguridad)
     formulario.onsubmit = async (e) => {
         e.preventDefault();
         const nombreActividad = inputActividad.value.trim();
@@ -219,6 +242,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 headers: headers,
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad, 
+                    horas: 0,
                     fecha: hoyISO, 
                     hora: horaActual, 
                     usuario: nombreUsuario,
@@ -244,7 +268,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             contenedorSugerencias.classList.add('hidden');
 
             btnSubmitActividad.disabled = false;
-            btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
+            btnSubmitActividad.textContent = 'Aktivität hinzufügen (+)';
             mensaje.textContent = '✓ Aktivität hinzugefügt!';
             mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-green-100 text-green-700';
             mensaje.classList.remove('hidden');
@@ -254,12 +278,59 @@ export function iniciarAppPrincipal(nombreUsuario) {
         } catch (err) {
             alert("⚠️ " + err.message);
             btnSubmitActividad.disabled = false;
-            btnSubmitActividad.textContent = 'Zur Liste hinzufügen';
+            btnSubmitActividad.textContent = 'Aktivität hinzufügen (+)';
             mensaje.textContent = '❌ Fehler beim Speichern.';
             mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-red-100 text-red-700';
             mensaje.classList.remove('hidden');
         }
     };
+
+    // Función para eliminar actividad de hoy
+    window.eliminarActividad = async function(id) {
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            cargarActividadesHoy();
+        } catch (e) {
+            console.error("Error al eliminar actividad:", e);
+        }
+    };
+
+    // Botón para distribuir las horas globales equitativamente entre las tareas de hoy
+    if (btnRepartirHoras) {
+        btnRepartirHoras.addEventListener('click', async () => {
+            const horasTotales = parseFloat(inputHorasGlobal.value);
+            if (isNaN(horasTotales) || horasTotales <= 0) {
+                alert("Bitte gib gültige Gesamtstunden ein.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?fecha=eq.${hoyISO}&usuario=eq.${encodeURIComponent(nombreUsuario)}`, { headers });
+                const data = await res.json();
+
+                if (!data || data.length === 0) return;
+
+                const horasPorActividad = Number((horasTotales / data.length).toFixed(2));
+
+                for (const item of data) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/registro_diario?id=eq.${item.id}`, {
+                        method: 'PATCH',
+                        headers: { ...headers, 'Prefer': 'return=minimal' },
+                        body: JSON.stringify({ horas: horasPorActividad })
+                    });
+                }
+
+                inputHorasGlobal.value = '';
+                alert("✓ Stunden erfolgreich für heute verteilt!");
+                cargarActividadesHoy();
+            } catch (err) {
+                alert("⚠️ Fehler beim Verteilen der Stunden: " + err.message);
+            }
+        });
+    }
 
     formPasado.onsubmit = async (e) => {
         e.preventDefault();
@@ -275,6 +346,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 headers: headers,
                 body: JSON.stringify({ 
                     nombre_actividad: nombreActividad, 
+                    horas: 0,
                     fecha: fechaElegida, 
                     hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
                     usuario: nombreUsuario,
@@ -309,7 +381,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             cargarActividadesPasadas(fechaElegida);
         } catch (err) {
             alert("⚠ " + err.message);
-            btnSubmitPasado.disabledberg = false;
+            btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen';
             mensajePasado.textContent = '❌ Fehler beim Speichern.';
             mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-red-100 text-red-700';
