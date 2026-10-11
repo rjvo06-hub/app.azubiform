@@ -169,6 +169,10 @@ export function inicializarAuth(onLoginExitoso) {
             const nombre = document.getElementById('regNombre').value.trim();
             const email = document.getElementById('regEmail').value.trim();
             const ausbildung = document.getElementById('regAusbildung').value.trim(); 
+            
+            const selectTipo = document.getElementById('regTipoPrograma');
+            const tipoPrograma = selectTipo ? selectTipo.value.trim().toLowerCase() : '';
+
             const password = document.getElementById('regPassword').value;
             const passwordConfirm = document.getElementById('regPasswordConfirm').value;
             if (loginMensaje) loginMensaje.classList.add('hidden');
@@ -212,7 +216,9 @@ export function inicializarAuth(onLoginExitoso) {
                     return;
                 }
 
-                const emailRes = await fetch('/api/enviar-correo', {
+                const endpointCorreo = (tipoPrograma.includes('fos')) ? '/api/send-fos-email' : '/api/enviar-correo';
+
+                const emailRes = await fetch(endpointCorreo, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, nombre, token })
@@ -232,7 +238,7 @@ export function inicializarAuth(onLoginExitoso) {
                 }
 
             } catch (error) {
-                mostrarMensaje('❌ Netzwerkfehler auf Mobilfunknetz: ' + error.message);
+                mostrarMensaje('❌ Netzwerkfehler: ' + error.message);
             }
         });
     }
