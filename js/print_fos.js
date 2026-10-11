@@ -475,7 +475,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Ausbildungsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
+            link.download = `Taetigkeitsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
             link.click();
 
             estadoInfoModal.textContent = "🎉 ¡PDF generado y descargado con éxito!";
