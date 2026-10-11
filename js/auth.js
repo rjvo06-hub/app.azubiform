@@ -200,12 +200,11 @@ export function inicializarAuth(onLoginExitoso) {
                     body: JSON.stringify({ 
                         nombre: nombre, 
                         email: email, 
-                        ausbildung: ausbildung, 
-                        tipo: tipoPrograma, // Guardamos el tipo en la BD
+                        ausbildung: ausbildung, // <-- Aquí se guarda la especialidad seleccionada
                         password: password, 
                         verificado: false, 
                         token_verificacion: token,
-                        acceso: null 
+                        acceso: null
                     })
                 });
 
