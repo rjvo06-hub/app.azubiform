@@ -4,21 +4,21 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Estructura simplificada con la selección de semana integrada en el panel azul
+    // Estructura optimizada para móviles (flex-col para evitar desbordamientos)
     container.innerHTML = `
         <div class="space-y-4 relative">
-            <!-- PANEL DE RESUMEN E INTEGRACIÓN DE SEMANA (Recuadro Azul) -->
+            <!-- PANEL DE RESUMEN E INTEGRACIÓN DE SEMANA (Recuadro Azul Adaptable a Móvil) -->
             <div class="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md space-y-3 text-xs">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-indigo-700 pb-2 gap-2">
-                    <span class="font-bold uppercase tracking-wider text-indigo-200">👤 Datos del Reporte Activo</span>
+                <div class="border-b border-indigo-700 pb-2 space-y-2">
+                    <span class="font-bold uppercase tracking-wider text-indigo-200 block">👤 Datos del Reporte Activo</span>
                     
-                    <!-- Selector de Semana y Botón integrados en el recuadro azul -->
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <select id="fosSelectSemanaModal" class="p-1 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium flex-1 sm:flex-initial">
+                    <!-- Selector de Semana y Botón en columna para que no se salgan en el teléfono -->
+                    <div class="flex flex-col gap-2 w-full pt-1">
+                        <select id="fosSelectSemanaModal" class="w-full p-2 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium">
                             <option value="">-- Selecciona semana --</option>
                         </select>
-                        <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded shadow transition whitespace-nowrap">
-                            🚀 Descargar PDF
+                        <button id="btnGenerarPdfModal" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded shadow transition flex items-center justify-center gap-1">
+                            <span>🚀 Descargar PDF</span>
                         </button>
                     </div>
                 </div>
