@@ -100,8 +100,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let archivoPdfOriginalBytes = null;
     let coordenadasMap = {};
     let semanasAgrupadas = {};
-    let pageViewportGlobal = null;
-    let escalaGlobal = 1.0;
     
     // 🔐 Recuperación del usuario actual (sesión)
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
@@ -213,13 +211,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             if (!respuestaPdf.ok) throw new Error(`No se encontró el archivo en la ruta: ${rutaPdfRepositorio}`);
             
             archivoPdfOriginalBytes = await respuestaPdf.arrayBuffer();
-
-            // Inicializar metadatos del viewport en segundo plano para el cálculo correcto de coordenadas
-            const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
-            const pdfDocJs = await loadingTask.promise;
-            const page = await pdfDocJs.getPage(1);
-            pageViewportGlobal = page.getViewport({ scale: escalaGlobal });
-
             estadoInfoModal.textContent = "✅ Listo para generar reportes. Semana actual seleccionada automáticamente.";
         } catch (errorPdfRepo) {
             console.error("Error al cargar la plantilla automática:", errorPdfRepo);
@@ -342,10 +333,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const x = Number(box.x1);
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
                 
-                // 🎯 FÓRMULA ORIGINAL EXACTA RESTAURADA
-                const heightCanvasPdfJs = pageViewportGlobal ? (pageViewportGlobal.height / escalaGlobal) : pdfHeight;
+                // 🔄 INVERSIÓN CORRECTA DEL EJE Y: Convertimos el origen superior-izquierdo a inferior-izquierdo de PDF-Lib
                 const y1Visual = Number(box.y1);
-                const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
+                const yPdfLibTop = pdfHeight - y1Visual;
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
