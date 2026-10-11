@@ -1,4 +1,4 @@
-Import { SUPABASE_URL, headers } from './config.js';
+import { SUPABASE_URL, headers } from './config.js';
 
 export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPreseleccionado = null) {
     const container = document.getElementById(containerId);
@@ -463,7 +463,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                             y: yActual,
                             size: fontSize,
                             font: fuenteUsada,
-                            color: PDFLib.rgb(0, 0, 0)
+                            color: PDFLib.rgb(0.4, 0.4, 0.4)
                         });
                     } catch (innerErr) {
                         console.error(`❌ Error al estampar en el campo "${campo}":`, innerErr);
@@ -475,7 +475,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const blob = new Blob([pdfBytesFinales], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Ausbildungsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
+            link.download = `Taetigkeitsnachweis_${nombreUsuarioActual}_${semSeleccionada}.pdf`;
             link.click();
 
             estadoInfoModal.textContent = "🎉 ¡PDF generado y descargado con éxito!";
