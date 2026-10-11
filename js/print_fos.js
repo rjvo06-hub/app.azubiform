@@ -4,15 +4,25 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // 1. Estructura HTML simplificada (sin canvas de previsualización)
+    // Estructura simplificada con la selección de semana integrada en el panel azul
     container.innerHTML = `
         <div class="space-y-4 relative">
-            <!-- PANEL DE RESUMEN DE DATOS AUTOMÁTICOS -->
-            <div class="bg-indigo-900 text-white p-3 rounded-xl shadow-md space-y-2 text-xs">
-                <div class="flex justify-between items-center border-b border-indigo-700 pb-1.5">
+            <!-- PANEL DE RESUMEN E INTEGRACIÓN DE SEMANA (Recuadro Azul) -->
+            <div class="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md space-y-3 text-xs">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-indigo-700 pb-2 gap-2">
                     <span class="font-bold uppercase tracking-wider text-indigo-200">👤 Datos del Reporte Activo</span>
-                    <span id="fosLblSemanaActual" class="bg-emerald-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">Semana: No seleccionada</span>
+                    
+                    <!-- Selector de Semana y Botón integrados en el recuadro azul -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <select id="fosSelectSemanaModal" class="p-1 border border-indigo-500 rounded text-xs bg-indigo-950 text-white font-medium flex-1 sm:flex-initial">
+                            <option value="">-- Selecciona semana --</option>
+                        </select>
+                        <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded shadow transition whitespace-nowrap">
+                            🚀 Descargar PDF
+                        </button>
+                    </div>
                 </div>
+
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                     <div><span class="text-indigo-300 block text-[10px] uppercase">Nombre:</span><strong id="fosResNombre" class="text-white">Cargando...</strong></div>
                     <div><span class="text-indigo-300 block text-[10px] uppercase">Clase:</span><strong id="fosResClase" class="text-white">Cargando...</strong></div>
@@ -22,35 +32,8 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 </div>
             </div>
 
-            <!-- 1. Carga manual del PDF base -->
-            <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-center gap-3">
-                <div>
-                    <h3 class="text-xs font-bold text-amber-900 uppercase">📂 1. Cargar Plantilla PDF Base</h3>
-                    <p class="text-[10px] text-amber-700">Selecciona el archivo PDF original de la escuela.</p>
-                </div>
-                <div class="w-full sm:w-auto">
-                    <input type="file" id="fosPdfFileInput" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-amber-100 file:text-amber-800 w-full cursor-pointer">
-                </div>
-            </div>
-
-            <!-- 2. Selección de Semana y Descarga -->
-            <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-3">
-                <div>
-                    <h3 class="text-xs font-bold text-indigo-900 uppercase">⚡ 2. Generar Ausbildungsnachweis</h3>
-                    <p class="text-[10px] text-indigo-700">Selecciona la semana para generar tu documento.</p>
-                </div>
-                <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <select id="fosSelectSemanaModal" class="p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium flex-1 sm:flex-initial">
-                        <option value="">-- Selecciona semana --</option>
-                    </select>
-                    <button id="btnGenerarPdfModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow transition whitespace-nowrap">
-                        🚀 Descargar PDF
-                    </button>
-                </div>
-            </div>
-
             <div id="fosEstadoInfoModal" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
-                📌 Datos cargados correctamente. Sube el PDF base para comenzar.
+                📌 Sincronizando datos y cargando plantilla del repositorio...
             </div>
 
             <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN -->
@@ -88,7 +71,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         </div>
     `;
 
-    const fosPdfFileInput = document.getElementById('fosPdfFileInput');
     const selectSemanaModal = document.getElementById('fosSelectSemanaModal');
     const btnGenerarPdfModal = document.getElementById('btnGenerarPdfModal');
     const estadoInfoModal = document.getElementById('fosEstadoInfoModal');
@@ -113,10 +95,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const fosResProfesion = document.getElementById('fosResProfesion');
     const fosResWorkplace = document.getElementById('fosResWorkplace');
     const fosResProfesora = document.getElementById('fosResProfesora');
-    const fosLblSemanaActual = document.getElementById('fosLblSemanaActual');
 
     let archivoPdfOriginalBytes = null;
-    let coordenadasPdfMap = {}; // Aquí cargaremos directo las coordenadas para PDFLib
+    let coordenadasPdfMap = {}; 
     let semanasAgrupadas = {};
     
     let nombreUsuarioActual = usuarioPreseleccionado || localStorage.getItem('usuario_actual');
@@ -127,10 +108,16 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // Sincronización con Supabase para obtener datos del usuario, profesión y las coordenadas PDF guardadas
     try {
-        estadoInfoModal.textContent = "⏳ Sincronizando datos...";
+        estadoInfoModal.textContent = "⏳ Cargando plantilla y sincronizando datos...";
 
+        // 1. Carga automática del PDF desde la carpeta 'form' del repositorio
+        const rutaPdfRepositorio = './form/Berufliche Oberschule Holzkirchen.pdf';
+        const responsePdf = await fetch(rutaPdfRepositorio);
+        if (!responsePdf.ok) throw new Error("No se pudo cargar el archivo PDF desde la carpeta form.");
+        archivoPdfOriginalBytes = await responsePdf.arrayBuffer();
+
+        // 2. Consultar usuario y registros diarios en paralelo
         const [respUsuario, respReg] = await Promise.all([
             fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
@@ -169,12 +156,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         if (respTpl && respTpl.ok) {
             const tplData = await respTpl.json();
             if (tplData.length > 0) {
-                // Tomamos directamente las coordenadas específicas de PDFLib guardadas en el nuevo campo
                 coordenadasPdfMap = tplData[0].coordinates_pdf_json || {};
             }
         }
 
-        // Respaldo por si acaso el campo específico está vacío, usando coordinates_json general como fallback
         if (Object.keys(coordenadasPdfMap).length === 0) {
             const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
@@ -192,12 +177,35 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             semanasAgrupadas = agruparRegistrosPorSemana(registrosGlobales);
 
             selectSemanaModal.innerHTML = '<option value="">-- Selecciona una semana --</option>';
+            
+            let claveSemanaActual = '';
+            const hoy = new Date();
+
             Object.keys(semanasAgrupadas).forEach(sem => {
                 const opt = document.createElement('option');
                 opt.value = sem;
                 opt.textContent = `Woche: ${sem}`;
                 selectSemanaModal.appendChild(opt);
+
+                // Detección automática de la semana actual
+                const partes = sem.split(' bis ');
+                if (partes.length === 2) {
+                    const [diaL, mesL, anioL] = partes[0].split('.').map(Number);
+                    const [diaV, mesV, anioV] = partes[1].split('.').map(Number);
+                    const inicioSemana = new Date(anioL, mesL - 1, diaL);
+                    const finSemana = new Date(anioV, mesV - 1, diaV);
+                    finSemana.setHours(23, 59, 59);
+
+                    if (hoy >= inicioSemana && hoy <= finSemana) {
+                        claveSemanaActual = sem;
+                    }
+                }
             });
+
+            // Seleccionar por defecto la semana actual si existe
+            if (claveSemanaActual) {
+                selectSemanaModal.value = claveSemanaActual;
+            }
         }
 
         fosResClase.textContent = claseUsuario;
@@ -205,31 +213,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         fosResWorkplace.textContent = workplaceUsuario;
         fosResProfesora.textContent = profesoraUsuario;
 
-        estadoInfoModal.textContent = "✅ Datos cargados correctamente. Sube el PDF base para comenzar.";
+        estadoInfoModal.textContent = "✅ Plantilla cargada y listo para generar el PDF.";
 
     } catch (err) {
-        console.error("Error sincronizando con Supabase:", err);
-        estadoInfoModal.textContent = `❌ ${err.message || "Error al conectar con Supabase."}`;
+        console.error("Error en la inicialización:", err);
+        estadoInfoModal.textContent = `❌ ${err.message || "Error al inicializar el componente."}`;
     }
-
-    // Capturar el archivo PDF base seleccionado por el usuario
-    fosPdfFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        try {
-            archivoPdfOriginalBytes = await file.arrayBuffer();
-            estadoInfoModal.textContent = "✅ PDF base cargado correctamente. Selecciona la semana.";
-        } catch (err) {
-            console.error(err);
-            estadoInfoModal.textContent = "❌ Error al leer el archivo PDF.";
-        }
-    });
-
-    selectSemanaModal.addEventListener('change', (e) => {
-        const semSeleccionada = e.target.value;
-        fosLblSemanaActual.textContent = semSeleccionada ? `Semana: ${semSeleccionada}` : "Semana: No seleccionada";
-    });
 
     function agruparRegistrosPorSemana(registros) {
         const semanas = {};
@@ -261,10 +250,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     }
 
     btnGenerarPdfModal.addEventListener('click', () => {
-        if (!archivoPdfOriginalBytes) return alert("⚠️ Sube primero el archivo PDF base.");
+        if (!archivoPdfOriginalBytes) return alert("⚠️ La plantilla PDF aún no se ha cargado desde el repositorio.");
         if (Object.keys(coordenadasPdfMap).length === 0) return alert("⚠️ No hay coordenadas cargadas desde Supabase.");
         const semSeleccionada = selectSemanaModal.value;
-        if (!semSeleccionada) return alert("⚠️ Selecciona una semana.");
+        if (!semSeleccionada) return alert("⚠️ Selecciona una semana válida.");
 
         fosValNombre.textContent = nombreUsuarioActual;
         fosValClase.textContent = fosResClase.textContent;
@@ -300,7 +289,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     fosModalCerrarX.addEventListener('click', cerrarModal);
     fosModalBtnCancelar.addEventListener('click', cerrarModal);
 
-    // Generación final directa con PDFLib utilizando las coordenadas guardadas
     fosModalBtnConfirmar.addEventListener('click', async () => {
         cerrarModal();
         const semSeleccionada = selectSemanaModal.value;
