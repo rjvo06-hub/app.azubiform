@@ -128,9 +128,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let pageViewport = null;
     let scale = 1.0;
     let archivoPdfOriginalBytes = null;
-    let coordenadasMap = {};        // Coordenadas para el Canvas (visual)
-    let coordenadasPdfMap = {};     // Coordenadas específicas para PDFLib (guardadas en la BD)
-    let escuelaSeleccionadaId = ''; // Variable global para recordar el ID de la escuela/plantilla actual
+    let coordenadasMap = {};
+    let coordenadasPdfMap = {};
+    let escuelaSeleccionadaId = '';
     let semanasAgrupadas = {};
     
     // 🔐 Recuperación correcta del usuario actual (sesión)
@@ -146,7 +146,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     try {
         estadoInfoModal.textContent = "⏳ Sincronizando datos...";
 
-        // 1. Consultar usuario y registros diarios en paralelo
         const [respUsuario, respReg] = await Promise.all([
             fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuarioActual)}&select=*`, { 
                 headers: { ...headers, 'Range': '0-0' } 
@@ -187,11 +186,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const tplData = await respTpl.json();
             if (tplData.length > 0) {
                 coordenadasMap = tplData[0].coordinates_json || {};
-                coordenadasPdfMap = tplData[0].coordinates_pdf_json || {}; // Carga el nuevo campo de la BD si ya existe
+                coordenadasPdfMap = tplData[0].coordinates_pdf_json || {};
             }
         }
 
-        // 🔄 PLAN B DE RESPALDO: Si las coordenadas siguen vacías, cargamos la primera plantilla disponible
+        // 🔄 PLAN B DE RESPALDO: Si las coordenadas siguen vacías
         if (Object.keys(coordenadasMap).length === 0) {
             console.warn("⚠️ No se hallaron coordenadas con el ID exacto, aplicando plantilla por defecto de Supabase...");
             const respFallbackTpl = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=*`, { 
@@ -243,12 +242,14 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             pdfDoc = await loadingTask.promise;
             await renderizarPaginaModal(1);
 
-            // 🧮 VALIDACIÓN Y GUARDADO AUTOMÁTICO EN EL NUEVO CAMPO DE PDF (SI ESTÁ VACÍO)
+            // 💾 PROCESO AÑADIDO: Si el campo de coordenadas PDF en la BD está vacío, las calculamos y guardamos
             if (Object.keys(coordenadasPdfMap).length === 0 && Object.keys(coordenadasMap).length > 0) {
-                const page = await pdfDoc.getPage(1);
-                const viewport = page.getViewport({ scale: 1.0 }); // Escala real 1.0
-                const pdfPageSize = page.getSize(); // Dimensiones reales del PDF
+                const pagePdfJs = await pdfDoc.getPage(1);
+                const viewportPdfJs = pagePdfJs.getViewport({ scale: 1.0 });
                 
+                const pdfDocTemp = await PDFLib.PDFDocument.load(archivoPdfOriginalBytes.slice(0));
+                const pdfPageSize = pdfDocTemp.getPages()[0].getSize();
+
                 coordenadasPdfMap = {};
 
                 for (const [campo, box] of Object.entries(coordenadasMap)) {
@@ -259,9 +260,8 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     const x2 = Number(box.x2);
                     const y2 = Number(box.y2);
 
-                    // Conversión exacta para PDFLib (origen abajo-izquierda)
-                    const yPdfLibTop = pdfPageSize.height - (viewport.height - y1) - 10;
-                    const yPdfLibBottom = pdfPageSize.height - (viewport.height - y2) - 10;
+                    const yPdfLibTop = pdfPageSize.height - (viewportPdfJs.height - y1) - 10;
+                    const yPdfLibBottom = pdfPageSize.height - (viewportPdfJs.height - y2) - 10;
 
                     coordenadasPdfMap[campo] = {
                         x1: x1,
@@ -271,16 +271,15 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                     };
                 }
 
-                // Guardar automáticamente en el nuevo campo de Supabase (coordinates_pdf_json)
                 try {
                     await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}`, {
                         method: 'PATCH',
-                        headers: { ...headers, 'Content-Type': 'application/json' },
+                        headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
                         body: JSON.stringify({ coordinates_pdf_json: coordenadasPdfMap })
                     });
-                    console.log("💾 Coordenadas de PDFLib guardadas exitosamente en el nuevo campo de Supabase.");
+                    console.log("💾 Coordenadas PDFLib guardadas correctamente en la base de datos.");
                 } catch (patchErr) {
-                    console.error("Error al guardar las coordenadas PDF en Supabase:", patchErr);
+                    console.error("Error al guardar coordenadas PDF en Supabase:", patchErr);
                 }
             }
 
@@ -339,7 +338,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         return semanas;
     }
 
-    // El Overlay visual se sigue dibujando con coordenadas de Canvas
     function redibujarOverlayModal() {
         if (!pageViewport) return;
         drawingOverlayModal.innerHTML = '';
@@ -430,7 +428,6 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     fosModalCerrarX.addEventListener('click', cerrarModal);
     fosModalBtnCancelar.addEventListener('click', cerrarModal);
 
-    // Generación final con PDFLib usando directamente las coordenadas almacenadas en `coordenadasPdfMap`
     fosModalBtnConfirmar.addEventListener('click', async () => {
         cerrarModal();
         const semSeleccionada = selectSemanaModal.value;
@@ -446,8 +443,34 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
-            // Iteramos directamente sobre las coordenadas de PDFLib almacenadas en la BD
-            for (const [campo, box] of Object.entries(coordenadasPdfMap)) {
+            // 🛡️ RESPALDO: Si por algo `coordenadasPdfMap` viniera vacío, lo recalculamos al vuelo
+            let mapaParaUsar = coordenadasPdfMap;
+            if (Object.keys(mapaParaUsar).length === 0 && Object.keys(coordenadasMap).length > 0) {
+                const pagePdfJs = await pdfDoc.getPage(1);
+                const viewportPdfJs = pagePdfJs.getViewport({ scale: 1.0 });
+                const pdfPageSize = firstPage.getSize();
+                mapaParaUsar = {};
+
+                for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
+                    const x1 = Number(box.x1);
+                    const y1 = Number(box.y1);
+                    const x2 = Number(box.x2);
+                    const y2 = Number(box.y2);
+
+                    const yPdfLibTop = pdfPageSize.height - (viewportPdfJs.height - y1) - 10;
+                    const yPdfLibBottom = pdfPageSize.height - (viewportPdfJs.height - y2) - 10;
+
+                    mapaParaUsar[campo] = {
+                        x1: x1,
+                        y1: Math.min(yPdfLibTop, yPdfLibBottom),
+                        x2: x2,
+                        y2: Math.max(yPdfLibTop, yPdfLibBottom)
+                    };
+                }
+            }
+
+            for (const [campo, box] of Object.entries(mapaParaUsar)) {
                 if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
 
                 const lowerKey = campo.toLowerCase();
@@ -471,7 +494,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 if (lineasAsignadas.length === 0) continue;
 
                 const x = Number(box.x1);
-                const yPdfLibTop = Number(box.y1); // Coordenada lista guardada en BD
+                const yPdfLibTop = Number(box.y1);
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
