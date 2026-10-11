@@ -265,10 +265,11 @@
 
     <!-- MODAL DÍA ANTERIOR -->
     <div id="modalPasado" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-3">
-        <div class="w-full max-w-lg bg-white p-5 sm:p-6 rounded-2xl shadow-xl relative max-h-[90vh] flex flex-col">
+        <div class="w-full max-w-lg bg-white p-5 sm:p-6 rounded-2xl shadow-xl relative max-h-[90vh] flex flex-col overflow-y-auto">
             <button type="button" onclick="cerrarModalPasado()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold p-2">✕</button>
             <h2 class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Nachträglicher Eintrag</h2>
             <h1 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Vergangene Aktivität hinzufügen</h1>
+            
             <form id="formPasado" class="space-y-3 mb-4">
                 <div>
                     <label for="fechaPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Datum auswählen</label>
@@ -288,13 +289,32 @@
                     </div>
                     <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
                 </div>
-                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen</button>
+                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen (+)</button>
             </form>
-            <div id="mensajePasado" class="text-xs text-center hidden py-2 mb-2 rounded-xl font-medium"></div>
+
+            <!-- BLOQUE DE TIEMPO GLOBAL PARA EL DÍA PASADO -->
+            <div id="contenedorHorasGlobalPasada" class="mb-4 bg-amber-50 p-4 rounded-2xl border border-amber-100 space-y-3 hidden">
+                <label for="horasGlobalPasada" class="block text-xs font-bold text-amber-900 uppercase">Gesamtstunden für diesen Tag verteilen</label>
+                <div class="flex gap-2">
+                    <input type="number" id="horasGlobalPasada" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <button type="button" id="btnRepartirHorasPasadas" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-700 transition text-xs whitespace-nowrap">Stunden verteilen</button>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-gray-800 text-xs">Einträge an diesem Datum</h3>
+                    <span id="contadorPasado" class="text-[11px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">0 erfasst</span>
+                </div>
+                <div id="listaActividadesPasadas" class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                    <p class="text-xs text-gray-400 text-center py-2">Keine Aktivitäten erfasst.</p>
+                </div>
+            </div>
+            <div id="mensajePasado" class="text-xs text-center hidden py-2 mt-2 rounded-xl font-medium"></div>
         </div>
     </div>
 
-    <!-- SCRIPTS DE ORQUESTACIÓN Y RECONOCIMIENTO DE VOZ -->
+    <!-- SCRIPTS DE ORQUESTACIÓN -->
     <script>
         const micIconSVG = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>`;
         const stopIconSVG = `<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>`;
@@ -357,7 +377,7 @@
             btn.classList.remove('text-red-600', 'animate-pulse');
             btn.classList.add('text-gray-400');
             svgIcon.innerHTML = micIconSVG;
-            btn.classList.add('hover:text-indigo-600');
+            btn.classList.add('hover:text-amber-600');
         }
     </script>
 
@@ -503,7 +523,7 @@
             inicializarHistorial();
             inicializarImpresion();
         } else {
-            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('loginSection').classList.add('hidden');
             document.body.classList.add('justify-center');
             inicializarAuth((nombre) => {
                 document.getElementById('loginSection').classList.add('hidden');
