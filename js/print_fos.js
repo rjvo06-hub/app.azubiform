@@ -128,7 +128,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     let pageViewport = null;
     let scale = 1.0;
     let archivoPdfOriginalBytes = null;
-    let coordenadasMap = {};
+    let coordenadasMap = {};        // Coordenadas para el Canvas (visual)
+    let coordenadasPdfMap = {};     // Coordenadas específicas para PDFLib (guardadas en la BD)
+    let escuelaSeleccionadaId = ''; // Variable global para recordar el ID de la escuela/plantilla actual
     let semanasAgrupadas = {};
     
     // 🔐 Recuperación correcta del usuario actual (sesión)
@@ -140,7 +142,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
     fosResNombre.textContent = nombreUsuarioActual;
 
-    // 🚀 Sincronización optimizada y en paralelo con Supabase (con Plan B de respaldo)
+    // 🚀 Sincronización optimizada y en paralelo con Supabase
     try {
         estadoInfoModal.textContent = "⏳ Sincronizando datos...";
 
@@ -159,7 +161,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         if (dataUsr.length === 0) throw new Error("Usuario no encontrado.");
 
         const usuario = dataUsr[0];
-        const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
+        escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
         const claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
         const workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
         const profesoraUsuario = usuario.teacher || '-'; 
@@ -185,6 +187,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const tplData = await respTpl.json();
             if (tplData.length > 0) {
                 coordenadasMap = tplData[0].coordinates_json || {};
+                coordenadasPdfMap = tplData[0].coordinates_pdf_json || {}; // Carga el nuevo campo de la BD si ya existe
             }
         }
 
@@ -198,6 +201,8 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 const fallbackData = await respFallbackTpl.json();
                 if (fallbackData.length > 0) {
                     coordenadasMap = fallbackData[0].coordinates_json || {};
+                    coordenadasPdfMap = fallbackData[0].coordinates_pdf_json || {};
+                    escuelaSeleccionadaId = fallbackData[0].file_identifier || escuelaSeleccionadaId;
                 }
             }
         }
@@ -237,6 +242,48 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const loadingTask = pdfjsLib.getDocument({ data: archivoPdfOriginalBytes.slice(0) });
             pdfDoc = await loadingTask.promise;
             await renderizarPaginaModal(1);
+
+            // 🧮 VALIDACIÓN Y GUARDADO AUTOMÁTICO EN EL NUEVO CAMPO DE PDF (SI ESTÁ VACÍO)
+            if (Object.keys(coordenadasPdfMap).length === 0 && Object.keys(coordenadasMap).length > 0) {
+                const page = await pdfDoc.getPage(1);
+                const viewport = page.getViewport({ scale: 1.0 }); // Escala real 1.0
+                const pdfPageSize = page.getSize(); // Dimensiones reales del PDF
+                
+                coordenadasPdfMap = {};
+
+                for (const [campo, box] of Object.entries(coordenadasMap)) {
+                    if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
+
+                    const x1 = Number(box.x1);
+                    const y1 = Number(box.y1);
+                    const x2 = Number(box.x2);
+                    const y2 = Number(box.y2);
+
+                    // Conversión exacta para PDFLib (origen abajo-izquierda)
+                    const yPdfLibTop = pdfPageSize.height - (viewport.height - y1) - 10;
+                    const yPdfLibBottom = pdfPageSize.height - (viewport.height - y2) - 10;
+
+                    coordenadasPdfMap[campo] = {
+                        x1: x1,
+                        y1: Math.min(yPdfLibTop, yPdfLibBottom),
+                        x2: x2,
+                        y2: Math.max(yPdfLibTop, yPdfLibBottom)
+                    };
+                }
+
+                // Guardar automáticamente en el nuevo campo de Supabase (coordinates_pdf_json)
+                try {
+                    await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(escuelaSeleccionadaId)}`, {
+                        method: 'PATCH',
+                        headers: { ...headers, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ coordinates_pdf_json: coordenadasPdfMap })
+                    });
+                    console.log("💾 Coordenadas de PDFLib guardadas exitosamente en el nuevo campo de Supabase.");
+                } catch (patchErr) {
+                    console.error("Error al guardar las coordenadas PDF en Supabase:", patchErr);
+                }
+            }
+
             estadoInfoModal.textContent = "✅ PDF base cargado. Selecciona la semana para visualizar.";
         } catch (err) {
             console.error(err);
@@ -292,6 +339,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         return semanas;
     }
 
+    // El Overlay visual se sigue dibujando con coordenadas de Canvas
     function redibujarOverlayModal() {
         if (!pageViewport) return;
         drawingOverlayModal.innerHTML = '';
@@ -382,6 +430,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     fosModalCerrarX.addEventListener('click', cerrarModal);
     fosModalBtnCancelar.addEventListener('click', cerrarModal);
 
+    // Generación final con PDFLib usando directamente las coordenadas almacenadas en `coordenadasPdfMap`
     fosModalBtnConfirmar.addEventListener('click', async () => {
         cerrarModal();
         const semSeleccionada = selectSemanaModal.value;
@@ -393,13 +442,12 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
             const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytesClon);
             
             const firstPage = pdfDocLib.getPages()[0];
-            const { height: pdfHeight } = firstPage.getSize();
             const font = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
-            const fontBold = await pdfDocLib.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
             const datosSemana = semanasAgrupadas[semSeleccionada] || {};
 
-            for (const [campo, box] of Object.entries(coordenadasMap)) {
+            // Iteramos directamente sobre las coordenadas de PDFLib almacenadas en la BD
+            for (const [campo, box] of Object.entries(coordenadasPdfMap)) {
                 if (!box || typeof box.x1 === 'undefined' || typeof box.y1 === 'undefined') continue;
 
                 const lowerKey = campo.toLowerCase();
@@ -423,15 +471,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 if (lineasAsignadas.length === 0) continue;
 
                 const x = Number(box.x1);
+                const yPdfLibTop = Number(box.y1); // Coordenada lista guardada en BD
                 const anchoCaja = Math.max(10, Number(box.x2) - Number(box.x1));
-                
-                const heightCanvasPdfJs = pageViewport ? (pageViewport.height / scale) : pdfHeight;
-                const y1Visual = Number(box.y1);
-                const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
                 const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('class') || lowerKey.includes('woche') || lowerKey.includes('lehrer') || lowerKey.includes('lehrkraft') || lowerKey.includes('teacher') || lowerKey.includes('ausbildung') || lowerKey.includes('ausbildungsrichtung') || lowerKey.includes('beruf') || lowerKey.includes('workplace') || lowerKey.includes('betrieb') || lowerKey.includes('ausbildungsstaette') || lowerKey.includes('lapso');
                 const fontSize = esEncabezado ? 10.5 : 8.5;
-                const fuenteUsada = font;
                 const espaciadoLineas = fontSize * 1.4;
 
                 let lineasFinalesParaDibujar = [];
@@ -441,7 +485,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
                     palabras.forEach(palabra => {
                         const pruebaLinea = lineaActual ? `${lineaActual} ${palabra}` : palabra;
-                        const anchoPrueba = fuenteUsada.widthOfTextAtSize(pruebaLinea, fontSize);
+                        const anchoPrueba = font.widthOfTextAtSize(pruebaLinea, fontSize);
 
                         if (anchoPrueba > anchoCaja && lineaActual !== '') {
                             lineasFinalesParaDibujar.push(lineaActual);
@@ -462,7 +506,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                             x: x,
                             y: yActual,
                             size: fontSize,
-                            font: fuenteUsada,
+                            font: font,
                             color: PDFLib.rgb(0, 0, 0)
                         });
                     } catch (innerErr) {
