@@ -50,39 +50,6 @@
                 if (updateRes.ok) {
                     titulo.textContent = "✅ E-Mail erfolgreich bestätigt!";
                     mensaje.textContent = `Vielen Dank, ${usuario.nombre}. Dein Konto wurde aktiviert. Du kannst dich jetzt anmelden.`;
-
-                    // 🔍 Buscar el nombre oficial de la profesión usando el código de la columna 'ausbildung'
-                    let nombreProfesion = usuario.ausbildung;
-                    if (usuario.ausbildung) {
-                        try {
-                            const profRes = await fetch(`${SUPABASE_URL}/rest/v1/profesions?codigo=eq.${encodeURIComponent(usuario.ausbildung)}`, {
-                                method: 'GET', headers: headers
-                            });
-                            const profData = await profRes.json();
-                            if (profData.length > 0 && profData[0].nombre_oficial) {
-                                nombreProfesion = profData[0].nombre_oficial;
-                            }
-                        } catch (e) {
-                            console.error("No se pudo obtener el nombre oficial de la profesión", e);
-                        }
-                    }
-
-                    // 🚀 Llamada a tu endpoint del backend en Vercel con el nombre oficial y el tipo de programa
-                    try {
-                        await fetch('/api/notificar-admin', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                email: usuario.email, 
-                                nombre: usuario.nombre,
-                                tipo: usuario.ausbildung, // Esto enviará 'elec-energ' o 'fos-sozial' para que el script detecte si es FOS o Ausbildung en el asunto
-                                profesion: nombreProfesion // Esto enviará el nombre oficial (ej. Elektroniker...)
-                            })
-                        });
-                    } catch (mailError) {
-                        console.error("Error al enviar la notificación de nuevo usuario:", mailError);
-                    }
-
                 } else {
                     titulo.textContent = "❌ Fehler";
                     mensaje.textContent = "Konto konnte nicht verifiziert werden. Bitte versuche es später erneut.";
