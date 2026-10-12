@@ -10,12 +10,12 @@ export function inicializarHistorial() {
     const contenedorResultadosConsulta = document.getElementById('contenedorResultadosConsulta');
     let fechaActualPivote = new Date();
 
-    // Asegurar clases en los selectores para prevenir el zoom automático en móviles
+    // Asegurar clases en los selectores con diseño moderno y sin zoom en móviles
     if (selectUsuarioConsulta) {
-        selectUsuarioConsulta.className = "w-full p-2.5 border border-gray-300 rounded-xl text-base sm:text-xs bg-white text-gray-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none";
+        selectUsuarioConsulta.className = "w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition";
     }
     if (selectVistaConsulta) {
-        selectVistaConsulta.className = "w-full p-2.5 border border-gray-300 rounded-xl text-base sm:text-xs bg-white text-gray-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none";
+        selectVistaConsulta.className = "w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition";
     }
 
     window.abrirModalConsulta = async function() {
@@ -40,9 +40,9 @@ export function inicializarHistorial() {
                 opt.textContent = usuarioActual;
                 elementoSelect.appendChild(opt);
                 elementoSelect.value = usuarioActual;
-                elementoSelect.disabled = true; // Bloquea el selector para que no pueda cambiarlo
+                elementoSelect.disabled = true;
             } else {
-                // Si es administrador (acceso === 1), carga todos los usuarios con total libertad
+                // Si es administrador (acceso === 1), carga todos los usuarios
                 elementoSelect.disabled = false;
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=nombre,email`, { headers });
                 const usuarios = await res.json();
@@ -71,7 +71,7 @@ export function inicializarHistorial() {
         return { lunes, viernes };
     }
 
-    // Función corregida para evitar desfases de zona horaria con los días lunes
+    // Función para evitar desfases de zona horaria con los días lunes
     function formatearISO(date) { 
         const offset = date.getTimezoneOffset();
         const localDate = new Date(date.getTime() - (offset * 60 * 1000));
@@ -110,27 +110,45 @@ export function inicializarHistorial() {
             const fechaStr = formatearISO(diaActual);
             const actsDelDia = registros.filter(r => r.fecha === fechaStr);
             const divDia = document.createElement('div');
-            divDia.className = 'bg-gray-50 border border-gray-200 rounded-xl p-3';
+            divDia.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3.5 shadow-sm';
+            
             let htmlActividades = actsDelDia.length > 0 
-                ? actsDelDia.map(a => `<div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-100 text-xs mb-1"><span class="text-gray-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-gray-400">${a.hora || ''}</span></div>`).join('')
-                : '<p class="text-[11px] text-gray-400 italic">Keine Einträge.</p>';
-            divDia.innerHTML = `<div class="flex justify-between items-center mb-1.5"><h3 class="font-bold text-gray-800 text-xs uppercase text-indigo-600">${nombreDia} (${diaActual.toLocaleDateString('de-DE')})</h3><span class="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">${actsDelDia.length} Eintr.</span></div><div class="space-y-1">${htmlActividades}</div>`;
+                ? actsDelDia.map(a => `<div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 text-xs mb-1.5 shadow-sm"><span class="text-slate-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-slate-400 font-semibold">${a.hora || ''}</span></div>`).join('')
+                : '<p class="text-[11px] text-slate-400 italic">Keine Einträge.</p>';
+            
+            divDia.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-slate-800 text-xs uppercase text-indigo-600">${nombreDia} (${diaActual.toLocaleDateString('de-DE')})</h3>
+                    <span class="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">${actsDelDia.length} Eintr.</span>
+                </div>
+                <div class="space-y-1">${htmlActividades}</div>`;
             contenedorResultadosConsulta.appendChild(divDia);
         });
     }
 
     function renderizarVistaMensualModal(registros) {
         contenedorResultadosConsulta.innerHTML = '';
-        if (registros.length === 0) { contenedorResultadosConsulta.innerHTML = '<p class="text-xs text-gray-400 text-center py-8">Keine Aktivitäten in diesem Monat.</p>'; return; }
+        if (registros.length === 0) { 
+            contenedorResultadosConsulta.innerHTML = '<p class="text-xs text-slate-400 text-center py-8">Keine Aktivitäten in diesem Monat.</p>'; 
+            return; 
+        }
         const agrupados = {};
         registros.forEach(r => { if (!agrupados[r.fecha]) agrupados[r.fecha] = []; agrupados[r.fecha].push(r); });
+        
         Object.keys(agrupados).sort().forEach(fecha => {
             const acts = agrupados[fecha];
             const divFecha = document.createElement('div');
-            divFecha.className = 'bg-gray-50 border border-gray-200 rounded-xl p-3';
+            divFecha.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3.5 shadow-sm';
             const fechaFormateada = new Date(fecha + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            let htmlActs = acts.map(a => `<div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-100 text-xs mb-1"><span class="text-gray-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-gray-400">${a.hora || ''}</span></div>`).join('');
-            divFecha.innerHTML = `<div class="flex justify-between items-center mb-1.5"><h3 class="font-bold text-gray-800 text-xs capitalize text-indigo-600">${fechaFormateada}</h3><span class="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">${acts.length} Eintr.</span></div><div class="space-y-1">${htmlActs}</div>`;
+            
+            let htmlActs = acts.map(a => `<div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 text-xs mb-1.5 shadow-sm"><span class="text-slate-700 font-medium">${a.nombre_actividad}</span><span class="text-[10px] text-slate-400 font-semibold">${a.hora || ''}</span></div>`).join('');
+            
+            divFecha.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-slate-800 text-xs capitalize text-indigo-600">${fechaFormateada}</h3>
+                    <span class="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">${acts.length} Eintr.</span>
+                </div>
+                <div class="space-y-1">${htmlActs}</div>`;
             contenedorResultadosConsulta.appendChild(divFecha);
         });
     }
