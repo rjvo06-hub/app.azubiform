@@ -51,7 +51,7 @@
                     titulo.textContent = "✅ E-Mail erfolgreich bestätigt!";
                     mensaje.textContent = `Vielen Dank, ${usuario.nombre}. Dein Konto wurde aktiviert. Du kannst dich jetzt anmelden.`;
 
-                    // 🚀 Llamada correcta al endpoint de la API para enviarte el correo a azubiform@gmail.com
+                    // 🚀 Llamada a tu endpoint del backend en Vercel
                     try {
                         await fetch('/api/notificar-admin', {
                             method: 'POST',
@@ -59,8 +59,8 @@
                             body: JSON.stringify({ 
                                 email: usuario.email, 
                                 nombre: usuario.nombre,
-                                tipo: usuario.tipo,          // Asegúrate de que coincida con la columna en tu base de datos
-                                profesion: usuario.profesion // Asegúrate de que coincida con la columna en tu base de datos
+                                tipo: usuario.tipo,          // Nota: Si en tu base de datos tu columna se llama diferente (ej. programa), cámbialo aquí
+                                profesion: usuario.profesion // Nota: Si en tu base de datos tu columna se llama diferente, cámbialo aquí
                             })
                         });
                     } catch (mailError) {
