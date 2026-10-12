@@ -4,67 +4,67 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Estructura optimizada, adaptativa y alineada al diseño moderno
+    // Estructura optimizada y adaptativa para móviles y escritorio
     container.innerHTML = `
-        <div class="space-y-3.5 relative">
+        <div class="space-y-3 relative">
             <!-- PANEL DE RESUMEN E INTEGRACIÓN DE SEMANA -->
-            <div class="bg-slate-900 text-white p-4 rounded-[20px] shadow-sm border border-slate-800 space-y-3.5 text-xs">
-                <div class="border-b border-slate-800 pb-3 space-y-2.5">
-                    <span class="font-bold uppercase tracking-wider text-slate-400 block text-[11px]">👤 Aktive Berichtsdaten</span>
+            <div class="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md space-y-3 text-xs">
+                <div class="border-b border-indigo-700 pb-2 space-y-2">
+                    <span class="font-bold uppercase tracking-wider text-indigo-200 block text-[11px]">👤 Aktive Berichtsdaten</span>
                     
                     <!-- Selector de Semana y Botón optimizados -->
-                    <div class="flex flex-col gap-2.5 w-full pt-1">
-                        <select id="fosSelectSemanaModal" class="w-full p-2.5 border border-slate-700 rounded-xl text-xs bg-slate-800 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                    <div class="flex flex-col gap-2 w-full pt-1">
+                        <select id="fosSelectSemanaModal" class="w-full p-2.5 border border-indigo-500 rounded-xl text-base sm:text-xs bg-indigo-950 text-white font-medium focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                             <option value="">-- Woche auswählen --</option>
                         </select>
-                        <button id="btnGenerarPdfModal" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+                        <button id="btnGenerarPdfModal" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow transition flex items-center justify-center gap-1">
                             <span>🚀 PDF herunterladen</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
-                    <div><span class="text-slate-400 block text-[10px] uppercase font-medium">Name:</span><strong id="fosResNombre" class="text-white text-xs">Wird geladen...</strong></div>
-                    <div><span class="text-slate-400 block text-[10px] uppercase font-medium">Klasse:</span><strong id="fosResClase" class="text-white text-xs">Wird geladen...</strong></div>
-                    <div><span class="text-slate-400 block text-[10px] uppercase font-medium">Ausbildung:</span><strong id="fosResProfesion" class="text-white text-xs">Wird geladen...</strong></div>
-                    <div><span class="text-slate-400 block text-[10px] uppercase font-medium">Betrieb:</span><strong id="fosResWorkplace" class="text-white text-xs">Wird geladen...</strong></div>
-                    <div><span class="text-slate-400 block text-[10px] uppercase font-medium">Lehrkraft:</span><strong id="fosResProfesora" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Name:</span><strong id="fosResNombre" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Klasse:</span><strong id="fosResClase" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Ausbildung:</span><strong id="fosResProfesion" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Betrieb:</span><strong id="fosResWorkplace" class="text-white text-xs">Wird geladen...</strong></div>
+                    <div><span class="text-indigo-300 block text-[10px] uppercase font-medium">Lehrkraft:</span><strong id="fosResProfesora" class="text-white text-xs">Wird geladen...</strong></div>
                 </div>
             </div>
 
-            <div id="fosEstadoInfoModal" class="text-xs font-medium text-indigo-700 bg-indigo-50 p-3 rounded-xl border border-indigo-200 text-center">
+            <div id="fosEstadoInfoModal" class="text-[11px] font-medium text-indigo-600 bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 text-center">
                 📌 Daten werden synchronisiert und Vorlage wird geladen...
             </div>
 
             <!-- VENTANA EMERGENTE (MODAL) DE VERIFICACIÓN RESPONSIVA -->
-            <div id="fosModalVerificacion" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
-                <div class="bg-white rounded-[20px] shadow-xl max-w-lg w-full overflow-hidden border border-slate-200 flex flex-col max-h-[88vh]">
-                    <div class="bg-slate-900 text-white px-4 py-3.5 flex justify-between items-center">
+            <div id="fosModalVerificacion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[88vh]">
+                    <div class="bg-indigo-900 text-white px-4 py-3 flex justify-between items-center">
                         <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider">🔍 Ausbildungsnachweis überprüfen</h3>
-                        <button id="fosModalCerrarX" class="text-slate-400 hover:text-white font-bold text-xl px-2 py-0.5">&times;</button>
+                        <button id="fosModalCerrarX" class="text-indigo-200 hover:text-white font-bold text-xl px-2 py-0.5">&times;</button>
                     </div>
-                    <div class="p-4 sm:p-5 overflow-y-auto space-y-3.5 text-xs text-slate-700 flex-1">
-                        <p class="text-xs text-slate-500">Bitte überprüfen Sie, ob die Daten und Aktivitäten korrekt sind, bevor Sie das finale Dokument generieren:</p>
+                    <div class="p-3.5 sm:p-5 overflow-y-auto space-y-3 text-xs text-gray-700 flex-1">
+                        <p class="text-[11px] text-gray-500">Bitte überprüfen Sie, ob die Daten und Aktivitäten korrekt sind, bevor Sie das finale Dokument generieren:</p>
                         
-                        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 grid grid-cols-2 gap-2.5">
-                            <div><span class="text-slate-400 block text-[10px] uppercase">Schüler/in:</span><strong id="fosValNombre" class="text-slate-900 text-xs">-</strong></div>
-                            <div><span class="text-slate-400 block text-[10px] uppercase">Klasse:</span><strong id="fosValClase" class="text-slate-900 text-xs">-</strong></div>
-                            <div><span class="text-slate-400 block text-[10px] uppercase">Woche:</span><strong id="fosValSemana" class="text-slate-900 text-xs">-</strong></div>
-                            <div><span class="text-slate-400 block text-[10px] uppercase">Ausbildung:</span><strong id="fosValProfesion" class="text-slate-900 text-xs">-</strong></div>
-                            <div><span class="text-slate-400 block text-[10px] uppercase">Betrieb:</span><strong id="fosValWorkplace" class="text-slate-900 text-xs">-</strong></div>
-                            <div><span class="text-slate-400 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosValProfesora" class="text-slate-900 text-xs">-</strong></div>
+                        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 grid grid-cols-2 gap-2">
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Schüler/in:</span><strong id="fosValNombre" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Klasse:</span><strong id="fosValClase" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Woche:</span><strong id="fosValSemana" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Ausbildung:</span><strong id="fosValProfesion" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Betrieb:</span><strong id="fosValWorkplace" class="text-indigo-900 text-xs">-</strong></div>
+                            <div><span class="text-gray-500 block text-[10px] uppercase">Lehrkraft:</span><strong id="fosValProfesora" class="text-indigo-900 text-xs">-</strong></div>
                         </div>
 
                         <div>
-                            <h4 class="font-bold text-slate-800 uppercase text-[10px] mb-1.5">📋 Erfasste Aktivitäten für diese Woche:</h4>
-                            <div id="fosValActividades" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs max-h-36 overflow-y-auto">
+                            <h4 class="font-bold text-gray-800 uppercase text-[10px] mb-1">📋 Erfasste Aktivitäten für diese Woche:</h4>
+                            <div id="fosValActividades" class="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-1.5 text-[11px] max-h-36 overflow-y-auto">
                                 <!-- Se llena dinámicamente -->
                             </div>
                         </div>
                     </div>
-                    <div class="bg-slate-50 px-4 py-3 border-t border-slate-200 flex justify-end gap-2">
-                        <button id="fosModalBtnCancelar" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3.5 py-2 rounded-xl text-xs transition">Abbrechen</button>
-                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow-sm">Bestätigen & Herunterladen</button>
+                    <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+                        <button id="fosModalBtnCancelar" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-3.5 py-2 rounded-xl text-xs transition">Abbrechen</button>
+                        <button id="fosModalBtnConfirmar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow">Bestätigen & Herunterladen</button>
                     </div>
                 </div>
             </div>
@@ -137,6 +137,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
 
         const usuario = dataUsr[0];
         
+        // Uso directo de las columnas exactas de tu tabla 'usuarios'
         const escuelaSeleccionadaId = usuario.school_name || 'fos_holzkirchen';
         const claseUsuario = usuario.class || '-';
         const workplaceUsuario = usuario.workplace || '-';
@@ -293,9 +294,9 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         dias.forEach(dia => {
             const listado = (dia.items || []).filter(i => i && i.trim() !== '');
             htmlActividades += `
-                <div class="bg-white p-2.5 rounded-lg border border-slate-200">
-                    <span class="font-semibold text-slate-900">${dia.nombre} (${dia.horas} Std.):</span>
-                    <span class="text-slate-600 block mt-0.5">${listado.length > 0 ? listado.join(' | ') : '<span class="italic text-slate-400">Keine Aktivitäten</span>'}</span>
+                <div>
+                    <span class="font-semibold text-indigo-900">${dia.nombre} (${dia.horas} Std.):</span>
+                    <span class="text-gray-600">${listado.length > 0 ? listado.join(' | ') : '<span class="italic text-gray-400">Keine Aktivitäten</span>'}</span>
                 </div>
             `;
         });
