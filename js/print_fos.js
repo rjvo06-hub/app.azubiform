@@ -12,7 +12,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 <div class="border-b border-indigo-700 pb-2 space-y-2">
                     <span class="font-bold uppercase tracking-wider text-indigo-200 block text-[11px]">👤 Aktive Berichtsdaten</span>
                     
-                    <!-- Selector de Semana y Botón optimizados (text-base en móvil evita el zoom automático de iOS/Android) -->
+                    <!-- Selector de Semana y Botón optimizados -->
                     <div class="flex flex-col gap-2 w-full pt-1">
                         <select id="fosSelectSemanaModal" class="w-full p-2.5 border border-indigo-500 rounded-xl text-base sm:text-xs bg-indigo-950 text-white font-medium focus:ring-2 focus:ring-indigo-400 focus:outline-none">
                             <option value="">-- Woche auswählen --</option>
@@ -136,9 +136,11 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
         if (dataUsr.length === 0) throw new Error("Benutzer nicht gefunden.");
 
         const usuario = dataUsr[0];
-        const escuelaSeleccionadaId = usuario.file_identifier || usuario.school_name || usuario.escuela || 'fos_holzkirchen';
-        const claseUsuario = usuario.class || usuario.klasse || usuario.clase || '-';
-        const workplaceUsuario = usuario.workplace || usuario.betrieb || usuario.ausbildungsstaette || '-';
+        
+        // Uso directo de las columnas exactas de tu tabla 'usuarios'
+        const escuelaSeleccionadaId = usuario.school_name || 'fos_holzkirchen';
+        const claseUsuario = usuario.class || '-';
+        const workplaceUsuario = usuario.workplace || '-';
         const profesoraUsuario = usuario.teacher || '-'; 
         const codigoProfesion = usuario.ausbildung;
 
