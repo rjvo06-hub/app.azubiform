@@ -29,8 +29,16 @@
     <style>
         button, input, select {
             -webkit-tap-highlight-color: transparent;
-            font-size: 16px !important; /* Fuerza los 16px en móviles para evitar el zoom automático del navegador */
+            font-size: 16px !important;
         }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
         @media print {
             body * { visibility: hidden; }
@@ -43,279 +51,302 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-3 sm:p-4 flex flex-col items-center justify-center">
+<body class="bg-slate-900 text-slate-100 flex justify-center items-center min-h-screen m-0 p-0 sm:py-6">
 
-    <!-- SECCIÓN 1: LOGIN -->
-    <div id="loginSection" class="w-full max-w-md">
-        <div class="w-full text-center mb-6">
-            <div class="flex items-center justify-center gap-3.5 mb-2">
-                <img src="./icon_azubiform.png" alt="Azubiform Logo" class="w-12 h-12 rounded-2xl shadow-lg flex-shrink-0 object-cover">
-                <h1 class="text-3xl sm:text-4xl font-extrabold text-indigo-700 tracking-tight">Azubiform</h1>
+    <!-- CONTENEDOR CENTRAL (Simula la pantalla del móvil en desktop) -->
+    <div class="w-full sm:max-w-md h-screen sm:h-[844px] bg-slate-950 sm:rounded-[40px] sm:border-[8px] sm:border-slate-800 shadow-2xl flex flex-col overflow-hidden relative">
+
+        <!-- SECCIÓN 1: LOGIN (Vista inicial flotante dentro del contenedor) -->
+        <div id="loginSection" class="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col justify-center no-scrollbar">
+            <div class="w-full text-center mb-6">
+                <div class="flex items-center justify-center gap-3.5 mb-2">
+                    <img src="./icon_azubiform.png" alt="Azubiform Logo" class="w-12 h-12 rounded-2xl shadow-lg flex-shrink-0 object-cover">
+                    <h1 class="text-3xl font-extrabold text-indigo-500 tracking-tight">Azubiform</h1>
+                </div>
+                <p class="text-sm font-bold text-slate-200 mb-2">Die digitale Plattform für deine Ausbildung</p>
+                <p class="text-xs text-slate-400 leading-relaxed px-1">
+                    Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Tätigkeitsnachweis</strong>.
+                </p>
             </div>
-            <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
-            <p class="text-xs text-gray-600 leading-relaxed px-1">
-                Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Tätigkeitsnachweis</strong>. Wir speichern deine Einträge sicher und chronologisch ab.
-            </p>
+
+            <div class="bg-slate-900/90 border border-slate-800 p-5 rounded-3xl shadow-lg">
+                <h2 class="text-xl font-bold text-slate-100 mb-4" id="tituloAuth">Anmelden</h2>
+
+                <div class="flex border-b border-slate-800 mb-4">
+                    <button type="button" id="tabLogin" onclick="cambiarTab('login')" class="w-1/2 pb-2 text-xs font-bold text-indigo-400 border-b-2 border-indigo-500 focus:outline-none transition">Anmelden</button>
+                    <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-slate-200 focus:outline-none transition">Registrieren</button>
+                </div>
+                
+                <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-950/60 border-l-4 border-emerald-500 text-emerald-300 text-xs rounded-xl">
+                    <p class="font-bold mb-1">Registrierung erfolgreich!</p>
+                    <p>Prüfe dein Postfach und bestätige deine E-Mail.</p>
+                </div>
+
+                <form id="formLogin" class="space-y-4">
+                    <div>
+                        <label for="loginEmail" class="block text-xs font-semibold text-slate-400 uppercase mb-1">E-Mail-Adresse</label>
+                        <input type="email" id="loginEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="loginPassword" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Passwort</label>
+                        <div class="relative">
+                            <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-200"><span id="iconLoginPass">👁</span></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20">Anmelden</button>
+                </form>
+
+                <form id="formRegistro" class="space-y-4 hidden">
+                    <div>
+                        <label for="regNombre" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Vorname und Nachname</label>
+                        <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="regEmail" class="block text-xs font-semibold text-slate-400 uppercase mb-1">E-Mail-Adresse</label>
+                        <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="regTipoPrograma" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Programm / Typ</label>
+                        <select id="regTipoPrograma" required class="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="" disabled selected>-- Wähle Ausbildung oder FOS --</option>
+                            <option value="ausbildung">Ausbildung</option>
+                            <option value="fos">FOS (Fachoberschule)</option>
+                        </select>
+                    </div>
+                    <div id="contenedorFachrichtung" class="hidden">
+                        <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Fachrichtung / Beruf</label>
+                        <select id="regAusbildung" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="" disabled selected>-- Wähle deine Option --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="regPassword" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Passwort</label>
+                        <div class="relative">
+                            <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-200"><span id="iconRegPass">👁</span></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="regPasswordConfirm" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Passwort wiederholen</label>
+                        <div class="relative">
+                            <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-200"><span id="iconRegPassConfirm">👁️</span></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-500 transition shadow-lg shadow-amber-600/20">Registrierung abschließen</button>
+                </form>
+                <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-xl font-medium"></div>
+            </div>
         </div>
 
-        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-lg">
-            <h2 class="text-xl font-bold text-gray-800 mb-4" id="tituloAuth">Anmelden</h2>
-
-            <div class="flex border-b border-gray-200 mb-4">
-                <button type="button" id="tabLogin" onclick="cambiarTab('login')" class="w-1/2 pb-2 text-xs sm:text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none transition">Ich habe bereits ein Konto</button>
-                <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2 text-xs sm:text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition">Registrieren</button>
-            </div>
+        <!-- SECCIÓN 2: APP PRINCIPAL (Oculta al inicio) -->
+        <div id="appSection" class="w-full h-full hidden flex flex-col overflow-hidden">
             
-            <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-lg">
-                <p class="font-bold mb-1">Registrierung erfolgreich!</p>
-                <p>Wir haben dir eine Bestätigungs-E-Mail gesendet. Bitte prüfe dein Postfach und bestätige deine E-Mail, bevor du dich anmeldest.</p>
-            </div>
-
-            <form id="formLogin" class="space-y-4">
-                <div>
-                    <label for="loginEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="loginEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <!-- HEADER DE LA APP -->
+            <header class="px-5 py-4 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 flex justify-between items-center z-10 shrink-0">
+                <div class="flex items-center gap-2">
+                    <img src="./icon_azubiform.png" alt="Logo" class="w-8 h-8 rounded-xl object-cover">
+                    <span class="text-sm font-bold tracking-tight text-slate-100" id="lblUsuario">Benutzer</span>
                 </div>
-                <div>
-                    <label for="loginPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
-                    <div class="relative">
-                        <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconLoginPass">👁</span></button>
+                <button onclick="cerrarSesion()" class="text-xs text-red-400 hover:text-red-300 bg-red-950/40 border border-red-900/50 px-3 py-1.5 rounded-xl transition">Abmelden</button>
+            </header>
+
+            <!-- CONTENIDO CON SCROLL -->
+            <main class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-24">
+                
+                <!-- PANEL DE REGISTRO -->
+                <div class="bg-slate-900/90 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-sm relative">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="block text-xs font-semibold text-slate-400 uppercase">Aktivitätsprotokoll</h2>
+                        <button type="button" onclick="abrirModalPasado()" class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold px-2.5 py-1.5 rounded-xl hover:bg-amber-500/20 transition">📅 Tag nachtragen</button>
+                    </div>
+                    <div id="fechaActual" class="text-xs font-medium text-slate-300 bg-slate-950 p-2.5 rounded-2xl text-center mb-4 border border-slate-800">Datum wird geladen...</div>
+
+                    <form id="registroForm" class="space-y-3 relative">
+                        <div class="relative">
+                            <label for="actividad" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                            <div class="relative flex items-center">
+                                <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2.5 pr-12 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-2 text-slate-400 hover:text-indigo-400 rounded-full transition focus:outline-none">
+                                    <svg id="icon-btnVozActividad" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path></svg>
+                                </button>
+                            </div>
+                            <div id="sugerencias" class="absolute left-0 right-0 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                        </div>
+                        <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20">Aktivität hinzufügen (+)</button>
+                    </form>
+                    <div id="mensaje" class="text-xs text-center hidden py-2 mt-3 rounded-xl font-medium"></div>
+
+                    <!-- BLOQUE DE TIEMPO GLOBAL -->
+                    <div id="contenedorHorasGlobal" class="mt-4 bg-indigo-950/40 p-4 rounded-2xl border border-indigo-900/50 space-y-3 hidden">
+                        <label for="horasGlobal" class="block text-xs font-bold text-indigo-300 uppercase">Gesamtstunden für den Tag verteilen</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="horasGlobal" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-slate-950 border border-indigo-900 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <button type="button" id="btnRepartirHoras" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-500 transition text-xs whitespace-nowrap">Stunden verteilen</button>
+                        </div>
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition">Anmelden</button>
-            </form>
 
-            <form id="formRegistro" class="space-y-4 hidden">
-                <div>
-                    <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
-                    <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                </div>
-                <div>
-                    <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                </div>
-                <div>
-                    <label for="regTipoPrograma" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Programm / Typ</label>
-                    <select id="regTipoPrograma" required class="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-base sm:text-sm">
-                        <option value="" disabled selected>-- Wähle Ausbildung oder FOS --</option>
-                        <option value="ausbildung">Ausbildung</option>
-                        <option value="fos">FOS (Fachoberschule)</option>
-                    </select>
-                </div>
-                <div id="contenedorFachrichtung" class="hidden">
-                    <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Fachrichtung / Beruf</label>
-                    <select id="regAusbildung" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-base sm:text-sm">
-                        <option value="" disabled selected>-- Wähle deine Option --</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
-                    <div class="relative">
-                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁</span></button>
+                <!-- LISTA DE ACTIVIDADES DE HOY -->
+                <div class="bg-slate-900/90 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-sm">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-slate-200 text-xs uppercase">Meine heutigen Aktivitäten</h3>
+                        <span id="contador" class="text-xs bg-indigo-950 text-indigo-300 border border-indigo-900 font-semibold px-2.5 py-1 rounded-full">0 erfasst</span>
+                    </div>
+                    <div id="listaActividades" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        <p class="text-xs text-slate-500 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>
                     </div>
                 </div>
-                <div>
-                    <label for="regPasswordConfirm" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort wiederholen</label>
-                    <div class="relative">
-                        <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPassConfirm">👁️</span></button>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-700 transition">Registrierung abschließen</button>
-            </form>
-            <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
-        </div>
-    </div>
 
-    <!-- SECCIÓN 2: APP PRINCIPAL -->
-    <div id="appSection" class="w-full max-w-md hidden flex flex-col items-center">
-        <!-- BARRA SUPERIOR CON "MEIN KONTO" -->
-        <div class="w-full bg-white p-3.5 rounded-2xl shadow-sm mb-4 flex justify-between items-center text-xs sm:text-sm text-gray-600">
-            <span>Benutzer: <strong id="lblUsuario" class="text-indigo-600"></strong></span>
-            <div class="space-x-2 flex items-center">
-                <button onclick="abrirModalKonto()" class="text-indigo-600 font-bold hover:underline bg-indigo-50 px-3 py-1.5 rounded-xl text-xs flex items-center gap-1">
-                    <span>⚙️</span> Mein Konto
+            </main>
+
+            <!-- BARRA DE NAVEGACIÓN INFERIOR (Bottom Navigation Bar) -->
+            <nav class="absolute bottom-0 left-0 right-0 h-20 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/80 px-6 flex justify-around items-center z-20">
+                <button onclick="cambiarTabApp('home')" id="navBtnHome" class="flex flex-col items-center text-indigo-400 space-y-1 transition hover:scale-105 focus:outline-none">
+                    <span class="text-xl">🏠</span>
+                    <span class="text-[10px] font-medium">Erfassen</span>
                 </button>
-                <span class="text-gray-300">|</span>
-                <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
-            </div>
+                <button onclick="abrirModalKonto()" id="navBtnKonto" class="flex flex-col items-center text-slate-400 space-y-1 transition hover:scale-105 focus:outline-none">
+                    <span class="text-xl">📊</span>
+                    <span class="text-[10px] font-medium">Abfrage & PDF</span>
+                </button>
+                <button onclick="abrirSeccionDatos()" id="navBtnDatos" class="flex flex-col items-center text-slate-400 space-y-1 transition hover:scale-105 focus:outline-none">
+                    <span class="text-xl">⚙️</span>
+                    <span class="text-[10px] font-medium">Stammdaten</span>
+                </button>
+            </nav>
+
         </div>
 
-        <!-- PANEL DE REGISTRO DE ACTIVIDAD DIARIA -->
-        <div class="w-full bg-white p-5 sm:p-6 rounded-2xl shadow-lg mb-4 relative">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="block text-xs font-semibold text-gray-700 uppercase mb-1">Aktivitätsprotokoll</h2>
-                <button type="button" onclick="abrirModalPasado()" class="text-xs bg-amber-100 text-amber-700 font-semibold px-2.5 py-1.5 rounded-xl hover:bg-amber-200 transition">📅 Tag nachtragen</button>
-            </div>
-            <div id="fechaActual" class="text-sm font-medium text-gray-600 bg-gray-50 p-2.5 rounded-xl text-center mb-4 border border-gray-200">Datum wird geladen...</div>
-
-            <form id="registroForm" class="space-y-4 relative">
-                <div class="relative">
-                    <label for="actividad" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
-                    <div class="relative flex items-center">
-                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2.5 pr-12 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        
-                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-2 text-gray-400 hover:text-indigo-600 rounded-full transition focus:outline-none">
-                            <svg id="icon-btnVozActividad" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
-                </div>
-                <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition">Aktivität hinzufügen (+)</button>
-            </form>
-            <div id="mensaje" class="text-xs text-center hidden py-2 mt-3 rounded-xl font-medium"></div>
-
-            <!-- BLOQUE DE TIEMPO GLOBAL PARA EL DÍA -->
-            <div id="contenedorHorasGlobal" class="mt-4 bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-3 hidden">
-                <label for="horasGlobal" class="block text-xs font-bold text-indigo-900 uppercase">Gesamtstunden für den Tag verteilen</label>
-                <div class="flex gap-2">
-                    <input type="number" id="horasGlobal" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    <button type="button" id="btnRepartirHoras" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-700 transition text-xs whitespace-nowrap">Stunden verteilen</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="w-full bg-white p-5 sm:p-6 rounded-2xl shadow-lg">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-gray-800 text-sm">Meine heutigen Aktivitäten</h3>
-                <span id="contador" class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1 rounded-full">0 erfasst</span>
-            </div>
-            <div id="listaActividades" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                <p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL "MEIN KONTO" -->
-    <div id="modalKonto" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-2 sm:p-4">
-        <div class="w-full max-w-3xl bg-white rounded-2xl shadow-2xl relative flex flex-col h-full sm:h-auto max-h-[92vh]">
-            <div class="p-4 bg-gray-900 text-white rounded-t-2xl flex justify-between items-center">
-                <h2 class="font-bold text-sm flex items-center gap-2"><span>⚙️</span> Mein Konto • Übersicht</h2>
-                <button onclick="cerrarModalKonto()" class="text-gray-400 hover:text-white font-bold text-lg px-2.5 py-1">✕</button>
+        <!-- SECCIÓN INTEGRADA "MEIN KONTO" / VISTA DESLIZABLE (SLIDE-UP) -->
+        <div id="seccionKontoPrincipal" class="absolute inset-0 bg-slate-950 z-40 hidden flex flex-col animate-slide-up">
+            <div class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center flex-shrink-0">
+                <h2 class="font-bold text-sm flex items-center gap-2 text-slate-100"><span>📊</span> Übersicht & Tätigkeitsnachweis</h2>
+                <button onclick="cerrarModalKonto()" class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
             </div>
 
-            <div class="grid grid-cols-3 border-b border-gray-200 bg-gray-100 p-2 gap-1.5">
-                <button type="button" id="tabBtnConsulta" onclick="cambiarTabKonto('consulta')" class="py-2.5 px-1 text-[11px] sm:text-xs font-bold text-indigo-700 bg-white rounded-xl shadow-sm transition text-center flex items-center justify-center gap-1"><span>📊</span> Abfrage</button>
-                <button type="button" id="tabBtnPdf" onclick="cambiarTabKonto('pdf')" class="py-2.5 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1"><span>📄</span> PDF Generieren</button>
-                <button type="button" id="tabBtnDatos" onclick="cambiarTabKonto('datos')" class="py-2.5 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1"><span>✏️</span> Stammdaten</button>
+            <!-- Pestañas internas de Konto -->
+            <div class="grid grid-cols-3 border-b border-slate-800 bg-slate-950 p-2 gap-1.5 flex-shrink-0">
+                <button type="button" id="tabBtnConsulta" onclick="cambiarTabKonto('consulta')" class="py-2 px-1 text-xs font-bold text-indigo-400 bg-slate-900 border border-slate-800 rounded-xl transition text-center flex items-center justify-center gap-1"><span>📊</span> Abfrage</button>
+                <button type="button" id="tabBtnPdf" onclick="cambiarTabKonto('pdf')" class="py-2 px-1 text-xs font-semibold text-slate-400 hover:text-slate-200 transition text-center flex items-center justify-center gap-1"><span>📄</span> PDF Gen.</button>
+                <button type="button" id="tabBtnDatos" onclick="cambiarTabKonto('datos')" class="py-2 px-1 text-xs font-semibold text-slate-400 hover:text-slate-200 transition text-center flex items-center justify-center gap-1"><span>✏️</span> Daten</button>
             </div>
 
-            <div class="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-gray-50">
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-10">
                 <div id="seccionTabConsulta" class="space-y-3">
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                        <h3 class="text-xs font-bold text-indigo-700 uppercase mb-3 flex items-center gap-1.5"><span>📊</span> Aktivitäten-Abfrage (Wöchentlich)</h3>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm">
+                        <h3 class="text-xs font-bold text-indigo-400 uppercase mb-2.5 flex items-center gap-1"><span>📊</span> Aktivitäten-Abfrage (Wöchentlich)</h3>
                         <div class="hidden">
                             <select id="selectUsuarioConsulta"><option value="" selected></option></select>
                             <select id="selectVistaConsulta"><option value="semanal" selected></option></select>
                         </div>
-                        <div class="flex justify-between items-center mb-3 bg-indigo-50 px-3 py-2.5 rounded-xl border border-indigo-100">
-                            <button id="btnAnteriorConsulta" class="bg-white text-indigo-600 font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 text-xs hover:bg-indigo-600 hover:text-white transition">← Zurück</button>
-                            <span id="lblRangoPeriodoConsulta" class="text-[11px] font-bold text-indigo-900 text-center">Woche wird geladen...</span>
-                            <button id="btnSiguienteConsulta" class="bg-white text-indigo-600 font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 text-xs hover:bg-indigo-600 hover:text-white transition">Weiter →</button>
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-2 mb-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <button id="btnAnteriorConsulta" class="w-full sm:w-auto bg-slate-900 text-indigo-400 font-semibold px-3 py-1.5 rounded-lg border border-slate-800 text-xs hover:bg-indigo-600 hover:text-white transition">← Zurück</button>
+                            <span id="lblRangoPeriodoConsulta" class="text-[11px] font-bold text-slate-300 text-center">Woche wird geladen...</span>
+                            <button id="btnSiguienteConsulta" class="w-full sm:w-auto bg-slate-900 text-indigo-400 font-semibold px-3 py-1.5 rounded-lg border border-slate-800 text-xs hover:bg-indigo-600 hover:text-white transition">Weiter →</button>
                         </div>
-                        <div id="contenedorResultadosConsulta" class="space-y-2 max-h-64 overflow-y-auto pr-1">
-                            <p class="text-xs text-gray-400 text-center py-4">Lade Einträge...</p>
+                        <div id="contenedorResultadosConsulta" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            <p class="text-xs text-slate-500 text-center py-4">Lade Einträge...</p>
                         </div>
                     </div>
                 </div>
 
                 <div id="seccionTabPdf" class="space-y-3 hidden">
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 text-center">
-                        <div class="mb-4">
-                            <span class="text-3xl">📄</span>
-                            <h3 class="text-sm font-bold text-gray-800 mt-1">Tätigkeitsnachweis Erstellen</h3>
-                            <p class="text-xs text-gray-500 mt-0.5">Erstelle und lade dein offizielles Berichts-PDF direkt herunter.</p>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm text-center">
+                        <div class="mb-2">
+                            <span class="text-2xl">📄</span>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-100 mt-0.5">Tätigkeitsnachweis Erstellen</h3>
+                            <p class="text-[11px] text-slate-400">Erstelle und lade dein offizielles Berichts-PDF direkt herunter.</p>
                         </div>
                         <div id="contenedorPdfManagerApp" class="text-left"></div>
                     </div>
                 </div>
 
                 <div id="seccionTabDatos" class="space-y-3 hidden">
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                        <h3 class="text-xs font-bold text-indigo-700 uppercase mb-3 flex items-center gap-1.5"><span>✏️</span> Zusätzliche Angaben für deinen Tätigkeitsnachweis</h3>
-                        <div class="space-y-3">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm">
+                        <h3 class="text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-1"><span>✏️</span> Zusätzliche Angaben</h3>
+                        <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Klasse (class)</label>
-                                <input type="text" id="kontoClass" placeholder="z.B. FOS 11" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Klasse (class)</label>
+                                <input type="text" id="kontoClass" placeholder="z.B. FOS 11" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Lehrkraft (teacher)</label>
-                                <input type="text" id="kontoTeacher" placeholder="z.B. Frau Müller" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Lehrkraft (teacher)</label>
+                                <input type="text" id="kontoTeacher" placeholder="z.B. Frau Müller" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Schule (school_name)</label>
-                                <input type="text" id="kontoSchool" placeholder="z.B. Fachoberschule München" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Schule (school_name)</label>
+                                <input type="text" id="kontoSchool" placeholder="z.B. Fachoberschule München" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Betrieb (workplace)</label>
-                                <input type="text" id="kontoWorkplace" placeholder="z.B. Tech Solutions GmbH" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Betrieb (workplace)</label>
+                                <input type="text" id="kontoWorkplace" placeholder="z.B. Tech Solutions GmbH" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                         </div>
-                        <button type="button" onclick="guardarDatosKontoSupabase()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 rounded-xl shadow transition">In der Datenbank speichern</button>
-                        <span id="msgKontoGuardado" class="block text-center mt-2 text-xs text-emerald-600 font-semibold hidden">✓ Erfolgreich in Supabase gespeichert!</span>
+                        <button type="button" onclick="guardarDatosKontoSupabase()" class="w-full mt-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 rounded-xl shadow transition">In der Datenbank speichern</button>
+                        <span id="msgKontoGuardado" class="block text-center mt-2 text-[11px] text-emerald-400 font-semibold hidden">✓ Erfolgreich in Supabase gespeichert!</span>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- MODAL DÍA ANTERIOR -->
-    <div id="modalPasado" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-3">
-        <div class="w-full max-w-lg bg-white p-5 sm:p-6 rounded-2xl shadow-xl relative max-h-[90vh] flex flex-col overflow-y-auto">
-            <button type="button" onclick="cerrarModalPasado()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold p-2">✕</button>
-            <h2 class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Nachträglicher Eintrag</h2>
-            <h1 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Vergangene Aktivität hinzufügen</h1>
-            
-            <form id="formPasado" class="space-y-3 mb-4">
-                <div>
-                    <label for="fechaPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Datum auswählen</label>
-                    <input type="date" id="fechaPasada" lang="de" required class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-                <div class="relative">
-                    <label for="actividadPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
-                    <div class="relative flex items-center">
-                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2.5 pr-12 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        
-                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-2 text-gray-400 hover:text-amber-600 rounded-full transition focus:outline-none">
-                            <svg id="icon-btnVozPasada" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
-                            </svg>
-                        </button>
+        <!-- MODAL DÍA ANTERIOR (Estilo Slide-Up) -->
+        <div id="modalPasado" class="absolute inset-0 bg-black/70 backdrop-blur-sm z-50 flex flex-col justify-end hidden">
+            <div class="bg-slate-900 border-t border-slate-800 rounded-t-[30px] p-6 max-h-[90vh] flex flex-col animate-slide-up">
+                <div class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-4"></div>
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">Nachträglicher Eintrag</h2>
+                        <h1 class="text-base font-bold text-slate-100">Vergangene Aktivität hinzufügen</h1>
                     </div>
-                    <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                    <button type="button" onclick="cerrarModalPasado()" class="text-slate-400 hover:text-white p-1">✕</button>
                 </div>
-                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen (+)</button>
-            </form>
+                
+                <div class="overflow-y-auto space-y-4 pr-1 no-scrollbar">
+                    <form id="formPasado" class="space-y-3">
+                        <div>
+                            <label for="fechaPasada" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Datum auswählen</label>
+                            <input type="date" id="fechaPasada" lang="de" required class="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div class="relative">
+                            <label for="actividadPasada" class="block text-xs font-semibold text-slate-400 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                            <div class="relative flex items-center">
+                                <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2.5 pr-12 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-2 text-slate-400 hover:text-amber-400 rounded-full transition focus:outline-none">
+                                    <svg id="icon-btnVozPasada" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path></svg>
+                                </button>
+                            </div>
+                            <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                        </div>
+                        <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-500 transition shadow-lg shadow-amber-600/20">Vergangene Aktivität hinzufügen (+)</button>
+                    </form>
 
-            <!-- BLOQUE DE TIEMPO GLOBAL PARA EL DÍA PASADO -->
-            <div id="contenedorHorasGlobalPasada" class="mb-4 bg-amber-50 p-4 rounded-2xl border border-amber-100 space-y-3 hidden">
-                <label for="horasGlobalPasada" class="block text-xs font-bold text-amber-900 uppercase">Gesamtstunden für diesen Tag verteilen</label>
-                <div class="flex gap-2">
-                    <input type="number" id="horasGlobalPasada" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                    <button type="button" id="btnRepartirHorasPasadas" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-700 transition text-xs whitespace-nowrap">Stunden verteilen</button>
+                    <div id="contenedorHorasGlobalPasada" class="bg-amber-950/40 p-4 rounded-2xl border border-amber-900/50 space-y-3 hidden">
+                        <label for="horasGlobalPasada" class="block text-xs font-bold text-amber-300 uppercase">Gesamtstunden für diesen Tag verteilen</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="horasGlobalPasada" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-slate-950 border border-amber-900 rounded-xl text-slate-100 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            <button type="button" id="btnRepartirHorasPasadas" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-500 transition text-xs whitespace-nowrap">Stunden verteilen</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-slate-300 text-xs uppercase">Einträge an diesem Datum</h3>
+                            <span id="contadorPasado" class="text-[11px] bg-amber-950 text-amber-300 border border-amber-900 font-semibold px-2 py-0.5 rounded-full">0 erfasst</span>
+                        </div>
+                        <div id="listaActividadesPasadas" class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                            <p class="text-xs text-slate-500 text-center py-2">Keine Aktivitäten erfasst.</p>
+                        </div>
+                    </div>
+                    <div id="mensajePasado" class="text-xs text-center hidden py-2 mt-2 rounded-xl font-medium"></div>
                 </div>
             </div>
-
-            <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-bold text-gray-800 text-xs">Einträge an diesem Datum</h3>
-                    <span id="contadorPasado" class="text-[11px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">0 erfasst</span>
-                </div>
-                <div id="listaActividadesPasadas" class="space-y-2 max-h-44 overflow-y-auto pr-1">
-                    <p class="text-xs text-gray-400 text-center py-2">Keine Aktivitäten erfasst.</p>
-                </div>
-            </div>
-            <div id="mensajePasado" class="text-xs text-center hidden py-2 mt-2 rounded-xl font-medium"></div>
         </div>
+
     </div>
 
-    <!-- SCRIPTS DE ORQUESTACIÓN -->
+    <!-- SCRIPTS DE ORQUESTACIÓN Y NAVEGACIÓN -->
     <script>
         const micIconSVG = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>`;
         const stopIconSVG = `<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>`;
@@ -348,8 +379,8 @@
             let textoBase = input.value;
             if (textoBase.length > 0 && !textoBase.endsWith(' ')) { textoBase += ' '; }
 
-            btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
-            btn.classList.add('text-red-600', 'animate-pulse');
+            btn.classList.remove('text-slate-400', 'hover:text-indigo-400', 'hover:text-amber-400');
+            btn.classList.add('text-red-500', 'animate-pulse');
             svgIcon.innerHTML = stopIconSVG;
 
             recognition.onresult = function(event) {
@@ -364,7 +395,7 @@
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             };
 
-            recognition.onerror = function(event) { resetBtnRec(btn, svgIcon); };
+            recognition.onerror = function() { resetBtnRec(btn, svgIcon); };
             recognition.onend = function() {
                 resetBtnRec(btn, svgIcon);
                 window.currentRecognition = null;
@@ -375,10 +406,39 @@
         }
 
         function resetBtnRec(btn, svgIcon) {
-            btn.classList.remove('text-red-600', 'animate-pulse');
-            btn.classList.add('text-gray-400');
+            btn.classList.remove('text-red-500', 'animate-pulse');
+            btn.classList.add('text-slate-400');
             svgIcon.innerHTML = micIconSVG;
-            btn.classList.add('hover:text-amber-600');
+            btn.classList.add('hover:text-amber-400');
+        }
+
+        // Navegación inferior interactiva
+        function cambiarTabApp(tab) {
+            const btnHome = document.getElementById('navBtnHome');
+            const btnKonto = document.getElementById('navBtnKonto');
+            const btnDatos = document.getElementById('navBtnDatos');
+
+            [btnHome, btnKonto, btnDatos].forEach(b => {
+                b.classList.remove('text-indigo-400');
+                b.classList.add('text-slate-400');
+            });
+
+            if (tab === 'home') {
+                btnHome.classList.remove('text-slate-400');
+                btnHome.classList.add('text-indigo-400');
+                cerrarModalKonto();
+            }
+        }
+
+        function abrirSeccionDatos() {
+            abrirModalKonto();
+            cambiarTabKonto('datos');
+            const btnDatos = document.getElementById('navBtnDatos');
+            const btnKonto = document.getElementById('navBtnKonto');
+            btnKonto.classList.remove('text-indigo-400');
+            btnKonto.classList.add('text-slate-400');
+            btnDatos.classList.remove('text-slate-400');
+            btnDatos.classList.add('text-indigo-400');
         }
     </script>
 
@@ -394,9 +454,16 @@
         let kontoInicializado = false;
 
         window.abrirModalKonto = async function() {
-            document.getElementById('modalKonto').classList.remove('hidden');
-            const usuarioActual = localStorage.getItem('usuario_actual');
+            document.getElementById('seccionKontoPrincipal').classList.remove('hidden');
 
+            const btnKonto = document.getElementById('navBtnKonto');
+            const btnHome = document.getElementById('navBtnHome');
+            btnHome.classList.remove('text-indigo-400');
+            btnHome.classList.add('text-slate-400');
+            btnKonto.classList.remove('text-slate-400');
+            btnKonto.classList.add('text-indigo-400');
+
+            const usuarioActual = localStorage.getItem('usuario_actual');
             const selectUsr = document.getElementById('selectUsuarioConsulta');
             if (selectUsr && usuarioActual) {
                 selectUsr.innerHTML = `<option value="${usuarioActual}" selected>${usuarioActual}</option>`;
@@ -430,7 +497,18 @@
             }
         };
 
-        window.cerrarModalKonto = function() { document.getElementById('modalKonto').classList.add('hidden'); };
+        window.cerrarModalKonto = function() {
+            document.getElementById('seccionKontoPrincipal').classList.add('hidden');
+            const btnKonto = document.getElementById('navBtnKonto');
+            const btnDatos = document.getElementById('navBtnDatos');
+            const btnHome = document.getElementById('navBtnHome');
+            [btnKonto, btnDatos].forEach(b => {
+                b.classList.remove('text-indigo-400');
+                b.classList.add('text-slate-400');
+            });
+            btnHome.classList.remove('text-slate-400');
+            btnHome.classList.add('text-indigo-400');
+        };
 
         window.cambiarTabKonto = function(tab) {
             const secConsulta = document.getElementById('seccionTabConsulta');
@@ -445,19 +523,19 @@
             secPdf.classList.add('hidden');
             secDatos.classList.add('hidden');
 
-            btnConsulta.className = "py-2.5 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1";
-            btnPdf.className = "py-2.5 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1";
-            btnDatos.className = "py-2.5 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1";
+            btnConsulta.className = "py-2 px-1 text-xs font-semibold text-slate-400 hover:text-slate-200 transition text-center flex items-center justify-center gap-1";
+            btnPdf.className = "py-2 px-1 text-xs font-semibold text-slate-400 hover:text-slate-200 transition text-center flex items-center justify-center gap-1";
+            btnDatos.className = "py-2 px-1 text-xs font-semibold text-slate-400 hover:text-slate-200 transition text-center flex items-center justify-center gap-1";
 
             if (tab === 'consulta') {
                 secConsulta.classList.remove('hidden');
-                btnConsulta.className = "py-2.5 px-1 text-[11px] sm:text-xs font-bold text-indigo-700 bg-white rounded-xl shadow-sm transition text-center flex items-center justify-center gap-1";
+                btnConsulta.className = "py-2 px-1 text-xs font-bold text-indigo-400 bg-slate-900 border border-slate-800 rounded-xl transition text-center flex items-center justify-center gap-1";
             } else if (tab === 'pdf') {
                 secPdf.classList.remove('hidden');
-                btnPdf.className = "py-2.5 px-1 text-[11px] sm:text-xs font-bold text-amber-700 bg-white rounded-xl shadow-sm transition text-center flex items-center justify-center gap-1";
+                btnPdf.className = "py-2 px-1 text-xs font-bold text-amber-400 bg-slate-900 border border-slate-800 rounded-xl transition text-center flex items-center justify-center gap-1";
             } else if (tab === 'datos') {
                 secDatos.classList.remove('hidden');
-                btnDatos.className = "py-2.5 px-1 text-[11px] sm:text-xs font-bold text-indigo-700 bg-white rounded-xl shadow-sm transition text-center flex items-center justify-center gap-1";
+                btnDatos.className = "py-2 px-1 text-xs font-bold text-indigo-400 bg-slate-900 border border-slate-800 rounded-xl transition text-center flex items-center justify-center gap-1";
             }
         };
 
@@ -499,12 +577,10 @@
 
             document.getElementById('appSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
-            document.body.classList.add('justify-center');
             
             inicializarAuth((nombre) => {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
-                document.body.classList.remove('justify-center');
                 const lbl = document.getElementById('lblUsuario');
                 if(lbl) lbl.textContent = nombre;
                 iniciarAppPrincipal(nombre);
@@ -518,7 +594,6 @@
             if (usuarioGuardado) {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
-                document.body.classList.remove('justify-center');
                 const lbl = document.getElementById('lblUsuario');
                 if(lbl) lbl.textContent = usuarioGuardado;
                 iniciarAppPrincipal(usuarioGuardado);
@@ -526,11 +601,9 @@
                 inicializarImpresion();
             } else {
                 document.getElementById('loginSection').classList.remove('hidden');
-                document.body.classList.add('justify-center');
                 inicializarAuth((nombre) => {
                     document.getElementById('loginSection').classList.add('hidden');
                     document.getElementById('appSection').classList.remove('hidden');
-                    document.body.classList.remove('justify-center');
                     const lbl = document.getElementById('lblUsuario');
                     if(lbl) lbl.textContent = nombre;
                     iniciarAppPrincipal(nombre);
