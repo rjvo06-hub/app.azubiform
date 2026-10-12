@@ -16,9 +16,6 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon_azubiform.png">
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- PDF.js para renderizar e inspeccionar PDFs estáticos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -30,28 +27,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 
     <style>
-        :root {
-            --bg-body: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-secondary: #64748b;
-            --border-subtle: #e2e8f0;
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --radius-xl: 20px;
-            --radius-md: 12px;
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
-        }
-
         button, input, select {
             -webkit-tap-highlight-color: transparent;
-            font-size: 16px !important;
+            font-size: 16px !important; /* Fuerza los 16px en móviles para evitar el zoom automático del navegador */
         }
 
         @media print {
@@ -65,130 +43,130 @@
         }
     </style>
 </head>
-<body class="min-h-screen p-4 flex flex-col items-center justify-center">
+<body class="bg-gray-100 min-h-screen p-3 sm:p-4 flex flex-col items-center justify-center">
 
     <!-- SECCIÓN 1: LOGIN -->
     <div id="loginSection" class="w-full max-w-md">
         <div class="w-full text-center mb-6">
             <div class="flex items-center justify-center gap-3.5 mb-2">
-                <img src="./icon_azubiform.png" alt="Azubiform Logo" class="w-12 h-12 rounded-2xl shadow-md flex-shrink-0 object-cover border border-slate-200">
-                <h1 class="text-3xl sm:text-4xl font-extrabold text-indigo-600 tracking-tight">Azubiform</h1>
+                <img src="./icon_azubiform.png" alt="Azubiform Logo" class="w-12 h-12 rounded-2xl shadow-lg flex-shrink-0 object-cover">
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-indigo-700 tracking-tight">Azubiform</h1>
             </div>
-            <p class="text-xs font-bold text-slate-700 mb-2">Die digitale Plattform für deine Ausbildung</p>
-            <p class="text-xs text-slate-500 leading-relaxed px-2">
+            <p class="text-sm font-bold text-gray-800 mb-2">Die digitale Plattform für deine Ausbildung</p>
+            <p class="text-xs text-gray-600 leading-relaxed px-1">
                 Erfasse deine täglichen Aktivitäten ganz einfach flexibel zu jeder Zeit für deinen <strong>Tätigkeitsnachweis</strong>. Wir speichern deine Einträge sicher und chronologisch ab.
             </p>
         </div>
 
-        <div class="bg-white p-6 rounded-[20px] shadow-sm border border-slate-200">
-            <h2 class="text-lg font-bold text-slate-900 mb-4" id="tituloAuth">Anmelden</h2>
+        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-lg">
+            <h2 class="text-xl font-bold text-gray-800 mb-4" id="tituloAuth">Anmelden</h2>
 
-            <div class="flex border-b border-slate-100 mb-4">
-                <button type="button" id="tabLogin" onclick="cambiarTab('login')" class="w-1/2 pb-2.5 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none transition">Ich habe bereits ein Konto</button>
-                <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2.5 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-slate-600 focus:outline-none transition">Registrieren</button>
+            <div class="flex border-b border-gray-200 mb-4">
+                <button type="button" id="tabLogin" onclick="cambiarTab('login')" class="w-1/2 pb-2 text-xs sm:text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 focus:outline-none transition">Ich habe bereits ein Konto</button>
+                <button type="button" id="tabRegistro" onclick="cambiarTab('registro')" class="w-1/2 pb-2 text-xs sm:text-sm font-semibold text-gray-400 border-b-2 border-transparent hover:text-gray-600 focus:outline-none transition">Registrieren</button>
             </div>
             
-            <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-xl">
+            <div id="alertaRegistroExitoso" class="hidden mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-lg">
                 <p class="font-bold mb-1">Registrierung erfolgreich!</p>
                 <p>Wir haben dir eine Bestätigungs-E-Mail gesendet. Bitte prüfe dein Postfach und bestätige deine E-Mail, bevor du dich anmeldest.</p>
             </div>
 
             <form id="formLogin" class="space-y-4">
                 <div>
-                    <label for="loginEmail" class="block text-xs font-semibold text-slate-700 uppercase mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="loginEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                    <label for="loginEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
+                    <input type="email" id="loginEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label for="loginPassword" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Passwort</label>
+                    <label for="loginPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
-                        <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 pr-10 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
-                        <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"><span id="iconLoginPass">👁</span></button>
+                        <input type="password" id="loginPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('loginPassword', 'iconLoginPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconLoginPass">👁</span></button>
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2.5 rounded-xl hover:bg-indigo-700 shadow-sm transition text-sm">Anmelden</button>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition">Anmelden</button>
             </form>
 
-            <form id="formRegistro" class="space-y-3.5 hidden">
+            <form id="formRegistro" class="space-y-4 hidden">
                 <div>
-                    <label for="regNombre" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Vorname und Nachname</label>
-                    <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                    <label for="regNombre" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Vorname und Nachname</label>
+                    <input type="text" id="regNombre" autocomplete="off" required placeholder="Dein Name" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label for="regEmail" class="block text-xs font-semibold text-slate-700 uppercase mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                    <label for="regEmail" class="block text-xs font-semibold text-gray-700 uppercase mb-1">E-Mail-Adresse</label>
+                    <input type="email" id="regEmail" autocomplete="off" required placeholder="email@beispiel.de" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label for="regTipoPrograma" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Programm / Typ</label>
-                    <select id="regTipoPrograma" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 text-sm transition">
+                    <label for="regTipoPrograma" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Programm / Typ</label>
+                    <select id="regTipoPrograma" required class="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-base sm:text-sm">
                         <option value="" disabled selected>-- Wähle Ausbildung oder FOS --</option>
                         <option value="ausbildung">Ausbildung</option>
                         <option value="fos">FOS (Fachoberschule)</option>
                     </select>
                 </div>
                 <div id="contenedorFachrichtung" class="hidden">
-                    <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Fachrichtung / Beruf</label>
-                    <select id="regAusbildung" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 text-sm transition">
+                    <label id="labelRegFachrichtung" for="regAusbildung" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Fachrichtung / Beruf</label>
+                    <select id="regAusbildung" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-base sm:text-sm">
                         <option value="" disabled selected>-- Wähle deine Option --</option>
                     </select>
                 </div>
                 <div>
-                    <label for="regPassword" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Passwort</label>
+                    <label for="regPassword" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort</label>
                     <div class="relative">
-                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 pr-10 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
-                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"><span id="iconRegPass">👁</span></button>
+                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPassword', 'iconRegPass')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPass">👁</span></button>
                     </div>
                 </div>
                 <div>
-                    <label for="regPasswordConfirm" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Passwort wiederholen</label>
+                    <label for="regPasswordConfirm" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Passwort wiederholen</label>
                     <div class="relative">
-                        <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3.5 py-2.5 pr-10 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
-                        <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"><span id="iconRegPassConfirm">👁️</span></button>
+                        <input type="password" id="regPasswordConfirm" autocomplete="new-password" required placeholder="••••••••" class="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="togglePassword('regPasswordConfirm', 'iconRegPassConfirm')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"><span id="iconRegPassConfirm">👁️</span></button>
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-amber-600 text-white font-semibold py-2.5 rounded-xl hover:bg-amber-700 shadow-sm transition text-sm">Registrierung abschließen</button>
+                <button type="submit" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-700 transition">Registrierung abschließen</button>
             </form>
-            <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-xl font-medium"></div>
+            <div id="loginMensaje" class="text-xs text-center hidden py-2 mt-3 rounded-lg font-medium"></div>
         </div>
     </div>
 
     <!-- SECCIÓN 2: APP PRINCIPAL -->
     <div id="appSection" class="w-full max-w-md hidden flex flex-col items-center">
         <!-- BARRA SUPERIOR CON "MEIN KONTO" -->
-        <div class="w-full bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200 mb-4 flex justify-between items-center text-xs sm:text-sm text-slate-600">
+        <div class="w-full bg-white p-3.5 rounded-2xl shadow-sm mb-4 flex justify-between items-center text-xs sm:text-sm text-gray-600">
             <span>Benutzer: <strong id="lblUsuario" class="text-indigo-600"></strong></span>
             <div class="space-x-2 flex items-center">
-                <button onclick="abrirModalKonto()" class="text-indigo-600 font-bold hover:bg-indigo-50 px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 transition">
+                <button onclick="abrirModalKonto()" class="text-indigo-600 font-bold hover:underline bg-indigo-50 px-3 py-1.5 rounded-xl text-xs flex items-center gap-1">
                     <span>⚙️</span> Mein Konto
                 </button>
-                <span class="text-slate-200">|</span>
-                <button onclick="cerrarSesion()" class="text-rose-500 hover:underline font-medium">Abmelden</button>
+                <span class="text-gray-300">|</span>
+                <button onclick="cerrarSesion()" class="text-red-500 hover:underline">Abmelden</button>
             </div>
         </div>
 
         <!-- PANEL DE REGISTRO DE ACTIVIDAD DIARIA -->
-        <div class="w-full bg-white p-6 rounded-[20px] shadow-sm border border-slate-200 mb-4 relative">
+        <div class="w-full bg-white p-5 sm:p-6 rounded-2xl shadow-lg mb-4 relative">
             <div class="flex justify-between items-center mb-2">
-                <h2 class="block text-xs font-semibold text-slate-700 uppercase">Aktivitätsprotokoll</h2>
-                <button type="button" onclick="abrirModalPasado()" class="text-xs bg-amber-50 text-amber-700 border border-amber-200 font-semibold px-3 py-1.5 rounded-xl hover:bg-amber-100 transition">📅 Tag nachtragen</button>
+                <h2 class="block text-xs font-semibold text-gray-700 uppercase mb-1">Aktivitätsprotokoll</h2>
+                <button type="button" onclick="abrirModalPasado()" class="text-xs bg-amber-100 text-amber-700 font-semibold px-2.5 py-1.5 rounded-xl hover:bg-amber-200 transition">📅 Tag nachtragen</button>
             </div>
-            <div id="fechaActual" class="text-xs font-semibold text-slate-600 bg-slate-50 p-2.5 rounded-xl text-center mb-4 border border-slate-200">Datum wird geladen...</div>
+            <div id="fechaActual" class="text-sm font-medium text-gray-600 bg-gray-50 p-2.5 rounded-xl text-center mb-4 border border-gray-200">Datum wird geladen...</div>
 
             <form id="registroForm" class="space-y-4 relative">
                 <div class="relative">
-                    <label for="actividad" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                    <label for="actividad" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
                     <div class="relative flex items-center">
-                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3.5 py-2.5 pr-12 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                        <input type="text" id="actividad" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2.5 pr-12 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         
-                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-2 text-slate-400 hover:text-indigo-600 rounded-full transition focus:outline-none">
+                        <button type="button" id="btnVozActividad" onclick="toggleSpeechRecognition('actividad', 'btnVozActividad')" title="Spracheingabe" class="absolute right-2.5 p-2 text-gray-400 hover:text-indigo-600 rounded-full transition focus:outline-none">
                             <svg id="icon-btnVozActividad" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
                             </svg>
                         </button>
                     </div>
-                    <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                    <div id="sugerencias" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
                 </div>
-                <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-semibold py-2.5 rounded-xl hover:bg-indigo-700 shadow-sm transition text-sm">Aktivität hinzufügen (+)</button>
+                <button type="submit" id="btnSubmitActividad" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition">Aktivität hinzufügen (+)</button>
             </form>
             <div id="mensaje" class="text-xs text-center hidden py-2 mt-3 rounded-xl font-medium"></div>
 
@@ -196,40 +174,40 @@
             <div id="contenedorHorasGlobal" class="mt-4 bg-indigo-50 p-4 rounded-2xl border border-indigo-100 space-y-3 hidden">
                 <label for="horasGlobal" class="block text-xs font-bold text-indigo-900 uppercase">Gesamtstunden für den Tag verteilen</label>
                 <div class="flex gap-2">
-                    <input type="number" id="horasGlobal" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    <button type="button" id="btnRepartirHoras" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-700 transition text-xs whitespace-nowrap shadow-sm">Stunden verteilen</button>
+                    <input type="number" id="horasGlobal" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <button type="button" id="btnRepartirHoras" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-700 transition text-xs whitespace-nowrap">Stunden verteilen</button>
                 </div>
             </div>
         </div>
 
-        <div class="w-full bg-white p-6 rounded-[20px] shadow-sm border border-slate-200">
+        <div class="w-full bg-white p-5 sm:p-6 rounded-2xl shadow-lg">
             <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Meine heutigen Aktivitäten</h3>
-                <span id="contador" class="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold px-2.5 py-1 rounded-full">0 erfasst</span>
+                <h3 class="font-bold text-gray-800 text-sm">Meine heutigen Aktivitäten</h3>
+                <span id="contador" class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1 rounded-full">0 erfasst</span>
             </div>
             <div id="listaActividades" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                <p class="text-xs text-slate-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>
+                <p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>
             </div>
         </div>
     </div>
 
-    <!-- SECCIÓN INTEGRADA "MEIN KONTO" -->
+    <!-- SECCIÓN INTEGRADA "MEIN KONTO" (Ya no es un modal flotante) -->
     <div id="seccionKontoPrincipal" class="w-full max-w-md hidden space-y-4 mb-6">
-        <div class="bg-white rounded-[20px] shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            <div class="p-3.5 bg-slate-900 text-white flex justify-between items-center flex-shrink-0">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200 flex flex-col">
+            <div class="p-3.5 bg-gray-900 text-white flex justify-between items-center flex-shrink-0">
                 <h2 class="font-bold text-xs sm:text-sm flex items-center gap-1.5"><span>⚙️</span> Mein Konto • Übersicht</h2>
-                <button onclick="cerrarModalKonto()" class="text-slate-400 hover:text-white font-bold text-lg px-2 py-0.5">&times;</button>
+                <button onclick="cerrarModalKonto()" class="text-gray-400 hover:text-white font-bold text-lg px-2 py-0.5">&times;</button>
             </div>
 
-            <div class="grid grid-cols-3 border-b border-slate-200 bg-slate-100 p-1.5 gap-1 flex-shrink-0">
+            <div class="grid grid-cols-3 border-b border-gray-200 bg-gray-100 p-1.5 gap-1 flex-shrink-0">
                 <button type="button" id="tabBtnConsulta" onclick="cambiarTabKonto('consulta')" class="py-2 px-1 text-[11px] sm:text-xs font-bold text-indigo-700 bg-white rounded-xl shadow-sm transition text-center flex items-center justify-center gap-1"><span>📊</span> Abfrage</button>
-                <button type="button" id="tabBtnPdf" onclick="cambiarTabKonto('pdf')" class="py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-600 hover:text-slate-900 transition text-center flex items-center justify-center gap-1"><span>📄</span> PDF Gen.</button>
-                <button type="button" id="tabBtnDatos" onclick="cambiarTabKonto('datos')" class="py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-600 hover:text-slate-900 transition text-center flex items-center justify-center gap-1"><span>✏️</span> Stammdaten</button>
+                <button type="button" id="tabBtnPdf" onclick="cambiarTabKonto('pdf')" class="py-2 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1"><span>📄</span> PDF Gen.</button>
+                <button type="button" id="tabBtnDatos" onclick="cambiarTabKonto('datos')" class="py-2 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1"><span>✏️</span> Stammdaten</button>
             </div>
 
-            <div class="p-4 sm:p-5 space-y-3 bg-slate-50 text-xs">
+            <div class="p-3.5 sm:p-5 space-y-3 bg-gray-50 text-xs">
                 <div id="seccionTabConsulta" class="space-y-3">
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <h3 class="text-xs font-bold text-indigo-700 uppercase mb-2.5 flex items-center gap-1"><span>📊</span> Aktivitäten-Abfrage (Wöchentlich)</h3>
                         <div class="hidden">
                             <select id="selectUsuarioConsulta"><option value="" selected></option></select>
@@ -241,44 +219,44 @@
                             <button id="btnSiguienteConsulta" class="w-full sm:w-auto bg-white text-indigo-600 font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 text-xs hover:bg-indigo-600 hover:text-white transition">Weiter →</button>
                         </div>
                         <div id="contenedorResultadosConsulta" class="space-y-2 max-h-56 overflow-y-auto pr-1">
-                            <p class="text-xs text-slate-400 text-center py-4">Lade Einträge...</p>
+                            <p class="text-xs text-gray-400 text-center py-4">Lade Einträge...</p>
                         </div>
                     </div>
                 </div>
 
                 <div id="seccionTabPdf" class="space-y-3 hidden">
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
                         <div class="mb-2">
                             <span class="text-2xl">📄</span>
-                            <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">Tätigkeitsnachweis Erstellen</h3>
-                            <p class="text-[11px] text-slate-500">Erstelle und lade dein offizielles Berichts-PDF direkt herunter.</p>
+                            <h3 class="text-xs sm:text-sm font-bold text-gray-800 mt-0.5">Tätigkeitsnachweis Erstellen</h3>
+                            <p class="text-[11px] text-gray-500">Erstelle und lade dein offizielles Berichts-PDF direkt herunter.</p>
                         </div>
                         <div id="contenedorPdfManagerApp" class="text-left"></div>
                     </div>
                 </div>
 
                 <div id="seccionTabDatos" class="space-y-3 hidden">
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <h3 class="text-xs font-bold text-indigo-700 uppercase mb-3 flex items-center gap-1"><span>✏️</span> Zusätzliche Angaben für deinen Tätigkeitsnachweis</h3>
                         <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-semibold text-slate-700 uppercase mb-1">Klasse (class)</label>
-                                <input type="text" id="kontoClass" placeholder="z.B. FOS 11" class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Klasse (class)</label>
+                                <input type="text" id="kontoClass" placeholder="z.B. FOS 11" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-base sm:text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-slate-700 uppercase mb-1">Lehrkraft (teacher)</label>
-                                <input type="text" id="kontoTeacher" placeholder="z.B. Frau Müller" class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Lehrkraft (teacher)</label>
+                                <input type="text" id="kontoTeacher" placeholder="z.B. Frau Müller" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-base sm:text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-slate-700 uppercase mb-1">Schule (school_name)</label>
-                                <input type="text" id="kontoSchool" placeholder="z.B. Fachoberschule München" class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Schule (school_name)</label>
+                                <input type="text" id="kontoSchool" placeholder="z.B. Fachoberschule München" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-base sm:text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-slate-700 uppercase mb-1">Betrieb (workplace)</label>
-                                <input type="text" id="kontoWorkplace" placeholder="z.B. Tech Solutions GmbH" class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                                <label class="block text-[10px] font-semibold text-gray-700 uppercase mb-1">Betrieb (workplace)</label>
+                                <input type="text" id="kontoWorkplace" placeholder="z.B. Tech Solutions GmbH" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-base sm:text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             </div>
                         </div>
-                        <button type="button" onclick="guardarDatosKontoSupabase()" class="w-full mt-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm transition">In der Datenbank speichern</button>
+                        <button type="button" onclick="guardarDatosKontoSupabase()" class="w-full mt-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow transition">In der Datenbank speichern</button>
                         <span id="msgKontoGuardado" class="block text-center mt-2 text-[11px] text-emerald-600 font-semibold hidden">✓ Erfolgreich in Supabase gespeichert!</span>
                     </div>
                 </div>
@@ -287,49 +265,49 @@
     </div>
 
     <!-- MODAL DÍA ANTERIOR -->
-    <div id="modalPasado" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-3">
-        <div class="w-full max-w-lg bg-white p-6 rounded-[20px] shadow-xl border border-slate-200 relative max-h-[90vh] flex flex-col overflow-y-auto">
-            <button type="button" onclick="cerrarModalPasado()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg font-bold p-2">✕</button>
+    <div id="modalPasado" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-3">
+        <div class="w-full max-w-lg bg-white p-5 sm:p-6 rounded-2xl shadow-xl relative max-h-[90vh] flex flex-col overflow-y-auto">
+            <button type="button" onclick="cerrarModalPasado()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold p-2">✕</button>
             <h2 class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Nachträglicher Eintrag</h2>
-            <h1 class="text-lg sm:text-xl font-bold text-slate-900 mb-4">Vergangene Aktivität hinzufügen</h1>
+            <h1 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Vergangene Aktivität hinzufügen</h1>
             
-            <form id="formPasado" class="space-y-3.5 mb-4">
+            <form id="formPasado" class="space-y-3 mb-4">
                 <div>
-                    <label for="fechaPasada" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Datum auswählen</label>
-                    <input type="date" id="fechaPasada" lang="de" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-none transition">
+                    <label for="fechaPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Datum auswählen</label>
+                    <input type="date" id="fechaPasada" lang="de" required class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div class="relative">
-                    <label for="actividadPasada" class="block text-xs font-semibold text-slate-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
+                    <label for="actividadPasada" class="block text-xs font-semibold text-gray-700 uppercase mb-1">Welche Aktivität hast du gemacht?</label>
                     <div class="relative flex items-center">
-                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3.5 py-2.5 pr-12 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-amber-500 focus:bg-white focus:outline-none transition">
+                        <input type="text" id="actividadPasada" autocomplete="off" required placeholder="Tippen zum Suchen..." class="w-full px-3 py-2.5 pr-12 border border-gray-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         
-                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-2 text-slate-400 hover:text-amber-600 rounded-full transition focus:outline-none">
+                        <button type="button" id="btnVozPasada" onclick="toggleSpeechRecognition('actividadPasada', 'btnVozPasada')" title="Spracheingabe" class="absolute right-2.5 p-2 text-gray-400 hover:text-amber-600 rounded-full transition focus:outline-none">
                             <svg id="icon-btnVozPasada" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v1a7 7 0 01-14 0v-1M12 18.5V23M8 23h8"></path>
                             </svg>
                         </button>
                     </div>
-                    <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
+                    <div id="sugerenciasPasadas" class="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto hidden z-50"></div>
                 </div>
-                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-semibold py-2.5 rounded-xl hover:bg-amber-700 shadow-sm transition text-sm">Vergangene Aktivität hinzufügen (+)</button>
+                <button type="submit" id="btnSubmitPasado" class="w-full bg-amber-600 text-white font-medium py-2.5 rounded-xl hover:bg-amber-700 transition">Vergangene Aktivität hinzufügen (+)</button>
             </form>
 
             <div id="contenedorHorasGlobalPasada" class="mb-4 bg-amber-50 p-4 rounded-2xl border border-amber-100 space-y-3 hidden">
                 <label for="horasGlobalPasada" class="block text-xs font-bold text-amber-900 uppercase">Gesamtstunden für diesen Tag verteilen</label>
                 <div class="flex gap-2">
-                    <input type="number" id="horasGlobalPasada" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                    <button type="button" id="btnRepartirHorasPasadas" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-700 transition text-xs whitespace-nowrap shadow-sm">Stunden verteilen</button>
+                    <input type="number" id="horasGlobalPasada" step="0.25" min="0.25" max="24" placeholder="z.B. 6" class="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <button type="button" id="btnRepartirHorasPasadas" class="bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-amber-700 transition text-xs whitespace-nowrap">Stunden verteilen</button>
                 </div>
             </div>
 
-            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-bold text-slate-800 text-xs">Einträge an diesem Datum</h3>
+                    <h3 class="font-bold text-gray-800 text-xs">Einträge an diesem Datum</h3>
                     <span id="contadorPasado" class="text-[11px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">0 erfasst</span>
                 </div>
                 <div id="listaActividadesPasadas" class="space-y-2 max-h-44 overflow-y-auto pr-1">
-                    <p class="text-xs text-slate-400 text-center py-2">Keine Aktivitäten erfasst.</p>
+                    <p class="text-xs text-gray-400 text-center py-2">Keine Aktivitäten erfasst.</p>
                 </div>
             </div>
             <div id="mensajePasado" class="text-xs text-center hidden py-2 mt-2 rounded-xl font-medium"></div>
@@ -369,8 +347,8 @@
             let textoBase = input.value;
             if (textoBase.length > 0 && !textoBase.endsWith(' ')) { textoBase += ' '; }
 
-            btn.classList.remove('text-slate-400', 'hover:text-indigo-600', 'hover:text-amber-600');
-            btn.classList.add('text-rose-600', 'animate-pulse');
+            btn.classList.remove('text-gray-400', 'hover:text-indigo-600', 'hover:text-amber-600');
+            btn.classList.add('text-red-600', 'animate-pulse');
             svgIcon.innerHTML = stopIconSVG;
 
             recognition.onresult = function(event) {
@@ -396,8 +374,8 @@
         }
 
         function resetBtnRec(btn, svgIcon) {
-            btn.classList.remove('text-rose-600', 'animate-pulse');
-            btn.classList.add('text-slate-400');
+            btn.classList.remove('text-red-600', 'animate-pulse');
+            btn.classList.add('text-gray-400');
             svgIcon.innerHTML = micIconSVG;
             btn.classList.add('hover:text-amber-600');
         }
@@ -471,9 +449,9 @@
             secPdf.classList.add('hidden');
             secDatos.classList.add('hidden');
 
-            btnConsulta.className = "py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-600 hover:text-slate-900 transition text-center flex items-center justify-center gap-1";
-            btnPdf.className = "py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-600 hover:text-slate-900 transition text-center flex items-center justify-center gap-1";
-            btnDatos.className = "py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-600 hover:text-slate-900 transition text-center flex items-center justify-center gap-1";
+            btnConsulta.className = "py-2 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1";
+            btnPdf.className = "py-2 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1";
+            btnDatos.className = "py-2 px-1 text-[11px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 transition text-center flex items-center justify-center gap-1";
 
             if (tab === 'consulta') {
                 secConsulta.classList.remove('hidden');
@@ -525,10 +503,12 @@
 
             document.getElementById('appSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
+            document.body.classList.add('justify-center');
             
             inicializarAuth((nombre) => {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
+                document.body.classList.remove('justify-center');
                 const lbl = document.getElementById('lblUsuario');
                 if(lbl) lbl.textContent = nombre;
                 iniciarAppPrincipal(nombre);
@@ -542,6 +522,7 @@
             if (usuarioGuardado) {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
+                document.body.classList.remove('justify-center');
                 const lbl = document.getElementById('lblUsuario');
                 if(lbl) lbl.textContent = usuarioGuardado;
                 iniciarAppPrincipal(usuarioGuardado);
@@ -549,9 +530,11 @@
                 inicializarImpresion();
             } else {
                 document.getElementById('loginSection').classList.remove('hidden');
+                document.body.classList.add('justify-center');
                 inicializarAuth((nombre) => {
                     document.getElementById('loginSection').classList.add('hidden');
                     document.getElementById('appSection').classList.remove('hidden');
+                    document.body.classList.remove('justify-center');
                     const lbl = document.getElementById('lblUsuario');
                     if(lbl) lbl.textContent = nombre;
                     iniciarAppPrincipal(nombre);
