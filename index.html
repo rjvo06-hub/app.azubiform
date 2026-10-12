@@ -213,7 +213,7 @@
         </div>
     </div>
 
-    <!-- SECCIÓN INTEGRADA "MEIN KONTO" (Totalmente integrada sin modales oscuros) -->
+    <!-- SECCIÓN INTEGRADA "MEIN KONTO" -->
     <div id="seccionKontoPrincipal" class="w-full max-w-md hidden space-y-4 mb-6">
         <div class="bg-white p-4 rounded-[20px] shadow-sm border border-slate-200 flex justify-between items-center">
             <h2 class="font-bold text-sm text-slate-900 flex items-center gap-2"><span>⚙️</span> Mein Konto • Übersicht</h2>
@@ -524,6 +524,7 @@
             document.getElementById('alertaRegistroExitoso').classList.add('hidden');
 
             document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('seccionKontoPrincipal').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
             
             inicializarAuth((nombre) => {
