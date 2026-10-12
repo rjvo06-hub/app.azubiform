@@ -1,67 +1,50 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>E-Mail Verifizierung - Azubiform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg text-center">
-        <h1 id="tituloEstado" class="text-xl font-bold text-gray-800 mb-2">E-Mail wird verifiziert...</h1>
-        <p id="mensajeEstado" class="text-sm text-gray-600 mb-6">Bitte einen Moment Geduld.</p>
-        <a href="index.html" class="inline-block bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition">Zur Anmeldung</a>
-    </div>
+import { Resend } from 'resend';
 
-    <script type="module">
-        import { SUPABASE_URL, headers } from './js/config.js';
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-        async function validarToken() {
-            const params = new URLSearchParams(window.location.search);
-            const token = params.get('token');
-            const titulo = document.getElementById('tituloEstado');
-            const mensaje = document.getElementById('mensajeEstado');
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-            if (!token) {
-                titulo.textContent = "❌ Ungültiger Link";
-                mensaje.textContent = "Der Verifizierungslink ist unvollständig.";
-                return;
-            }
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?token_verificacion=eq.${encodeURIComponent(token)}`, {
-                    method: 'GET', headers: headers
-                });
-                const usuarios = await res.json();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método no permitido' });
+  }
 
-                if (usuarios.length === 0) {
-                    titulo.textContent = "❌ Ungültiger oder abgelaufener Link";
-                    mensaje.textContent = "Dieser Bestätigungslink ist ungültig oder wurde bereits verwendet.";
-                    return;
-                }
+  try {
+    const { email, nombre, tipo, profesion } = req.body || {};
 
-                const usuario = usuarios[0];
+    // Detectar si es FOS o Ausbildung para el asunto
+    const esFos = tipo && tipo.toLowerCase().includes('fos');
+    const categoria = esFos ? 'FOS' : 'Ausbildung';
 
-                const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuario.id}`, {
-                    method: 'PATCH',
-                    headers: { ...headers, 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({ verificado: true, token_verificacion: null })
-                });
+    await resend.emails.send({
+      from: 'Azubiform System <info@azubiform.de>',
+      to: ['azubiform@gmail.com'],
+      subject: `Nuevo usuario (${categoria}) - ${nombre || 'Sin nombre'}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #2563eb;">¡Tienes un nuevo usuario confirmado!</h2>
+          <p>Un usuario acaba de verificar su correo y activar su cuenta en Azubiform:</p>
+          <ul style="line-height: 1.6;">
+            <li><b>Tipo:</b> ${categoria}</li>
+            <li><b>Nombre:</b> ${nombre || 'No especificado'}</li>
+            <li><b>Correo:</b> ${email}</li>
+            <li><b>Profesión:</b> ${profesion || 'No especificada'}</li>
+          </ul>
+        </div>
+      `
+    });
 
-                if (updateRes.ok) {
-                    titulo.textContent = "✅ E-Mail erfolgreich bestätigt!";
-                    mensaje.textContent = `Vielen Dank, ${usuario.nombre}. Dein Konto wurde aktiviert. Du kannst dich jetzt anmelden.`;
-                } else {
-                    titulo.textContent = "❌ Fehler";
-                    mensaje.textContent = "Konto konnte nicht verifiziert werden. Bitte versuche es später erneut.";
-                }
-
-            } catch (error) {
-                titulo.textContent = "❌ Netzwerkfehler";
-                mensaje.textContent = error.message;
-            }
-        }
-
-        validarToken();
-    </script>
-</body>
-</html>
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error enviando correo al admin:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
