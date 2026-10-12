@@ -360,10 +360,10 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) {
                     lineasAsignadas = [fosResProfesora.textContent];
                 } 
-                else if (esRangoSemana && !esHora) {
+                else if (lowerKey.includes('wochenbericht') || lowerKey.includes('vom') || (esRangoSemana && !esHora)) {
                     lineasAsignadas = [semSeleccionada];
                 } 
-                else if (esHora) {
+                else if (esHora && !lowerKey.includes('wochenbericht') && !lowerKey.includes('vom')) {
                     const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
                     lineasAsignadas = [totalSemana > 0 ? formatarDecimalAleman(totalSemana) : ''];
                 }
