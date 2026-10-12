@@ -328,6 +328,7 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 let lineasAsignadas = [];
 
                 const esHora = lowerKey.includes('stunden') || lowerKey.includes('hora') || lowerKey.includes('zeit');
+                const esRangoSemana = lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso') || lowerKey.includes('vom');
 
                 if (lowerKey.includes('montag') || lowerKey.includes('lunes')) {
                     lineasAsignadas = esHora ? [formatarDecimalAleman(datosSemana.horasLunes)] : (datosSemana.lunes || []);
@@ -359,9 +360,8 @@ export async function inicializarVistaPreviaSemanasFos(containerId, usuarioPrese
                 else if (lowerKey.includes('lehrkraft') || lowerKey.includes('lehrer') || lowerKey.includes('teacher') || lowerKey.includes('profesor')) {
                     lineasAsignadas = [fosResProfesora.textContent];
                 } 
-                else if (lowerKey.includes('woche') || lowerKey.includes('semana') || lowerKey.includes('lapso')) {
-                    const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
-                    lineasAsignadas = [totalSemana > 0 ? formatarDecimalAleman(totalSemana) : ''];
+                else if (esRangoSemana && !esHora) {
+                    lineasAsignadas = [semSeleccionada];
                 } 
                 else if (esHora) {
                     const totalSemana = (datosSemana.horasLunes || 0) + (datosSemana.horasDienstag || 0) + (datosSemana.horasMittwoch || 0) + (datosSemana.horasDonnerstag || 0) + (datosSemana.horasFreitag || 0);
