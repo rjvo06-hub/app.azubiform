@@ -7,7 +7,6 @@ export function iniciarAppPrincipal(nombreUsuario) {
 
     loginSection.classList.add('hidden');
     appSection.classList.remove('hidden');
-    document.body.classList.remove('justify-center');
     lblUsuario.textContent = nombreUsuario;
 
     const ausbildungUsuario = localStorage.getItem('usuario_ausbildung') || '';
@@ -92,7 +91,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             });
             const data = await res.json();
             if (!data || data.length === 0) {
-                listaActividadesPasadas.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Keine Aktivitäten für dieses Datum erfasst.</p>';
+                listaActividadesPasadas.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Keine Aktivitäten für dieses Datum erfasst.</p>';
                 contadorPasado.textContent = '0 erfasst (0 Std.)';
                 if (contenedorHorasGlobalPasada) contenedorHorasGlobalPasada.classList.add('hidden');
                 return;
@@ -105,11 +104,11 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 totalHoras += horasItem;
 
                 const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100 text-sm';
+                div.className = 'flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 text-xs shadow-sm';
                 div.innerHTML = `
-                    <span class="text-gray-700 font-medium">${item.nombre_actividad}</span>
+                    <span class="text-slate-700 font-medium">${item.nombre_actividad}</span>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="window.eliminarActividadPasada('${item.id}', '${fecha}')" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+                        <button type="button" onclick="window.eliminarActividadPasada('${item.id}', '${fecha}')" class="text-rose-400 hover:text-rose-600 font-bold text-xs p-1">✕</button>
                     </div>`;
                 listaActividadesPasadas.appendChild(div);
             });
@@ -141,7 +140,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             contenedorSugerenciasEl.innerHTML = '';
             data.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer border-b border-gray-100';
+                div.className = 'px-3.5 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer border-b border-slate-100 transition';
                 div.textContent = item.nombre_actividad;
                 div.addEventListener('click', () => { 
                     inputEl.value = item.nombre_actividad; 
@@ -173,7 +172,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             const data = await res.json();
             
             if (!data || data.length === 0) {
-                listaActividades.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>';
+                listaActividades.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Heute wurden noch keine Aktivitäten erfasst.</p>';
                 contador.textContent = '0 erfasst (0 Std.)';
                 if (contenedorHorasGlobal) contenedorHorasGlobal.classList.add('hidden');
                 return;
@@ -186,11 +185,11 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 totalHoras += horasItem;
 
                 const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-sm';
+                div.className = 'flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 text-xs shadow-sm';
                 div.innerHTML = `
-                    <span class="text-gray-700 font-medium">${item.nombre_actividad}</span>
+                    <span class="text-slate-700 font-medium">${item.nombre_actividad}</span>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="window.eliminarActividad('${item.id}')" class="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+                        <button type="button" onclick="window.eliminarActividad('${item.id}')" class="text-rose-400 hover:text-rose-600 font-bold text-xs p-1">✕</button>
                     </div>`;
                 listaActividades.appendChild(div);
             });
@@ -234,7 +233,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Aktivität hinzufügen (+)';
             mensaje.textContent = '✓ Aktivität hinzugefügt!';
-            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-lg font-medium bg-green-100 text-green-700';
+            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-xl font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
             mensaje.classList.remove('hidden');
             inputActividad.focus();
             setTimeout(() => mensaje.classList.add('hidden'), 2000);
@@ -367,7 +366,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen (+)';
             mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
-            mensajePasado.className = 'text-xs text-center py-1.5 mb-3 rounded-lg font-medium bg-green-100 text-green-700';
+            mensajePasado.className = 'text-xs text-center py-2 mb-3 rounded-xl font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
             mensajePasado.classList.remove('hidden');
             setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
             cargarActividadesPasadas(fechaElegida);
