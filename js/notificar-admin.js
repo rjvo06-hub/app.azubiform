@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const esFos = tipo && tipo.toLowerCase().includes('fos');
     const categoria = esFos ? 'FOS' : 'Ausbildung';
 
-    await resend.emails.send({
+    const data = await resend.emails.send({
       from: 'Azubiform System <info@azubiform.de>',
       to: ['azubiform@gmail.com'],
       subject: `Nuevo usuario (${categoria}) - ${nombre || 'Sin nombre'}`,
@@ -42,7 +42,8 @@ export default async function handler(req, res) {
       `
     });
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, data });
+
   } catch (error) {
     console.error('Error enviando correo al admin:', error);
     return res.status(500).json({ error: error.message });
