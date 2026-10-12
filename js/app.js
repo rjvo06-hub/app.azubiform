@@ -104,7 +104,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
                 totalHoras += horasItem;
 
                 const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 text-xs shadow-sm';
+                div.className = 'flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 text-xs shadow-sm';
                 div.innerHTML = `
                     <span class="text-slate-700 font-medium">${item.nombre_actividad}</span>
                     <div class="flex items-center gap-2">
@@ -233,7 +233,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             btnSubmitActividad.disabled = false;
             btnSubmitActividad.textContent = 'Aktivität hinzufügen (+)';
             mensaje.textContent = '✓ Aktivität hinzugefügt!';
-            mensaje.className = 'text-xs text-center py-2 mt-3 rounded-xl font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
+            mensaje.className = 'text-xs text-center py-2 rounded-xl font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
             mensaje.classList.remove('hidden');
             inputActividad.focus();
             setTimeout(() => mensaje.classList.add('hidden'), 2000);
@@ -366,7 +366,7 @@ export function iniciarAppPrincipal(nombreUsuario) {
             btnSubmitPasado.disabled = false;
             btnSubmitPasado.textContent = 'Vergangene Aktivität hinzufügen (+)';
             mensajePasado.textContent = `✓ Für den ${fechaElegida} gespeichert!`;
-            mensajePasado.className = 'text-xs text-center py-2 mb-3 rounded-xl font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
+            mensajePasado.className = 'text-xs text-center py-2 rounded-xl font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
             mensajePasado.classList.remove('hidden');
             setTimeout(() => mensajePasado.classList.add('hidden'), 2000);
             cargarActividadesPasadas(fechaElegida);
