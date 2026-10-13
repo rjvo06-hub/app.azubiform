@@ -328,7 +328,14 @@
                 const height = Math.max(10, (y2 - y1) * scale);
 
                 const cajaVisual = document.createElement('div');
-                cajaVisual.className = `absolute overflow-hidden px-1 font-sans text-black z-10 ${modoEdicionActivo ? 'border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md' : 'border border-blue-400/30 bg-blue-50/20 pointer-events-none'}`;
+                
+                // CONDICIONAL CLAVE: Si el modo edición está activo, permite interacción y se muestra rojo; si no, está bloqueado (pointer-events-none)
+                if (modoEdicionActivo) {
+                    cajaVisual.className = "absolute overflow-hidden px-1 font-sans text-black z-10 border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md";
+                } else {
+                    cajaVisual.className = "absolute overflow-hidden px-1 font-sans text-black z-10 border border-blue-400/30 bg-blue-50/20 pointer-events-none";
+                }
+
                 cajaVisual.style.left = `${left}px`;
                 cajaVisual.style.top = `${top}px`;
                 cajaVisual.style.width = `${width}px`;
@@ -349,6 +356,7 @@
                 const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
                 cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
 
+                // LOS EVENTOS DE EDICIÓN SOLO SE AÑADEN SI EL MODO EDICIÓN ESTÁ ACTIVO
                 if (modoEdicionActivo) {
                     let isDragging = false;
                     let startX, startY, initialLeft, initialTop;
@@ -484,9 +492,8 @@
                     const y1Visual = Number(box.y1);
                     const yPdfLibTop = pdfHeight - (heightCanvasPdfJs - y1Visual) - 10;
 
-                    // TAMAÑO DE LETRA ACTUALIZADO (+0.5 pt)
                     const esEncabezado = lowerKey.includes('schueler') || lowerKey.includes('klasse') || lowerKey.includes('woche');
-                    const fontSize = esEncabezado ? 10.5 : 8.5; // Encabezados 10.5pt, Contenido 8.5pt
+                    const fontSize = esEncabezado ? 10.5 : 8.5;
                     const fuenteUsada = esEncabezado ? fontBold : font;
                     const espaciadoLineas = fontSize * 1.4;
 
