@@ -3,25 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS</title>
+    <title>Mapeador Compacto FOS con Semántica</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
-        .caja-mapeada { 
-            touch-action: none; 
-            cursor: move; /* Cambia el cursor al icono de desplazamiento/cuatro flechas */
-        }
+        .caja-mapeada { touch-action: none; cursor: move; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3">
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador Secuencial Compacto</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador Secuencial & Diccionario DB</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
-                <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
+                <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar Plantilla</button>
             </div>
         </div>
 
@@ -36,7 +33,7 @@
 
             <!-- Panel de Control -->
             <div class="bg-white p-3 rounded-xl shadow-sm space-y-2.5 flex flex-col text-xs">
-                <h2 class="font-bold text-gray-800 uppercase border-b pb-1">Control de Campos</h2>
+                <h2 class="font-bold text-gray-800 uppercase border-b pb-1">Control de Campos & Base de Datos</h2>
                 
                 <!-- Cargar Plantilla -->
                 <div class="bg-indigo-50 p-2 rounded border border-indigo-200 flex space-x-1">
@@ -72,7 +69,6 @@
 
                     <!-- Controles de Extender / Reducir Largo y Ancho -->
                     <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 text-[10px]">
-                        <!-- Largo -->
                         <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
                             <span class="text-[9px] text-slate-600 font-bold block text-center">↕️ Largo (Alto)</span>
                             <div class="flex justify-between space-x-1">
@@ -80,7 +76,6 @@
                                 <button onclick="redimensionar(0, -1)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
                             </div>
                         </div>
-                        <!-- Ancho -->
                         <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
                             <span class="text-[9px] text-slate-600 font-bold block text-center">↔️ Ancho</span>
                             <div class="flex justify-between space-x-1">
@@ -91,9 +86,12 @@
                     </div>
                 </div>
 
-                <!-- Lista de Coordenadas -->
-                <div class="h-28 overflow-y-auto border rounded p-1.5 space-y-1 bg-gray-50 text-[11px]" id="listaCoordenadas">
-                    <p class="text-gray-400 text-center mt-6">Sin coordenadas aún.</p>
+                <!-- Lista de Coordenadas con Asociación a Base de Datos -->
+                <div class="space-y-1">
+                    <label class="font-semibold text-gray-700">Asignar Columnas DB (Diccionario):</label>
+                    <div class="h-36 overflow-y-auto border rounded p-1.5 space-y-2 bg-gray-50 text-[11px]" id="listaCoordenadas">
+                        <p class="text-gray-400 text-center mt-8">Sin coordenadas aún.</p>
+                    </div>
                 </div>
 
                 <!-- JSON -->
@@ -106,7 +104,7 @@
     <div id="duplicateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-xs space-y-3">
             <h3 class="text-xs font-bold text-indigo-900 uppercase">📋 Duplicar Campo</h3>
-            <p class="text-[11px] text-gray-600">Crear una copia exacta del campo <strong id="lblCampoOrigen"></strong> con el siguiente nombre secuencial:</p>
+            <p class="text-[11px] text-gray-600">Copiar el campo <strong id="lblCampoOrigen"></strong> con nombre:</p>
             <input type="text" id="inputNuevoNombreDuplicado" class="w-full p-1.5 border rounded text-xs bg-white font-bold text-indigo-900">
             <div class="flex justify-end space-x-2 pt-1">
                 <button onclick="cerrarModalDuplicar()" class="px-2.5 py-1 bg-gray-200 text-gray-700 text-xs font-bold rounded">Cancelar</button>
@@ -119,8 +117,24 @@
         import { SUPABASE_URL, headers } from './js/config.js';
 
         const $ = id => document.getElementById(id);
-        let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
+        let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, mappingDB = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
+
+        // Columnas principales extraídas de tus tablas de Supabase (usuarios y registro_diario)
+        const columnasDB = [
+            "-- Seleccionar columna --",
+            "usuarios.nombre",
+            "usuarios.class",
+            "usuarios.teacher",
+            "usuarios.workplace",
+            "usuarios.ausbildung",
+            "usuarios.email",
+            "usuarios.adresse",
+            "registro_diario.nombre_actividad",
+            "registro_diario.fecha",
+            "registro_diario.horas",
+            "registro_diario.ausbildung"
+        ];
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
@@ -144,6 +158,7 @@
                 if (data.length && data[0].coordinates_json) {
                     coordenadasMap = data[0].coordinates_json;
                     escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
+                    // Si tienes un diccionario guardado previamente o puedes extenderlo, aquí se cargaría
                     actualizarSelects();
                     if (pdfDoc) redibujar();
                     alert(`✅ Plantilla cargada.`);
@@ -245,6 +260,10 @@
             actualizarUI(); redibujar();
         };
 
+        window.actualizarMapeoDB = (k, selectEl) => {
+            mappingDB[k] = selectEl.value;
+        };
+
         window.abrirModalDuplicar = (k) => {
             if (!coordenadasMap[k]) return;
             campoPendienteDuplicar = k;
@@ -267,6 +286,7 @@
                 x2: +(bOrig.x2 + offset).toFixed(1),
                 y2: bOrig.y2
             };
+            if (mappingDB[campoPendienteDuplicar]) mappingDB[nuevoNombre] = mappingDB[campoPendienteDuplicar];
 
             campoActivo = nuevoNombre;
             cerrarModalDuplicar();
@@ -291,19 +311,36 @@
         };
 
         function actualizarUI() {
-            $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);$('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => `
-                <div class="p-1.5 rounded border flex justify-between items-center cursor-pointer ${k === campoActivo ? 'bg-indigo-50 border-indigo-500 font-bold' : 'bg-white'}" onclick="window.selCampo('${k}')">
-                    <span>${k}</span>
-                    <div class="flex items-center space-x-1">
-                        <button onclick="event.stopPropagation(); window.abrirModalDuplicar('${k}')" class="text-blue-600 font-bold px-1" title="Duplicar">📋</button>
-                        <button onclick="event.stopPropagation(); window.delCampo('${k}')" class="text-red-600 font-bold px-1" title="Eliminar">🗑️</button>
+            const payloadFinal = {
+                coordenadas: coordenadasMap,
+                diccionario_db: mappingDB
+            };
+            $('jsonOutput').value = JSON.stringify(payloadFinal, null, 2);
+
+            $('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
+                const selVal = mappingDB[k] || "";
+                const optsHTML = columnasDB.map(col => `<option value="${col === '-- Seleccionar columna --' ? '' : col}" ${selVal === col ? 'selected' : ''}>${col}</option>`).join('');
+                const esActivo = k === campoActivo;
+
+                return `
+                    <div class="p-2 rounded border space-y-1 ${esActivo ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500' : 'bg-white border-gray-200'}" onclick="window.selCampo('${k}')">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-indigo-900">${k} ${esActivo ? '⚡' : ''}</span>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="event.stopPropagation(); window.abrirModalDuplicar('${k}')" class="text-blue-600 font-bold px-1" title="Duplicar">📋</button>
+                                <button onclick="event.stopPropagation(); window.delCampo('${k}')" class="text-red-600 font-bold px-1" title="Eliminar">🗑️</button>
+                            </div>
+                        </div>
+                        <select class="w-full p-1 border rounded bg-white text-[10px] text-gray-700" onchange="window.actualizarMapeoDB('${k}', this)" onclick="event.stopPropagation()">
+                            ${optsHTML}
+                        </select>
                     </div>
-                </div>
-            `).join('') || '<p class="text-gray-400 text-center mt-6">Sin coordenadas aún.</p>';
+                `;
+            }).join('') || '<p class="text-gray-400 text-center mt-8">Sin coordenadas aún.</p>';
         }
 
         window.selCampo = (k) => { campoActivo = k; $('campoSelect').value = k; primerPunto = null; actualizarUI(); redibujar(); };
-        window.delCampo = (k) => { delete coordenadasMap[k]; actualizarSelects(); redibujar(); };
+        window.delCampo = (k) => { delete coordenadasMap[k]; delete mappingDB[k]; actualizarSelects(); redibujar(); };
 
         function redibujar() {
             if (!pageViewport) return;
@@ -319,12 +356,18 @@
             const name = escuelaCargada ? escuelaCargada.school_name : prompt("Nombre de la escuela:");
             if (!name) return;
             const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
+            
+            const payloadFinal = {
+                coordenadas: coordenadasMap,
+                diccionario_db: mappingDB
+            };
+
             const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?on_conflict=file_identifier`, {
                 method: 'POST',
                 headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ school_name: name, file_identifier: id, pdf_filename: 'template.pdf', coordinates_json: coordenadasMap })
+                body: JSON.stringify({ school_name: name, file_identifier: id, pdf_filename: 'template.pdf', coordinates_json: payloadFinal })
             });
-            if (res.ok) { alert("✅ Guardado con éxito."); cargarPlantillas(); }
+            if (res.ok) { alert("✅ Plantilla y diccionario guardados con éxito."); cargarPlantillas(); }
             else { alert("❌ Error al guardar."); }
         };
     </script>
