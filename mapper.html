@@ -529,7 +529,6 @@
             campoActivo = nuevoNombre;
             actualizarSelects();
             redibujar();
-            cerrarModalDuplicar();
         };
 
         function actualizarSelects() {
@@ -619,10 +618,16 @@
                 let textoHTML = k;
                 let etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
 
+                // Definir tamaño de fuente según el tipo de campo:
+                // - Usuario y Actividades: text-[11px] (más grande y legible)
+                // - Fechas y Año: text-[9px] (tamaño original más compacto)
+                let claseTamanoLetra = 'text-[9px]'; // Por defecto para fechas
+
                 if (datosPreviewCache.activo) {
                     if (tipoActual === 'fijo' && b.usuario_col) {
                         textoHTML = datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
                         etiquetaFija = '';
+                        claseTamanoLetra = 'text-[11px]'; // Nombre de usuario más grande
                     } else if (tipoActual === 'woche_von') {
                         textoHTML = datosPreviewCache.fechaInicioStr;
                         etiquetaFija = '';
@@ -645,13 +650,18 @@
                                     const fechaReg = r.fecha.split('T')[0];
                                     return fechaReg === infoDia.fecha;
                                 });
-                                // Cambiamos el join con ' • ' por saltos de línea reales (<br>) para que queden una debajo de otra
                                 textoHTML = registrosDelDia.length > 0 ? registrosDelDia.map(r => r.nombre_actividad || r.actividad || '').filter(Boolean).join('<br>') : '';
                             }
                         } else {
                             textoHTML = '';
                         }
                         etiquetaFija = '';
+                        claseTamanoLetra = 'text-[11px]'; // Actividades de la semana del mismo tamaño que el nombre
+                    }
+                } else {
+                    // Si no está activo el preview, ajustar según el tipo configurado
+                    if (tipoActual === 'fijo' || ['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
+                        claseTamanoLetra = 'text-[11px]';
                     }
                 }
 
@@ -662,7 +672,7 @@
                     estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
                 }
 
-                return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex flex-col justify-start pointer-events-auto overflow-hidden leading-tight ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
+                return `<div class="caja-mapeada absolute rounded ${claseTamanoLetra} font-bold px-1 flex flex-col justify-start pointer-events-auto overflow-hidden leading-tight ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
                     <div class="w-full">${textoHTML}${etiquetaFija}</div>
                 </div>`;
             }).join('');
