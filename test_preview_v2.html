@@ -23,35 +23,35 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen p-3 sm:p-6">
+<body class="bg-gray-100 font-sans min-h-screen p-2 sm:p-4">
 
-    <div class="max-w-7xl mx-auto space-y-4">
+    <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
-        <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase">⚡ Generador y Calibrador de Coordenadas FOS</h1>
-            <div class="w-full sm:w-auto">
+        <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col gap-2">
+            <h1 class="text-xs sm:text-sm font-bold text-indigo-900 uppercase text-center sm:text-left">⚡ Generador y Calibrador FOS</h1>
+            <div class="w-full">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[11px] text-gray-500 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 w-full">
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Panel Izquierdo: Lienzo Interactivo -->
-            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 sm:p-4 flex justify-center overflow-auto max-h-[70vh] lg:max-h-[800px] relative border border-gray-300">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <!-- Panel Izquierdo: Lienzo Interactivo adaptado a móviles -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto h-[60vh] sm:h-[70vh] lg:max-h-[800px] relative border border-gray-300">
                 <div class="relative inline-block shadow-2xl" id="canvasContainer">
-                    <canvas id="pdfCanvas" class="block"></canvas>
+                    <canvas id="pdfCanvas" class="block max-w-full h-auto"></canvas>
                     <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
 
             <!-- Panel Derecho: Controles y Calibración -->
-            <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm space-y-3 flex flex-col justify-between">
+            <div class="bg-white p-3 rounded-xl shadow-sm space-y-3 flex flex-col justify-between">
                 <div class="space-y-3">
                     <h2 class="text-xs font-bold text-gray-800 uppercase border-b pb-2">Controles y Calibración</h2>
                     
                     <!-- 1. Plantilla -->
                     <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-200 space-y-1">
                         <label class="text-[10px] font-semibold text-indigo-900">📂 1. Seleccionar escuela:</label>
-                        <select id="selectPlantillasGuardadas" class="w-full p-1.5 border border-indigo-300 rounded text-xs bg-white font-medium">
+                        <select id="selectPlantillasGuardadas" class="w-full p-2 border border-indigo-300 rounded text-xs bg-white font-medium">
                             <option value="">-- Selecciona escuela --</option>
                         </select>
                     </div>
@@ -60,13 +60,13 @@
                     <div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 space-y-2">
                         <div>
                             <label class="text-[10px] font-semibold text-emerald-900">👤 2. Seleccionar usuario:</label>
-                            <select id="selectUsuario" class="w-full p-1.5 border border-emerald-300 rounded text-xs bg-white font-medium">
+                            <select id="selectUsuario" class="w-full p-2 border border-emerald-300 rounded text-xs bg-white font-medium">
                                 <option value="">-- Selecciona usuario --</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold text-emerald-900">📅 3. Seleccionar semana:</label>
-                            <select id="selectSemana" class="w-full p-1.5 border border-emerald-300 rounded text-xs bg-white font-medium">
+                            <select id="selectSemana" class="w-full p-2 border border-emerald-300 rounded text-xs bg-white font-medium">
                                 <option value="">-- Carga usuario primero --</option>
                             </select>
                         </div>
@@ -75,29 +75,29 @@
                     <!-- Herramienta de Calibración Global y Manual -->
                     <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200 space-y-2">
                         <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-amber-900">🛠️ Modo Calibración Manual:</span>
-                            <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold">Activar Edición</button>
+                            <span class="text-[10px] font-bold text-amber-900">🛠️ Calibración Manual:</span>
+                            <button id="btnActivarEdicion" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2.5 py-1.5 rounded font-bold">Activar Edición</button>
                         </div>
-                        <p class="text-[9px] text-amber-800">Arrastra desde el centro para mover, o estira desde la esquina inferior derecha para cambiar el ancho:</p>
+                        <p class="text-[9px] text-amber-800">Toca y arrastra para mover, o estira desde la esquina inferior para cambiar el tamaño:</p>
                         
                         <!-- Opción para desplazar todas las coordenadas hacia abajo -->
                         <div class="flex space-x-1 pt-1">
-                            <input type="number" id="inputDesplazarY" value="30" class="w-20 p-1 text-xs border rounded bg-white text-center" placeholder="Píxeles">
-                            <button id="btnDesplazarTodoAbajo" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1 rounded">⬇️ Mover Todo Abajo</button>
+                            <input type="number" id="inputDesplazarY" value="30" class="w-20 p-1.5 text-xs border rounded bg-white text-center" placeholder="Píxeles">
+                            <button id="btnDesplazarTodoAbajo" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold py-1.5 rounded">⬇️ Mover Todo Abajo</button>
                         </div>
 
                         <!-- Botón de guardado -->
                         <button id="btnGuardarCoordenadas" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold py-2 rounded shadow hidden">💾 Guardar Cambios en Supabase</button>
                     </div>
 
-                    <button id="btnActualizarVista" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold py-2 rounded shadow transition">
+                    <button id="btnActualizarVista" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold py-2.5 rounded shadow transition">
                         👁️ Actualizar Vista Previa
                     </button>
                 </div>
 
                 <!-- Botón Final de Descarga -->
                 <div class="space-y-2 pt-2 border-t">
-                    <button id="btnGenerarPDFDirecto" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg shadow transition uppercase tracking-wide">
+                    <button id="btnGenerarPDFDirecto" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-lg shadow transition uppercase tracking-wide">
                         🚀 Descargar PDF Definitivo
                     </button>
                     <div id="estadoInfo" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-200 text-center">
@@ -127,7 +127,7 @@
 
         let pdfDoc = null;
         let pageViewport = null;
-        let scale = 1.2;
+        let scale = window.innerWidth < 768 ? 0.85 : 1.2; // Escala automática adaptada para móviles
         let archivoPdfOriginalBytes = null;
         let coordenadasMap = {};
         let semanasAgrupadas = {};
@@ -284,7 +284,7 @@
         btnActivarEdicion.addEventListener('click', () => {
             modoEdicionActivo = !modoEdicionActivo;
             btnActivarEdicion.textContent = modoEdicionActivo ? "❌ Salir de Edición" : "Activar Edición";
-            btnActivarEdicion.className = modoEdicionActivo ? "bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-1 rounded font-bold" : "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold";
+            btnActivarEdicion.className = modoEdicionActivo ? "bg-red-600 hover:bg-red-700 text-white text-[10px] px-2.5 py-1.5 rounded font-bold" : "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2.5 py-1.5 rounded font-bold";
             btnGuardarCoordenadas.classList.toggle('hidden', !modoEdicionActivo);
             redibujarOverlay();
         });
@@ -329,7 +329,6 @@
 
                 const cajaVisual = document.createElement('div');
                 
-                // CONDICIONAL CLAVE: Si el modo edición está activo, permite interacción y se muestra rojo; si no, está bloqueado (pointer-events-none)
                 if (modoEdicionActivo) {
                     cajaVisual.className = "absolute overflow-hidden px-1 font-sans text-black z-10 border-2 border-red-500 bg-red-100/70 draggable-box cursor-move pointer-events-auto shadow-md";
                 } else {
@@ -356,7 +355,6 @@
                 const contenidoVisual = textoAsignado ? textoAsignado : `<span class="text-gray-400 italic">[${campo}]</span>`;
                 cajaVisual.innerHTML = `<span class="text-[6px] font-bold text-red-900 block mb-0.5 sticky top-0 bg-red-100/90 px-0.5">${campo}</span><div class="pointer-events-none text-[5px] leading-tight">${contenidoVisual}</div>`;
 
-                // LOS EVENTOS DE EDICIÓN SOLO SE AÑADEN SI EL MODO EDICIÓN ESTÁ ACTIVO
                 if (modoEdicionActivo) {
                     let isDragging = false;
                     let startX, startY, initialLeft, initialTop;
@@ -434,7 +432,7 @@
                 if (response.ok) {
                     modoEdicionActivo = false;
                     btnActivarEdicion.textContent = "Activar Edición";
-                    btnActivarEdicion.className = "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2 py-1 rounded font-bold";
+                    btnActivarEdicion.className = "bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2.5 py-1.5 rounded font-bold";
                     btnGuardarCoordenadas.classList.add('hidden');
                     redibujarOverlay();
                     estadoInfo.textContent = "💾 ¡Coordenadas guardadas correctamente en Supabase!";
