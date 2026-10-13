@@ -7,6 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <style>
+        .caja { touch-action: none; cursor: move; }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-3">
     <div class="max-w-7xl mx-auto space-y-3">
@@ -49,7 +52,7 @@
                 </div>
 
                 <div id="estadoModo" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-1.5 rounded border text-center">
-                    📌 Toca 2 puntos en el PDF para el campo activo.
+                    📌 Toca 2 puntos en el PDF o arrastra las cajas existentes.
                 </div>
 
                 <!-- Ajuste Fino (Posición & Tamaño) -->
@@ -114,6 +117,7 @@
 
         const $ = id => document.getElementById(id);
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
+        let isDragging = false, dragCampo = null, startX = 0, startY = 0;
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
@@ -161,7 +165,7 @@
         }
 
         $('canvasContainer').onclick = (e) => {
-            if (!pdfDoc || e.target.classList.contains('caja')) return;
+            if (!pdfDoc || isDragging || e.target.classList.contains('caja')) return;
             const r = $('pdfCanvas').getBoundingClientRect();
             const x = e.clientX - r.left, y = e.clientY - r.top;
 
@@ -180,9 +184,48 @@
                     redibujar();
                 }
                 primerPunto = null;
-                $('estadoModo').textContent = `📌 Listo. Mapeando: "${campoActivo}". Toca 2 puntos.`;
+                $('estadoModo').textContent = `📌 Listo. Mapeando: "${campoActivo}". Toca 2 puntos o arrastra cajas.`;
             }
         };
+
+        // Lógica de Arrastrar y Soltar (Drag & Drop) sobre las cajas
+        window.iniciarArrastre = (e, k) => {
+            e.stopPropagation();
+            isDragging = true;
+            dragCampo = k;
+            window.selCampo(k);
+            const r = $('pdfCanvas').getBoundingClientRect();
+            startX = e.clientX - r.left;
+            startY = e.clientY - r.top;
+        };
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging || !dragCampo) return;
+            const r = $('pdfCanvas').getBoundingClientRect();
+            const currentX = e.clientX - r.left;
+            const currentY = e.clientY - r.top;
+
+            const dx = (currentX - startX) / scale;
+            const dy = -(currentY - startY) / scale; // Invertido por el eje Y de PDF.js
+
+            startX = currentX;
+            startY = currentY;
+
+            const b = coordenadasMap[dragCampo];
+            if (b) {
+                b.x1 = +(b.x1 + dx).toFixed(1);
+                b.x2 = +(b.x2 + dx).toFixed(1);
+                b.y1 = +(b.y1 + dy).toFixed(1);
+                b.y2 = +(b.y2 + dy).toFixed(1);
+                actualizarUI();
+                redibujar();
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            isDragging = false;
+            dragCampo = null;
+        });
 
         window.mover = (dx, dy) => {
             if (!coordenadasMap[campoActivo]) return;
@@ -206,9 +249,7 @@
             $('inputNuevoNombreDuplicado').value = sigCampo();$('duplicateModal').classList.remove('hidden');
         };
 
-        window.cerrarModalDuplicar = () => {
-            $('duplicateModal').classList.add('hidden');
-        };
+        window.cerrarModalDuplicar = () => { $('duplicateModal').classList.add('hidden'); };
 
         window.confirmarDuplicar = () => {
             const nuevoNombre = $('inputNuevoNombreDuplicado').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -267,7 +308,7 @@
                 const l = b.x1 * scale, t = pageViewport.height - (b.y2 * scale);
                 const w = (b.x2 - b.x1) * scale, h = (b.y2 - b.y1) * scale;
                 const activo = k === campoActivo;
-                return `<div class="caja absolute rounded text-[9px] font-bold px-1 flex items-center justify-between ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.selCampo('${k}')">${k}</div>`;
+                return `<div class="caja absolute rounded text-[9px] font-bold px-1 flex items-center justify-between ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">${k}</div>`;
             }).join('');
         }
 
