@@ -154,7 +154,7 @@
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
         let columnasUsuariosCache = [];
-        let datosPreviewCache = { usuario: null, registros: [], activo: false };
+        let datosPreviewCache = { usuario: null, registros: [], activo: false, fechasDias: {} };
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
@@ -347,6 +347,20 @@
                     datosPreviewCache.registros = [];
                 }
                 
+                // Mapear dinámicamente cada fecha de lunes a viernes con su respectivo día en inglés y alemán
+                datosPreviewCache.fechasDias = {};
+                for (let i = 0; i < 5; i++) {
+                    const d = new Date(fechaLunes);
+                    d.setDate(fechaLunes.getDate() + i);
+                    const fechaStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    
+                    const diasAleman = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'][i];
+                    const diasIngles = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'][i];
+                    
+                    datosPreviewCache.fechasDias[diasAleman] = { fecha: fechaStr, ingles: diasIngles };
+                    datosPreviewCache.fechasDias[diasIngles] = { fecha: fechaStr, ingles: diasIngles };
+                }
+
                 datosPreviewCache.activo = true;
                 datosPreviewCache.rangoTexto = `👤 ${nombreUsuario} | 📅 ${fechaInicio} al ${fechaFin}`;
 
@@ -470,20 +484,8 @@
                 actualizarUI();
                 redibujar();
             } else if (['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].includes(valor)) {
-                let nombreDestino = valor;
-                if (coordenadasMap[nombreDestino] && nombreDestino !== k) {
-                    nombreDestino = `${valor}_${Date.now().toString().slice(-3)}`;
-                }
-                
-                const datos = coordenadasMap[k];
-                datos.tipo = 'dinamico';
-                delete coordenadasMap[k];
-                coordenadasMap[nombreDestino] = datos;
-
-                normalizarOrdenMapa();
-                if (campoActivo === k) campoActivo = nombreDestino;
-
-                actualizarSelects();
+                coordenadasMap[k].tipo = valor;
+                actualizarUI();
                 redibujar();
             } else {
                 coordenadasMap[k].tipo = 'libre';
@@ -553,7 +555,7 @@
             $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);
             
             const keysOrdenadas = obtenerKeysOrdenadas(coordenadasMap);
-            $('listaCoordenadas').innerHTML = keysOrdenadas.map(k => {
+            $('listaCoordenadas').innerHTML = keysOrdenadas.map((k, index) => {
                 const b = coordenadasMap[k];
                 const esActivo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
@@ -573,12 +575,12 @@
 
                         <div class="flex space-x-1" onclick="event.stopPropagation()">
                             <select class="w-full p-1 border rounded bg-gray-50 text-[10px] font-semibold text-gray-700" onchange="window.cambiarTipoCampo('${k}', this)">
-                                <option value="" ${tipoActual === 'libre' && !['montag','dienstag','mittwoch','donnerstag','freitag'].includes(k) ? 'selected' : ''}>-- Asignar rol / día opcional --</option>
-                                <option value="montag" ${k === 'montag' || tipoActual === 'montag' ? 'selected' : ''}>📅 Montag (Lunes)</option>
-                                <option value="dienstag" ${k === 'dienstag' || tipoActual === 'dienstag' ? 'selected' : ''}>📅 Dienstag (Martes)</option>
-                                <option value="mittwoch" ${k === 'mittwoch' || tipoActual === 'mittwoch' ? 'selected' : ''}>📅 Mittwoch (Miércoles)</option>
-                                <option value="donnerstag" ${k === 'donnerstag' || tipoActual === 'donnerstag' ? 'selected' : ''}>📅 Donnerstag (Jueves)</option>
-                                <option value="freitag" ${k === 'freitag' || tipoActual === 'freitag' ? 'selected' : ''}>📅 Freitag (Viernes)</option>
+                                <option value="" ${tipoActual === 'libre' ? 'selected' : ''}>-- Asignar rol / día opcional --</option>
+                                <option value="montag" ${tipoActual === 'montag' ? 'selected' : ''}>📅 Montag (Lunes)</option>
+                                <option value="dienstag" ${tipoActual === 'dienstag' ? 'selected' : ''}>📅 Dienstag (Martes)</option>
+                                <option value="mittwoch" ${tipoActual === 'mittwoch' ? 'selected' : ''}>📅 Mittwoch (Miércoles)</option>
+                                <option value="donnerstag" ${tipoActual === 'donnerstag' ? 'selected' : ''}>📅 Donnerstag (Jueves)</option>
+                                <option value="freitag" ${tipoActual === 'freitag' ? 'selected' : ''}>📅 Freitag (Viernes)</option>
                                 <option value="fijo" ${tipoActual === 'fijo' ? 'selected' : ''}>📌 Campo Fijo (Usuarios)</option>
                             </select>
                         </div>
@@ -600,6 +602,13 @@
 
         function redibujar() {
             if (!pageViewport) return;
+            
+            // Obtener todas las claves ordenadas de las cajas de días para asignarlas por índice si no tienen tipo explícito
+            const keysCajas = Object.keys(coordenadasMap).filter(k => {
+                const b = coordenadasMap[k];
+                return b.tipo !== 'fijo';
+            });
+
             $('drawingOverlay').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
                 const l = b.x1 * scale, t = pageViewport.height - (b.y2 * scale);
                 const w = (b.x2 - b.x1) * scale, h = (b.y2 - b.y1) * scale;
@@ -614,15 +623,26 @@
                         textoMostrado = datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
                         etiquetaFija = '';
                     } else {
-                        const diasMapeo = { 'montag': 'Monday', 'dienstag': 'Tuesday', 'mittwoch': 'Wednesday', 'donnerstag': 'Thursday', 'freitag': 'Friday' };
-                        const diaTargetIngles = diasMapeo[k] || diasMapeo[tipoActual];
+                        // Determinar el día correspondiente a esta caja:
+                        // 1. Por su tipo asignado explícitamente (montag, dienstag, etc.)
+                        // 2. Por el nombre de su clave (si contiene montag, dienstag, etc.)
+                        // 3. Por su posición en la lista (índice 0 = Lunes, 1 = Martes, etc.)
+                        const diasSecuencia = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
+                        let indexDia = diasSecuencia.indexOf(tipoActual);
+                        if (indexDia === -1) indexDia = diasSecuencia.findIndex(d => k.toLowerCase().includes(d));
+                        if (indexDia === -1) indexDia = keysCajas.indexOf(k);
 
-                        if (diaTargetIngles) {
-                            const registrosDelDia = datosPreviewCache.registros.filter(r => {
-                                if (!r.dia_semana) return false;
-                                return r.dia_semana.trim().toLowerCase() === diaTargetIngles.toLowerCase();
-                            });
-                            textoMostrado = registrosDelDia.length > 0 ? registrosDelDia.map(r => r.nombre_actividad || r.actividad || '').filter(Boolean).join(' • ') : '';
+                        if (indexDia >= 0 && indexDia < 5) {
+                            const infoDia = datosPreviewCache.fechasDias[diasSecuencia[indexDia]];
+                            if (infoDia) {
+                                const registrosDelDia = datosPreviewCache.registros.filter(r => {
+                                    if (!r.fecha) return false;
+                                    // Compara la fecha exacta (YYYY-MM-DD) del registro con la fecha calculada de la semana
+                                    const fechaReg = r.fecha.split('T')[0];
+                                    return fechaReg === infoDia.fecha;
+                                });
+                                textoMostrado = registrosDelDia.length > 0 ? registrosDelDia.map(r => r.nombre_actividad || r.actividad || '').filter(Boolean).join(' • ') : '';
+                            }
                         } else {
                             textoMostrado = '';
                         }
@@ -632,7 +652,7 @@
 
                 let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
                 if (tipoActual === 'fijo') estiloColor = 'border-amber-600 bg-amber-500/20 text-amber-900';
-                if (['montag','dienstag','mittwoch','donnerstag','freitag'].includes(k) || ['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
+                if (['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
                     estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
                 }
 
