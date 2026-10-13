@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Nombres Libres</title>
+    <title>Mapeador Compacto FOS - Orden Fijo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Nombres Libres y Selectores Opcionales</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Orden Fijo & Estable</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
@@ -204,7 +204,6 @@
 
                 if ((x2 - x1) > 3 && (y2 - y1) > 3) {
                     const previo = coordenadasMap[campoActivo] || {};
-                    // Se crea estrictamente con su nombre genérico y tipo libre por defecto (sin forzar días)
                     coordenadasMap[campoActivo] = { 
                         x1: +x1.toFixed(1), 
                         y1: +y1.toFixed(1), 
@@ -275,7 +274,7 @@
             actualizarUI(); redibujar();
         };
 
-        // Cambiar el tipo de campo u opcionalmente asignarle un día / campo fijo
+        // Cambiar el tipo de campo sin alterar el orden de los elementos
         window.cambiarTipoCampo = async (k, selectEl) => {
             const valor = selectEl.value;
             if (!coordenadasMap[k] || !valor) return;
@@ -293,13 +292,20 @@
                 if (coordenadasMap[nombreDestino] && nombreDestino !== k) {
                     nombreDestino = `${valor}_${Date.now().toString().slice(-3)}`;
                 }
-                coordenadasMap[k].tipo = 'dinamico';
                 
-                if (nombreDestino !== k) {
-                    coordenadasMap[nombreDestino] = coordenadasMap[k];
-                    delete coordenadasMap[k];
-                    if (campoActivo === k) campoActivo = nombreDestino;
+                // Reasignamos conservando exactamente la posición en el objeto
+                const nuevoMapa = {};
+                for (let key in coordenadasMap) {
+                    if (key === k) {
+                        nuevoMapa[nombreDestino] = coordenadasMap[k];
+                        nuevoMapa[nombreDestino].tipo = 'dinamico';
+                    } else {
+                        nuevoMapa[key] = coordenadasMap[key];
+                    }
                 }
+                coordenadasMap = nuevoMapa;
+                if (campoActivo === k) campoActivo = nombreDestino;
+
                 actualizarSelects();
                 redibujar();
             }
@@ -360,7 +366,9 @@
         };
 
         function actualizarUI() {
-            $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);$('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
+            $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);
+            // El mapeo respeta estrictamente el orden original de inserción (sin orden alfabético)
+            $('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
                 const esActivo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
                 const colSeleccionada = b.usuario_col || (columnasUsuariosCache[0] || 'nombre');
@@ -377,20 +385,19 @@
                             </div>
                         </div>
 
-                        <!-- Menú desplegable opcional: Inicia vacío o en su estado libre, sin forzar ningún día -->
+                        <!-- Selector Rápido: Mantiene la posición fija y estable al interactuar -->
                         <div class="flex space-x-1" onclick="event.stopPropagation()">
                             <select class="w-full p-1 border rounded bg-gray-50 text-[10px] font-semibold text-gray-700" onchange="window.cambiarTipoCampo('${k}', this)">
                                 <option value="" ${tipoActual === 'libre' ? 'selected' : ''}>-- Asignar rol / día opcional --</option>
-                                <option value="montag">📅 Montag (Lunes)</option>
-                                <option value="dienstag">📅 Dienstag (Martes)</option>
-                                <option value="mittwoch">📅 Mittwoch (Miércoles)</option>
-                                <option value="donnerstag">📅 Donnerstag (Jueves)</option>
-                                <option value="freitag">📅 Freitag (Viernes)</option>
+                                <option value="montag" ${k === 'montag' ? 'selected' : ''}>📅 Montag (Lunes)</option>
+                                <option value="dienstag" ${k === 'dienstag' ? 'selected' : ''}>📅 Dienstag (Martes)</option>
+                                <option value="mittwoch" ${k === 'mittwoch' ? 'selected' : ''}>📅 Mittwoch (Miércoles)</option>
+                                <option value="donnerstag" ${k === 'donnerstag' ? 'selected' : ''}>📅 Donnerstag (Jueves)</option>
+                                <option value="freitag" ${k === 'freitag' ? 'selected' : ''}>📅 Freitag (Viernes)</option>
                                 <option value="fijo" ${tipoActual === 'fijo' ? 'selected' : ''}>📌 Campo Fijo (Usuarios)</option>
                             </select>
                         </div>
 
-                        <!-- Si el usuario selecciona que es Campo Fijo, muestra el selector de la tabla usuarios -->
                         ${tipoActual === 'fijo' ? `
                             <div class="pt-0.5" onclick="event.stopPropagation()">
                                 <select class="w-full p-1 border border-amber-300 rounded bg-amber-50 text-[10px] font-semibold text-amber-900 focus:outline-none" onchange="window.actualizarColumnaUsuario('${k}', this)">
