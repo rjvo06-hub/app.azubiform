@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Vista Previa Automática</title>
+    <title>Mapeador Compacto FOS - Orden Estricto Secuencial con Vista Previa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,9 +18,10 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Vista Previa Automática</h1>
-            <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Orden Estricto Secuencial</h1>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-between flex-wrap gap-1">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
+                <button id="btnAbrirPreview" class="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow hidden">👁️ Previsualizar Datos</button>
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
             </div>
         </div>
@@ -43,7 +44,7 @@
                     <select id="selectPlantillas" class="w-full p-1 border rounded bg-white text-[11px]">
                         <option value="">-- Cargar guardada --</option>
                     </select>
-                    <button id="btnCargar" class="bg-indigo-600 text-white px-2 rounded" title="Cargar y Previsualizar">📥</button>
+                    <button id="btnCargar" class="bg-indigo-600 text-white px-2 rounded">📥</button>
                 </div>
 
                 <!-- Campo Activo -->
@@ -113,11 +114,11 @@
         </div>
     </div>
 
-    <!-- Modal de Selección de Usuario y Rango de Fechas -->
+    <!-- Modal para Configurar Vista Previa (Usuario y Rango de Semana) -->
     <div id="previewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-sm space-y-3 text-xs">
-            <h3 class="text-xs font-bold text-indigo-900 uppercase">🔍 Vista Previa Automática</h3>
-            <p class="text-gray-600">Selecciona el usuario y el rango de fechas para rellenar los campos de la plantilla:</p>
+            <h3 class="text-xs font-bold text-indigo-900 uppercase">👁️ Vista Previa de Datos</h3>
+            <p class="text-gray-600">Selecciona el usuario y el rango de la semana para comprobar cómo se rellenarán los campos:</p>
             
             <div class="space-y-2">
                 <div>
@@ -128,11 +129,11 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="font-semibold text-gray-700 block">Fecha Inicio:</label>
+                        <label class="font-semibold text-gray-700 block">Fecha Inicio (Semana):</label>
                         <input type="date" id="inputFechaInicio" class="w-full p-1.5 border rounded bg-white text-xs">
                     </div>
                     <div>
-                        <label class="font-semibold text-gray-700 block">Fecha Fin:</label>
+                        <label class="font-semibold text-gray-700 block">Fecha Fin (Semana):</label>
                         <input type="date" id="inputFechaFin" class="w-full p-1.5 border rounded bg-white text-xs">
                     </div>
                 </div>
@@ -140,7 +141,7 @@
 
             <div class="flex justify-end space-x-2 pt-2">
                 <button onclick="cerrarModalPreview()" class="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded">Cancelar</button>
-                <button onclick="ejecutarVistaPreviaDatos()" class="px-3 py-1.5 bg-indigo-600 text-white font-bold rounded">Visualizar Datos</button>
+                <button onclick="ejecutarVistaPrevia()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded">Aplicar Vista Previa</button>
             </div>
         </div>
     </div>
@@ -156,6 +157,7 @@
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
+        // Función clave para ordenar estrictamente: primero los campo_N y luego los días en orden lógico de semana
         function obtenerKeysOrdenadas(mapa) {
             const ordenDias = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
             const keys = Object.keys(mapa);
@@ -166,24 +168,28 @@
                 const aEsDia = ordenDias.includes(a);
                 const bEsDia = ordenDias.includes(b);
 
+                // Si ambos son campo_N, se ordenan numéricamente por su número
                 if (aEsCampo && bEsCampo) {
                     const numA = parseInt(a.replace('campo_', '')) || 0;
                     const numB = parseInt(b.replace('campo_', '')) || 0;
                     return numA - numB;
                 }
+                // Los campo_ siempre van primero que los días u otros nombres
                 if (aEsCampo) return -1;
                 if (bEsCampo) return 1;
 
+                // Si ambos son días de la semana, se ordenan según el orden cronológico alemán
                 if (aEsDia && bEsDia) {
                     return ordenDias.indexOf(a) - ordenDias.indexOf(b);
                 }
-                if (aEsDia) return 1;
+                if (aEsDia) return 1; // Los días van después de los campo_N
                 if (bEsDia) return -1;
 
                 return a.localeCompare(b);
             });
         }
 
+        // Reorganiza físicamente el objeto coordenadasMap respetando el orden estricto
         function normalizarOrdenMapa() {
             const keysOrdenadas = obtenerKeysOrdenadas(coordenadasMap);
             const nuevoMapa = {};
@@ -221,17 +227,15 @@
             } catch (e) { console.error(e); }
         }
 
-        async function poblarSelectUsuariosModal() {
+        async function poblarUsuariosSelect() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers: { ...headers, 'Range': '0-999' } });
                 if (res.ok) {
                     const data = await res.json();
-                    const campoNombreKey = columnasUsuariosCache.includes('nombre') ? 'nombre' : (columnasUsuariosCache[1] || columnasUsuariosCache[0]);
-                    $('selectPreviewUsuario').innerHTML = '<option value="">-- Seleccionar Usuario --</option>' + data.map(u => `<option value="${u.id || u[columnasUsuariosCache[0]]}">${u[campoNombreKey] || u.email || 'Usuario ' + u.id}</option>`).join('');
+                    const colNombre = columnasUsuariosCache.includes('nombre') ? 'nombre' : (columnasUsuariosCache[1] || columnasUsuariosCache[0]);
+                    $('selectPreviewUsuario').innerHTML = '<option value="">-- Seleccionar Usuario --</option>' + data.map(u => `<option value="${u.id || u[columnasUsuariosCache[0]]}">${u[colNombre] || u.email || 'Usuario ' + u.id}</option>`).join('');
                 }
-            } catch (e) {
-                console.error("Error cargando usuarios para preview:", e);
-            }
+            } catch (e) { console.error("Error cargando usuarios:", e); }
         }
 
         (async () => {
@@ -242,7 +246,6 @@
         $('btnCargar').onclick = async () => {
             const id = $('selectPlantillas').value;
             if (!id) return alert("Selecciona una plantilla.");
-            
             const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(id)}&select=*`, { headers: { ...headers, 'Range': '0-999' } });
             if (res.ok) {
                 const data = await res.json();
@@ -253,17 +256,29 @@
                     escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
                     actualizarSelects();
                     if (pdfDoc) redibujar();
-                    
-                    // Abrir modal para elegir usuario y rango de semana
-                    await poblarSelectUsuariosModal();
-                    $('previewModal').classList.remove('hidden');
+                    $('btnAbrirPreview').classList.remove('hidden');
+                    alert(`✅ Plantilla cargada.`);
                 }
             }
         };
 
+        $('pdfFile').onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            pdfDoc = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+            renderPage(1);
+            $('btnAbrirPreview').classList.remove('hidden');
+        };
+
+        // Eventos para abrir el modal de previsualización después de tener el archivo y coordenadas listas
+        $('btnAbrirPreview').onclick = async () => {
+            await poblarUsuariosSelect();
+            $('previewModal').classList.remove('hidden');
+        };
+
         window.cerrarModalPreview = () => { $('previewModal').classList.add('hidden'); };
 
-        window.ejecutarVistaPreviaDatos = async () => {
+        window.ejecutarVistaPrevia = async () => {
             const userId = $('selectPreviewUsuario').value;
             const fechaInicio = $('inputFechaInicio').value;
             const fechaFin = $('inputFechaFin').value;
@@ -271,12 +286,12 @@
             if (!userId) return alert("Por favor selecciona un usuario.");
 
             try {
-                // 1. Obtener datos del usuario
+                // 1. Obtener datos del usuario seleccionado
                 const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(id.eq.${userId},nombre.eq.${encodeURIComponent(userId)})&limit=1`, { headers });
                 const userData = resUser.ok ? await resUser.json() : [];
                 datosPreviewCache.usuario = userData.length ? userData[0] : {};
 
-                // 2. Obtener registros diarios en el rango si se especificaron fechas
+                // 2. Obtener registros de la tabla registro_diario dentro del rango semanal
                 let queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?user_id=eq.${userId}`;
                 if (fechaInicio && fechaFin) {
                     queryReg += `&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}`;
@@ -286,18 +301,11 @@
 
                 cerrarModalPreview();
                 redibujar();
-                alert("✅ Vista previa cargada con éxito en el PDF.");
+                alert("✅ Vista previa aplicada con éxito en las cajas.");
             } catch (e) {
-                console.error("Error al obtener datos para vista previa:", e);
+                console.error("Error al consultar datos para vista previa:", e);
                 alert("❌ Error al consultar la base de datos.");
             }
-        };
-
-        $('pdfFile').onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            pdfDoc = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
-            renderPage(1);
         };
 
         async function renderPage(num) {
@@ -531,34 +539,32 @@
         window.selCampo = (k) => { campoActivo = k; $('campoSelect').value = k; primerPunto = null; actualizarUI(); redibujar(); };
         window.delCampo = (k) => { delete coordenadasMap[k]; actualizarSelects(); redibujar(); };
 
-        function obtenerTextoPreviewParaCampo(k, b) {
+        function obtenerTextoPreview(k, b) {
             const tipoActual = b.tipo || 'libre';
             
-            // Si es un campo fijo, busca en el objeto del usuario cargado
+            // Si es un campo fijo, busca en el usuario cargado
             if (tipoActual === 'fijo' && b.usuario_col) {
                 return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : `[${b.usuario_col}]`;
             }
             
-            // Si es un día de la semana, busca en los registros diarios la actividad correspondiente
+            // Si es un día de la semana, busca en registro_diario
             const diasMapeo = { 'montag': 1, 'dienstag': 2, 'mittwoch': 3, 'donnerstag': 4, 'freitag': 5 };
             if (diasMapeo[k] || ['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
                 const diaBusqueda = diasMapeo[k] || diasMapeo[tipoActual];
-                // Intentamos matchear por día de la semana de la fecha o por orden de registro
                 const regEncontrado = datosPreviewCache.registros.find(r => {
                     if (r.dia_semana === diaBusqueda || r.dia === diaBusqueda) return true;
                     if (r.fecha) {
-                        const d = new Date(r.fecha).getDay(); // 1=Lunes, etc.
+                        const d = new Date(r.fecha).getDay();
                         if (d === diaBusqueda) return true;
                     }
                     return false;
-                }) || datosPreviewCache.registros[diasMapeo[k] - 1]; // fallback posicional
+                }) || datosPreviewCache.registros[diasMapeo[k] - 1];
 
                 if (regEncontrado) {
                     return regEncontrado.actividad || regEncontrado.descripcion || regEncontrado.texto || JSON.stringify(regEncontrado);
                 }
                 return `(Sin actividad)`;
             }
-
             return '';
         }
 
@@ -570,8 +576,7 @@
                 const activo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
                 
-                // Obtenemos el texto de vista previa si hay datos cargados
-                const textoPreview = obtenerTextoPreviewParaCampo(k, b);
+                const textoPreview = obtenerTextoPreview(k, b);
                 const etiquetaTexto = textoPreview ? `: ${textoPreview}` : '';
                 const etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
 
