@@ -224,7 +224,6 @@
 
         async function poblarUsuariosSelect() {
             try {
-                // Obtenemos los nombres únicos de usuarios directamente de la tabla registro_diario o de usuarios
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers: { ...headers, 'Range': '0-999' } });
                 if (res.ok) {
                     const data = await res.json();
@@ -538,9 +537,9 @@
         function obtenerTextoPreview(k, b) {
             const tipoActual = b.tipo || 'libre';
             
-            // 1. Si es campo fijo, busca en el usuario cargado
+            // 1. Si es campo fijo, devuelve únicamente el valor del usuario sin prefijos
             if (tipoActual === 'fijo' && b.usuario_col) {
-                return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : `[${b.usuario_col}]`;
+                return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
             }
             
             // 2. Si es día de la semana, agrupa todas las actividades coincidentes
@@ -563,7 +562,7 @@
                 if (registrosDelDia.length > 0) {
                     return registrosDelDia.map(r => r.nombre_actividad).join(' • ');
                 }
-                return `(Sin actividad)`;
+                return ''; // Oculta texto si no hay actividades
             }
             return '';
         }
@@ -576,16 +575,15 @@
                 const activo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
                 
+                // Obtenemos puramente el texto de los datos (sin mostrar nombres de campos)
                 const textoPreview = obtenerTextoPreview(k, b);
-                const etiquetaTexto = textoPreview ? `: ${textoPreview}` : '';
-                const etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
 
                 let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
                 if (tipoActual === 'fijo') estiloColor = 'border-amber-600 bg-amber-500/20 text-amber-900';
                 if (['montag','dienstag','mittwoch','donnerstag','freitag'].includes(k)) estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
 
                 return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto overflow-hidden ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
-                    <span class="truncate">${k}${etiquetaFija}${etiquetaTexto}</span>
+                    <span class="truncate">${textoPreview}</span>
                     ${tipoActual === 'fijo' ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
                 </div>`;
             }).join('');
