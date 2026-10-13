@@ -154,7 +154,7 @@
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
         let columnasUsuariosCache = [];
-        let datosPreviewCache = { usuario: null, registros: [], activo: false, fechasDias: {} };
+        let datosPreviewCache = { usuario: null, registros: [], activo: false, fechasDias: {}, fechaInicioStr: '', fechaFinStr: '', anioStr: '' };
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
@@ -298,10 +298,10 @@
             const fechaViernes = new Date(fechaLunes);
             fechaViernes.setDate(fechaLunes.getDate() + 4);
 
-            const fInicioStr = `${fechaLunes.getFullYear()}-${String(fechaLunes.getMonth() + 1).padStart(2, '0')}-${String(fechaLunes.getDate()).padStart(2, '0')}`;
-            const fFinStr = `${fechaViernes.getFullYear()}-${String(fechaViernes.getMonth() + 1).padStart(2, '0')}-${String(fechaViernes.getDate()).padStart(2, '0')}`;
+            const fInicioStr = `${fechaLunes.getDate()}/${fechaLunes.getMonth() + 1}`;
+            const fFinStr = `${fechaViernes.getDate()}/${fechaViernes.getMonth() + 1}`;
 
-            $('lblRangoMostrado').textContent = `${fInicioStr} al ${fFinStr} (Lun - Vie)`;
+            $('lblRangoMostrado').textContent = `${fInicioStr} al ${fFinStr} (${fechaLunes.getFullYear()})`;
             $('rangoCalculadoInfo').classList.remove('hidden');
         };
 
@@ -322,8 +322,8 @@
             const fechaViernes = new Date(fechaLunes);
             fechaViernes.setDate(fechaLunes.getDate() + 4);
 
-            const fechaInicio = `${fechaLunes.getFullYear()}-${String(fechaLunes.getMonth() + 1).padStart(2, '0')}-${String(fechaLunes.getDate()).padStart(2, '0')}`;
-            const fechaFin = `${fechaViernes.getFullYear()}-${String(fechaViernes.getMonth() + 1).padStart(2, '0')}-${String(fechaViernes.getDate()).padStart(2, '0')}`;
+            const fechaInicioISO = `${fechaLunes.getFullYear()}-${String(fechaLunes.getMonth() + 1).padStart(2, '0')}-${String(fechaLunes.getDate()).padStart(2, '0')}`;
+            const fechaFinISO = `${fechaViernes.getFullYear()}-${String(fechaViernes.getMonth() + 1).padStart(2, '0')}-${String(fechaViernes.getDate()).padStart(2, '0')}`;
 
             try {
                 const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuario)}&limit=1`, { headers });
@@ -337,7 +337,7 @@
                     datosPreviewCache.usuario = userData[0];
                 }
 
-                const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}&select=*`;
+                const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicioISO}&fecha=lte.${fechaFinISO}&select=*`;
                 const resReg = await fetch(queryReg, { headers });
                 
                 if (resReg.ok) {
@@ -347,22 +347,22 @@
                     datosPreviewCache.registros = [];
                 }
                 
-                // Mapear dinámicamente cada fecha de lunes a viernes con su respectivo día en inglés y alemán
+                // Formatos solicitados: Día/Mes (ej. 7/9) y Año de 2 dígitos (ej. 26)
+                datosPreviewCache.fechaInicioStr = `${fechaLunes.getDate()}/${fechaLunes.getMonth() + 1}`;
+                datosPreviewCache.fechaFinStr = `${fechaViernes.getDate()}/${fechaViernes.getMonth() + 1}`;
+                datosPreviewCache.anioStr = String(fechaLunes.getFullYear()).slice(-2);
+
                 datosPreviewCache.fechasDias = {};
                 for (let i = 0; i < 5; i++) {
                     const d = new Date(fechaLunes);
                     d.setDate(fechaLunes.getDate() + i);
                     const fechaStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                    
                     const diasAleman = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'][i];
-                    const diasIngles = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'][i];
-                    
-                    datosPreviewCache.fechasDias[diasAleman] = { fecha: fechaStr, ingles: diasIngles };
-                    datosPreviewCache.fechasDias[diasIngles] = { fecha: fechaStr, ingles: diasIngles };
+                    datosPreviewCache.fechasDias[diasAleman] = { fecha: fechaStr };
                 }
 
                 datosPreviewCache.activo = true;
-                datosPreviewCache.rangoTexto = `👤 ${nombreUsuario} | 📅 ${fechaInicio} al ${fechaFin}`;
+                datosPreviewCache.rangoTexto = `👤 ${nombreUsuario} | 📅 ${datosPreviewCache.fechaInicioStr} al ${datosPreviewCache.fechaFinStr}/${datosPreviewCache.anioStr}`;
 
                 $('infoBarraEstado').textContent = datosPreviewCache.rangoTexto;
                 $('infoBarraEstado').classList.remove('hidden');
@@ -483,7 +483,7 @@
                 }
                 actualizarUI();
                 redibujar();
-            } else if (['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].includes(valor)) {
+            } else if (['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'woche_von', 'woche_bis', 'anno'].includes(valor)) {
                 coordenadasMap[k].tipo = valor;
                 actualizarUI();
                 redibujar();
@@ -555,7 +555,7 @@
             $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);
             
             const keysOrdenadas = obtenerKeysOrdenadas(coordenadasMap);
-            $('listaCoordenadas').innerHTML = keysOrdenadas.map((k, index) => {
+            $('listaCoordenadas').innerHTML = keysOrdenadas.map((k) => {
                 const b = coordenadasMap[k];
                 const esActivo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
@@ -575,12 +575,15 @@
 
                         <div class="flex space-x-1" onclick="event.stopPropagation()">
                             <select class="w-full p-1 border rounded bg-gray-50 text-[10px] font-semibold text-gray-700" onchange="window.cambiarTipoCampo('${k}', this)">
-                                <option value="" ${tipoActual === 'libre' ? 'selected' : ''}>-- Asignar rol / día opcional --</option>
-                                <option value="montag" ${tipoActual === 'montag' ? 'selected' : ''}>📅 Montag (Lunes)</option>
-                                <option value="dienstag" ${tipoActual === 'dienstag' ? 'selected' : ''}>📅 Dienstag (Martes)</option>
-                                <option value="mittwoch" ${tipoActual === 'mittwoch' ? 'selected' : ''}>📅 Mittwoch (Miércoles)</option>
-                                <option value="donnerstag" ${tipoActual === 'donnerstag' ? 'selected' : ''}>📅 Donnerstag (Jueves)</option>
-                                <option value="freitag" ${tipoActual === 'freitag' ? 'selected' : ''}>📅 Freitag (Viernes)</option>
+                                <option value="" ${tipoActual === 'libre' ? 'selected' : ''}>-- Asignar rol / campo opcional --</option>
+                                <option value="woche_von" ${tipoActual === 'woche_von' ? 'selected' : ''}>📅 Fecha Inicio (Woche von - Ej: 7/9)</option>
+                                <option value="woche_bis" ${tipoActual === 'woche_bis' ? 'selected' : ''}>📅 Fecha Fin (bis - Ej: 11/9)</option>
+                                <option value="anno" ${tipoActual === 'anno' ? 'selected' : ''}>📅 Año 2 Dígitos (Ej: 26)</option>
+                                <option value="montag" ${tipoActual === 'montag' ? 'selected' : ''}>🟢 Montag (Lunes)</option>
+                                <option value="dienstag" ${tipoActual === 'dienstag' ? 'selected' : ''}>🟢 Dienstag (Martes)</option>
+                                <option value="mittwoch" ${tipoActual === 'mittwoch' ? 'selected' : ''}>🟢 Mittwoch (Miércoles)</option>
+                                <option value="donnerstag" ${tipoActual === 'donnerstag' ? 'selected' : ''}>🟢 Donnerstag (Jueves)</option>
+                                <option value="freitag" ${tipoActual === 'freitag' ? 'selected' : ''}>🟢 Freitag (Viernes)</option>
                                 <option value="fijo" ${tipoActual === 'fijo' ? 'selected' : ''}>📌 Campo Fijo (Usuarios)</option>
                             </select>
                         </div>
@@ -603,10 +606,9 @@
         function redibujar() {
             if (!pageViewport) return;
             
-            // Obtener todas las claves ordenadas de las cajas de días para asignarlas por índice si no tienen tipo explícito
-            const keysCajas = Object.keys(coordenadasMap).filter(k => {
+            const keysCajasDias = Object.keys(coordenadasMap).filter(k => {
                 const b = coordenadasMap[k];
-                return b.tipo !== 'fijo';
+                return b.tipo !== 'fijo' && !['woche_von', 'woche_bis', 'anno'].includes(b.tipo);
             });
 
             $('drawingOverlay').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
@@ -622,22 +624,25 @@
                     if (tipoActual === 'fijo' && b.usuario_col) {
                         textoMostrado = datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
                         etiquetaFija = '';
+                    } else if (tipoActual === 'woche_von') {
+                        textoMostrado = datosPreviewCache.fechaInicioStr;
+                        etiquetaFija = '';
+                    } else if (tipoActual === 'woche_bis') {
+                        textoMostrado = datosPreviewCache.fechaFinStr;
+                        etiquetaFija = '';
+                    } else if (tipoActual === 'anno') {
+                        textoMostrado = datosPreviewCache.anioStr;
+                        etiquetaFija = '';
                     } else {
-                        // Determinar el día correspondiente a esta caja:
-                        // 1. Por su tipo asignado explícitamente (montag, dienstag, etc.)
-                        // 2. Por el nombre de su clave (si contiene montag, dienstag, etc.)
-                        // 3. Por su posición en la lista (índice 0 = Lunes, 1 = Martes, etc.)
                         const diasSecuencia = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
                         let indexDia = diasSecuencia.indexOf(tipoActual);
-                        if (indexDia === -1) indexDia = diasSecuencia.findIndex(d => k.toLowerCase().includes(d));
-                        if (indexDia === -1) indexDia = keysCajas.indexOf(k);
+                        if (indexDia === -1) indexDia = keysCajasDias.indexOf(k);
 
                         if (indexDia >= 0 && indexDia < 5) {
                             const infoDia = datosPreviewCache.fechasDias[diasSecuencia[indexDia]];
                             if (infoDia) {
                                 const registrosDelDia = datosPreviewCache.registros.filter(r => {
                                     if (!r.fecha) return false;
-                                    // Compara la fecha exacta (YYYY-MM-DD) del registro con la fecha calculada de la semana
                                     const fechaReg = r.fecha.split('T')[0];
                                     return fechaReg === infoDia.fecha;
                                 });
@@ -652,6 +657,7 @@
 
                 let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
                 if (tipoActual === 'fijo') estiloColor = 'border-amber-600 bg-amber-500/20 text-amber-900';
+                if (['woche_von', 'woche_bis', 'anno'].includes(tipoActual)) estiloColor = 'border-blue-600 bg-blue-500/20 text-blue-900';
                 if (['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
                     estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
                 }
