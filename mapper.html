@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS con Consulta Dinámica DB</title>
+    <title>Mapeador Compacto FOS con Selector Rápido</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Consulta en Vivo de Usuarios</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Selector Rápido de Días y Fijos</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
@@ -90,8 +90,8 @@
                 </div>
 
                 <!-- Lista de Coordenadas -->
-                <div class="h-40 overflow-y-auto border rounded p-1.5 space-y-2 bg-gray-50 text-[11px]" id="listaCoordenadas">
-                    <p class="text-gray-400 text-center mt-8">Sin coordenadas aún.</p>
+                <div class="h-48 overflow-y-auto border rounded p-1.5 space-y-2 bg-gray-50 text-[11px]" id="listaCoordenadas">
+                    <p class="text-gray-400 text-center mt-10">Sin coordenadas aún.</p>
                 </div>
 
                 <!-- JSON -->
@@ -119,21 +119,18 @@
         const $ = id => document.getElementById(id);
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
-        let columnasUsuariosCache = []; // Caché temporal para optimizar
+        let columnasUsuariosCache = [];
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
-        // Función que consulta en tiempo real las columnas de la tabla 'usuarios' en Supabase
         async function obtenerColumnasUsuariosEnVivo() {
             try {
-                // Consultamos 1 registro para extraer las llaves/columnas vigentes en tiempo real
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?limit=1`, { headers: { ...headers, 'Range': '0-0' } });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.length > 0) {
                         columnasUsuariosCache = Object.keys(data[0]);
                     } else {
-                        // Fallback si la tabla está vacía temporalmente
                         columnasUsuariosCache = ["nombre", "email", "class", "teacher", "workplace", "ausbildung", "adresse"];
                     }
                 }
@@ -153,8 +150,7 @@
                 }
             } catch (e) { console.error(e); }
         }
-        
-        // Inicialización al cargar la página
+
         (async () => {
             await obtenerColumnasUsuariosEnVivo();
             cargarPlantillas();
@@ -213,7 +209,7 @@
                         y1: +y1.toFixed(1), 
                         x2: +x2.toFixed(1), 
                         y2: +y2.toFixed(1),
-                        is_fijo: previo.is_fijo || false,
+                        tipo: previo.tipo || 'dinamico', // dinamico (ej. dias), fijo (tabla usuarios), o campo libre
                         usuario_col: previo.usuario_col || (columnasUsuariosCache[0] || 'nombre')
                     };
                     campoActivo = sigCampo();
@@ -278,20 +274,55 @@
             actualizarUI(); redibujar();
         };
 
-        // Al hacer clic en el Pin 📌, consulta en vivo la tabla usuarios antes de mostrar/actualizar
-        window.toggleFijo = async (k) => {
-            if (coordenadasMap[k]) {
-                coordenadasMap[k].is_fijo = !coordenadasMap[k].is_fijo;
-                if (coordenadasMap[k].is_fijo) {
-                    // Consulta en tiempo real por si hay datos nuevos
-                    await obtenerColumnasUsuariosEnVivo();
-                    if (!coordenadasMap[k].usuario_col) {
-                        coordenadasMap[k].usuario_col = columnasUsuariosCache[0] || 'nombre';
-                    }
-                }
+        // Cambiar nombre del campo (ej. de campo_5 a lunes, o campo_1 a nombre)
+        window.cambiarNombreCampo = (viejoNombre, nuevoNombre) => {
+            nuevoNombre = nuevoNombre.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+            if (!nuevoNombre || nuevoNombre === viejoNombre) return;
+            if (coordenadasMap[nuevoNombre]) {
+                alert("Este nombre ya existe.");
                 actualizarUI();
-                redibujar();
+                return;
             }
+
+            coordenadasMap[nuevoNombre] = coordenadasMap[viejoNombre];
+            delete coordenadasMap[viejoNombre];
+
+            if (campoActivo === viejoNombre) campoActivo = nuevoNombre;
+
+            actualizarSelects();
+            redibujar();
+        };
+
+        // Cambiar entre tipo de campo: Dinámico (Días), Fijo (Tabla Usuarios) u Otro
+        window.cambiarTipoCampo = async (k, selectEl) => {
+            const valor = selectEl.value;
+            if (!coordenadasMap[k]) return;
+
+            if (valor === 'fijo') {
+                coordenadasMap[k].tipo = 'fijo';
+                await obtenerColumnasUsuariosEnVivo();
+                if (!coordenadasMap[k].usuario_col) {
+                    coordenadasMap[k].usuario_col = columnasUsuariosCache[0] || 'nombre';
+                }
+            } else if (['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].includes(valor)) {
+                // Renombrar automáticamente al día seleccionado si está disponible
+                let nombreDestino = valor;
+                if (coordenadasMap[nombreDestino] && nombreDestino !== k) {
+                    nombreDestino = `${valor}_${Date.now().toString().slice(-3)}`;
+                }
+                coordenadasMap[k].tipo = 'dinamico';
+                
+                if (nombreDestino !== k) {
+                    coordenadasMap[nombreDestino] = coordenadasMap[k];
+                    delete coordenadasMap[k];
+                    if (campoActivo === k) campoActivo = nombreDestino;
+                }
+            } else {
+                coordenadasMap[k].tipo = 'libre';
+            }
+
+            actualizarSelects();
+            redibujar();
         };
 
         window.actualizarColumnaUsuario = (k, selectEl) => {
@@ -322,7 +353,7 @@
                 y1: bOrig.y1,
                 x2: +(bOrig.x2 + offset).toFixed(1),
                 y2: bOrig.y2,
-                is_fijo: bOrig.is_fijo || false,
+                tipo: bOrig.tipo || 'dinamico',
                 usuario_col: bOrig.usuario_col || (columnasUsuariosCache[0] || 'nombre')
             };
 
@@ -351,33 +382,45 @@
         function actualizarUI() {
             $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);$('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
                 const esActivo = k === campoActivo;
-                const esFijo = b.is_fijo || false;
+                const tipoActual = b.tipo || 'dinamico';
                 const colSeleccionada = b.usuario_col || (columnasUsuariosCache[0] || 'nombre');
 
-                const optionsHTML = columnasUsuariosCache.map(col => `<option value="${col}" ${col === colSeleccionada ? 'selected' : ''}>usuarios.${col}</option>`).join('');
+                const optionsUsuariosHTML = columnasUsuariosCache.map(col => `<option value="${col}" ${col === colSeleccionada ? 'selected' : ''}>usuarios.${col}</option>`).join('');
 
                 return `
-                    <div class="p-2 rounded border space-y-1.5 ${esActivo ? 'bg-indigo-50 border-indigo-500 font-bold' : 'bg-white'}" onclick="window.selCampo('${k}')">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center space-x-1.5 overflow-hidden">
-                                <button onclick="event.stopPropagation(); window.toggleFijo('${k}')" class="px-1.5 py-0.5 rounded text-[10px] ${esFijo ? 'bg-amber-100 text-amber-800 border border-amber-300 font-bold' : 'bg-gray-100 text-gray-400'}" title="${esFijo ? 'Campo Fijo DB (Activo)' : 'Marcar como Campo Fijo DB'}">📌</button>
-                                <span class="truncate" title="${k}">${k}</span>
-                            </div>
+                    <div class="p-2 rounded border space-y-1.5 ${esActivo ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500' : 'bg-white'}" onclick="window.selCampo('${k}')">
+                        <div class="flex justify-between items-center gap-1">
+                            <span class="font-bold text-indigo-900 truncate" title="${k}">${k}</span>
                             <div class="flex items-center space-x-1 shrink-0">
                                 <button onclick="event.stopPropagation(); window.abrirModalDuplicar('${k}')" class="text-blue-600 font-bold px-1" title="Duplicar">📋</button>
                                 <button onclick="event.stopPropagation(); window.delCampo('${k}')" class="text-red-600 font-bold px-1" title="Eliminar">🗑️</button>
                             </div>
                         </div>
-                        ${esFijo ? `
-                            <div class="pt-1" onclick="event.stopPropagation()">
+
+                        <!-- Selector Rápido: Día de la semana o Campo Fijo DB -->
+                        <div class="flex space-x-1" onclick="event.stopPropagation()">
+                            <select class="w-full p-1 border rounded bg-gray-50 text-[10px] font-semibold text-gray-700" onchange="window.cambiarTipoCampo('${k}', this)">
+                                <option value="lunes" ${k === 'lunes' ? 'selected' : ''}>📅 Lunes</option>
+                                <option value="martes" ${k === 'martes' ? 'selected' : ''}>📅 Martes</option>
+                                <option value="miercoles" ${k === 'miercoles' ? 'selected' : ''}>📅 Miércoles</option>
+                                <option value="jueves" ${k === 'jueves' ? 'selected' : ''}>📅 Jueves</option>
+                                <option value="viernes" ${k === 'viernes' ? 'selected' : ''}>📅 Viernes</option>
+                                <option value="fijo" ${tipoActual === 'fijo' ? 'selected' : ''}>📌 Campo Fijo (Usuarios)</option>
+                                <option value="libre" ${tipoActual === 'libre' ? 'selected' : ''}>✏️ Otro / Genérico</option>
+                            </select>
+                        </div>
+
+                        <!-- Si es Campo Fijo, muestra el selector de la tabla usuarios -->
+                        ${tipoActual === 'fijo' ? `
+                            <div class="pt-0.5" onclick="event.stopPropagation()">
                                 <select class="w-full p-1 border border-amber-300 rounded bg-amber-50 text-[10px] font-semibold text-amber-900 focus:outline-none" onchange="window.actualizarColumnaUsuario('${k}', this)">
-                                    ${optionsHTML}
+                                    ${optionsUsuariosHTML}
                                 </select>
                             </div>
                         ` : ''}
                     </div>
                 `;
-            }).join('') || '<p class="text-gray-400 text-center mt-8">Sin coordenadas aún.</p>';
+            }).join('') || '<p class="text-gray-400 text-center mt-10">Sin coordenadas aún.</p>';
         }
 
         window.selCampo = (k) => { campoActivo = k; $('campoSelect').value = k; primerPunto = null; actualizarUI(); redibujar(); };
@@ -389,12 +432,16 @@
                 const l = b.x1 * scale, t = pageViewport.height - (b.y2 * scale);
                 const w = (b.x2 - b.x1) * scale, h = (b.y2 - b.y1) * scale;
                 const activo = k === campoActivo;
-                const esFijo = b.is_fijo || false;
-                const etiquetaFija = esFijo && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
+                const tipoActual = b.tipo || 'dinamico';
+                const etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
 
-                return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : (esFijo ? 'border border-amber-600 bg-amber-500/20 text-amber-900 z-10' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 z-10')}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
+                let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
+                if (tipoActual === 'fijo') estiloColor = 'border-amber-600 bg-amber-500/20 text-amber-900';
+                if (['lunes','martes','miercoles','jueves','viernes'].includes(k)) estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
+
+                return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
                     <span class="truncate">${k}${etiquetaFija}</span>
-                    ${esFijo ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
+                    ${tipoActual === 'fijo' ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
                 </div>`;
             }).join('');
         }
