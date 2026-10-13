@@ -52,14 +52,36 @@
                     📌 Toca 2 puntos en el PDF para el campo activo.
                 </div>
 
-                <!-- Ajuste Fino -->
-                <div class="bg-slate-50 p-2 rounded border text-center">
-                    <label class="font-bold text-slate-700 uppercase text-[9px] block mb-1">🕹️ Ajuste Fino</label>
-                    <div class="grid grid-cols-3 gap-1 max-w-[140px] mx-auto">
-                        <div></div><button onclick="mover(0,1)" class="bg-slate-200 py-1 rounded font-bold">⬆️</button><div></div>
-                        <button onclick="mover(-1,0)" class="bg-slate-200 py-1 rounded font-bold">⬅️</button>
-                        <button onclick="mover(0,-1)" class="bg-slate-200 py-1 rounded font-bold">⬇️</button>
-                        <button onclick="mover(1,0)" class="bg-slate-200 py-1 rounded font-bold">➡️</button>
+                <!-- Ajuste Fino (Posición & Tamaño) -->
+                <div class="bg-slate-50 p-2 rounded border space-y-2">
+                    <label class="font-bold text-slate-700 uppercase text-[9px] block text-center">🕹️ Ajuste Fino (Posición y Tamaño)</label>
+                    
+                    <!-- Movimiento -->
+                    <div class="grid grid-cols-3 gap-1 max-w-[130px] mx-auto">
+                        <div></div><button onclick="mover(0,1)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Arriba">⬆️</button><div></div>
+                        <button onclick="mover(-1,0)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Izquierda">⬅️</button>
+                        <button onclick="mover(0,-1)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Abajo">⬇️</button>
+                        <button onclick="mover(1,0)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Derecha">➡️</button>
+                    </div>
+
+                    <!-- Controles de Extender / Reducir Largo y Ancho -->
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 text-[10px]">
+                        <!-- Largo -->
+                        <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
+                            <span class="text-[9px] text-slate-600 font-bold block text-center">↕️ Largo (Alto)</span>
+                            <div class="flex justify-between space-x-1">
+                                <button onclick="redimensionar(0, 1)" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-0.5 rounded font-bold text-[10px]">➕ Extender</button>
+                                <button onclick="redimensionar(0, -1)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
+                            </div>
+                        </div>
+                        <!-- Ancho -->
+                        <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
+                            <span class="text-[9px] text-slate-600 font-bold block text-center">↔️ Ancho</span>
+                            <div class="flex justify-between space-x-1">
+                                <button onclick="redimensionar(1, 0)" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-0.5 rounded font-bold text-[10px]">➕ Extender</button>
+                                <button onclick="redimensionar(-1, 0)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -153,6 +175,14 @@
             if (!coordenadasMap[campoActivo]) return;
             const b = coordenadasMap[campoActivo];
             b.x1 += dx; b.x2 += dx; b.y1 += dy; b.y2 += dy;
+            actualizarUI(); redibujar();
+        };
+
+        window.redimensionar = (dw, dh) => {
+            if (!coordenadasMap[campoActivo]) return;
+            const b = coordenadasMap[campoActivo];
+            b.x2 = +(b.x2 + dw).toFixed(1);
+            b.y2 = +(b.y2 + dh).toFixed(1);
             actualizarUI(); redibujar();
         };
 
