@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Orden Estricto Secuencial con Vista Previa</title>
+    <title>Mapeador Compacto FOS - Vista Previa Automática Inteligente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,10 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Orden Estricto Secuencial</h1>
+            <div class="flex items-center space-x-2">
+                <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS</h1>
+                <span id="infoBarraEstado" class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium border border-indigo-200 hidden"></span>
+            </div>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between flex-wrap gap-1">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnAbrirPreview" class="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow hidden">👁️ Previsualizar Datos</button>
@@ -114,34 +117,31 @@
         </div>
     </div>
 
-    <!-- Modal de Configuración de Vista Previa (Usuario y Rango de Semana) -->
+    <!-- Modal Inteligente de Vista Previa -->
     <div id="previewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-sm space-y-3 text-xs">
-            <h3 class="text-xs font-bold text-indigo-900 uppercase">👁️ Vista Previa de Datos</h3>
-            <p class="text-gray-600">Selecciona el usuario y el rango de la semana para comprobar cómo se rellenarán los campos desde <strong>registro_diario</strong>:</p>
+            <h3 class="text-xs font-bold text-indigo-900 uppercase">👁️ Vista Previa Inteligente</h3>
+            <p class="text-gray-600">Selecciona el usuario y la fecha del <strong>Lunes</strong> de la semana. El sistema calculará automáticamente hasta el viernes:</p>
             
-            <div class="space-y-2">
+            <div class="space-y-2.5">
                 <div>
                     <label class="font-semibold text-gray-700 block">Usuario:</label>
                     <select id="selectPreviewUsuario" class="w-full p-1.5 border rounded bg-white font-bold text-indigo-900">
                         <option value="">-- Seleccionar Usuario --</option>
                     </select>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="font-semibold text-gray-700 block">Fecha Inicio (Semana):</label>
-                        <input type="date" id="inputFechaInicio" class="w-full p-1.5 border rounded bg-white text-xs">
-                    </div>
-                    <div>
-                        <label class="font-semibold text-gray-700 block">Fecha Fin (Semana):</label>
-                        <input type="date" id="inputFechaFin" class="w-full p-1.5 border rounded bg-white text-xs">
-                    </div>
+                <div>
+                    <label class="font-semibold text-gray-700 block">Fecha del Lunes (Semana):</label>
+                    <input type="date" id="inputFechaLunes" class="w-full p-1.5 border rounded bg-white text-xs font-bold text-indigo-700">
+                </div>
+                <div id="rangoCalculadoInfo" class="text-[11px] bg-slate-50 p-2 rounded border text-slate-700 hidden">
+                    📅 <strong>Rango calculado:</strong> <span id="lblRangoMostrado"></span>
                 </div>
             </div>
 
             <div class="flex justify-end space-x-2 pt-2">
                 <button onclick="cerrarModalPreview()" class="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded">Cancelar</button>
-                <button onclick="ejecutarVistaPrevia()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded">Aplicar Vista Previa</button>
+                <button onclick="ejecutarVistaPreviaInteligente()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded">Generar Vista Previa</button>
             </div>
         </div>
     </div>
@@ -153,7 +153,7 @@
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
         let columnasUsuariosCache = [];
-        let datosPreviewCache = { usuario: null, registros: [] };
+        let datosPreviewCache = { usuario: null, registros: [], rangoTexto: '' };
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
@@ -275,28 +275,58 @@
 
         window.cerrarModalPreview = () => { $('previewModal').classList.add('hidden'); };
 
-        window.ejecutarVistaPrevia = async () => {
+        // Al cambiar la fecha del lunes, calcula automáticamente el viernes y muestra la información en pantalla
+        $('inputFechaLunes').onchange = (e) => {
+            const val = e.target.value;
+            if (!val) {
+                $('rangoCalculadoInfo').classList.add('hidden');
+                return;
+            }
+            const fechaLunes = new Date(val + 'T00:00:00');
+            const fechaViernes = new Date(fechaLunes);
+            fechaViernes.setDate(fechaLunes.getDate() + 4); // Lunes + 4 días = Viernes
+
+            const fInicioStr = fechaLunes.toISOString().split('T')[0];
+            const fFinStr = fechaViernes.toISOString().split('T')[0];
+
+            $('lblRangoMostrado').textContent = `${fInicioStr} al ${fFinStr} (Lun - Vie)`;
+            $('rangoCalculadoInfo').classList.remove('hidden');
+        };
+
+        window.ejecutarVistaPreviaInteligente = async () => {
             const nombreUsuario = $('selectPreviewUsuario').value;
-            const fechaInicio = $('inputFechaInicio').value;
-            const fechaFin = $('inputFechaFin').value;
+            const fechaLunesVal = $('inputFechaLunes').value;
 
             if (!nombreUsuario) return alert("Por favor selecciona un usuario.");
-            if (!fechaInicio || !fechaFin) return alert("Por favor selecciona el rango de fechas.");
+            if (!fechaLunesVal) return alert("Por favor selecciona la fecha del lunes.");
+
+            // Calcular automáticamente fecha inicio (Lunes) y fecha fin (Viernes)
+            const fechaLunes = new Date(fechaLunesVal + 'T00:00:00');
+            const fechaViernes = new Date(fechaLunes);
+            fechaViernes.setDate(fechaLunes.getDate() + 4);
+
+            const fechaInicio = fechaLunes.toISOString().split('T')[0];
+            const fechaFin = fechaViernes.toISOString().split('T')[0];
 
             try {
-                // 1. Obtener datos del usuario desde la tabla usuarios
-                const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(nombre.eq.${encodeURIComponent(nombreUsuario)},email.eq.${encodeURIComponent(nombreUsuario)})&limit=1`, { headers });
+                // 1. Obtener datos del usuario con búsqueda flexible
+                const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(nombre.ilike.%${encodeURIComponent(nombreUsuario)}%,email.ilike.%${encodeURIComponent(nombreUsuario)}%)&limit=1`, { headers });
                 const userData = resUser.ok ? await resUser.json() : [];
                 datosPreviewCache.usuario = userData.length ? userData[0] : { nombre: nombreUsuario };
 
-                // 2. Consultar la tabla registro_diario filtrando por nombre de usuario y rango de fechas
-                const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}&select=*`;
+                // 2. Consultar la tabla registro_diario con flexibilidad en el nombre de usuario y rango semanal
+                const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=ilike.%${encodeURIComponent(nombreUsuario)}%&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}&select=*`;
                 const resReg = await fetch(queryReg, { headers });
                 datosPreviewCache.registros = resReg.ok ? await resReg.json() : [];
+                datosPreviewCache.rangoTexto = `👤 ${nombreUsuario} | 📅 Rango: ${fechaInicio} al ${fechaFin}`;
+
+                // Mostrar barra superior de estado
+                $('infoBarraEstado').textContent = datosPreviewCache.rangoTexto;
+                $('infoBarraEstado').classList.remove('hidden');
 
                 cerrarModalPreview();
                 redibujar();
-                alert(`✅ Vista previa aplicada. Se encontraron ${datosPreviewCache.registros.length} registros.`);
+                alert(`✅ Vista previa aplicada con éxito. Registros encontrados: ${datosPreviewCache.registros.length}`);
             } catch (e) {
                 console.error("Error al consultar datos para vista previa:", e);
                 alert("❌ Error al consultar la base de datos.");
@@ -537,12 +567,12 @@
         function obtenerTextoPreview(k, b) {
             const tipoActual = b.tipo || 'libre';
             
-            // 1. Si es campo fijo, devuelve únicamente el valor del usuario sin prefijos
+            // 1. Si es campo fijo, devuelve el valor del usuario
             if (tipoActual === 'fijo' && b.usuario_col) {
                 return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
             }
             
-            // 2. Si es día de la semana, agrupa todas las actividades coincidentes
+            // 2. Si es día de la semana, agrupa todas las actividades coincidentes por día
             const diasMapeo = { 
                 'montag': 'Monday', 
                 'dienstag': 'Tuesday', 
@@ -562,7 +592,7 @@
                 if (registrosDelDia.length > 0) {
                     return registrosDelDia.map(r => r.nombre_actividad).join(' • ');
                 }
-                return ''; // Oculta texto si no hay actividades
+                return '';
             }
             return '';
         }
@@ -575,7 +605,6 @@
                 const activo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
                 
-                // Obtenemos puramente el texto de los datos (sin mostrar nombres de campos)
                 const textoPreview = obtenerTextoPreview(k, b);
 
                 let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
