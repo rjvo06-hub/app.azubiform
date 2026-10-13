@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Vista Previa Automática</title>
+    <title>Mapeador Compacto FOS - Orden Estricto Secuencial con Vista Previa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -224,11 +224,15 @@
 
         async function poblarUsuariosSelect() {
             try {
+                // Obtenemos los nombres únicos de usuarios directamente de la tabla registro_diario o de usuarios
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers: { ...headers, 'Range': '0-999' } });
                 if (res.ok) {
                     const data = await res.json();
                     const colNombre = columnasUsuariosCache.includes('nombre') ? 'nombre' : (columnasUsuariosCache[1] || columnasUsuariosCache[0]);
-                    $('selectPreviewUsuario').innerHTML = '<option value="">-- Seleccionar Usuario --</option>' + data.map(u => `<option value="${u.id || u[columnasUsuariosCache[0]]}">${u[colNombre] || u.email || 'Usuario ' + u.id}</option>`).join('');
+                    $('selectPreviewUsuario').innerHTML = '<option value="">-- Seleccionar Usuario --</option>' + data.map(u => {
+                        const nombreVal = u[colNombre] || u.nombre || u.email;
+                        return `<option value="${nombreVal}">${nombreVal}</option>`;
+                    }).join('');
                 }
             } catch (e) { console.error("Error cargando usuarios:", e); }
         }
@@ -273,29 +277,27 @@
         window.cerrarModalPreview = () => { $('previewModal').classList.add('hidden'); };
 
         window.ejecutarVistaPrevia = async () => {
-            const userId = $('selectPreviewUsuario').value;
+            const nombreUsuario = $('selectPreviewUsuario').value;
             const fechaInicio = $('inputFechaInicio').value;
             const fechaFin = $('inputFechaFin').value;
 
-            if (!userId) return alert("Por favor selecciona un usuario.");
+            if (!nombreUsuario) return alert("Por favor selecciona un usuario.");
+            if (!fechaInicio || !fechaFin) return alert("Por favor selecciona el rango de fechas.");
 
             try {
-                // 1. Obtener datos del usuario seleccionado
-                const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(id.eq.${userId},nombre.eq.${encodeURIComponent(userId)})&limit=1`, { headers });
+                // 1. Obtener datos del usuario desde la tabla usuarios
+                const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(nombre.eq.${encodeURIComponent(nombreUsuario)},email.eq.${encodeURIComponent(nombreUsuario)})&limit=1`, { headers });
                 const userData = resUser.ok ? await resUser.json() : [];
-                datosPreviewCache.usuario = userData.length ? userData[0] : {};
+                datosPreviewCache.usuario = userData.length ? userData[0] : { nombre: nombreUsuario };
 
-                // 2. Consultar la tabla registro_diario filtrando por usuario y rango de fechas
-                let queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?user_id=eq.${userId}`;
-                if (fechaInicio && fechaFin) {
-                    queryReg += `&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}`;
-                }
+                // 2. Consultar la tabla registro_diario filtrando por nombre de usuario y rango de fechas
+                const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}&select=*`;
                 const resReg = await fetch(queryReg, { headers });
                 datosPreviewCache.registros = resReg.ok ? await resReg.json() : [];
 
                 cerrarModalPreview();
                 redibujar();
-                alert("✅ Vista previa aplicada con éxito desde registro_diario.");
+                alert(`✅ Vista previa aplicada. Se encontraron ${datosPreviewCache.registros.length} registros.`);
             } catch (e) {
                 console.error("Error al consultar datos para vista previa:", e);
                 alert("❌ Error al consultar la base de datos.");
@@ -536,26 +538,30 @@
         function obtenerTextoPreview(k, b) {
             const tipoActual = b.tipo || 'libre';
             
-            // Si es campo fijo, muestra la columna del usuario
+            // 1. Si es campo fijo, busca en el usuario cargado
             if (tipoActual === 'fijo' && b.usuario_col) {
                 return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : `[${b.usuario_col}]`;
             }
             
-            // Si es día de la semana, busca la actividad correspondiente en registro_diario
-            const diasMapeo = { 'montag': 1, 'dienstag': 2, 'mittwoch': 3, 'donnerstag': 4, 'freitag': 5 };
-            if (diasMapeo[k] || ['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
-                const diaBusqueda = diasMapeo[k] || diasMapeo[tipoActual];
-                const regEncontrado = datosPreviewCache.registros.find(r => {
-                    if (r.dia_semana === diaBusqueda || r.dia === diaBusqueda) return true;
-                    if (r.fecha) {
-                        const d = new Date(r.fecha).getDay(); // 1=Lunes, etc.
-                        if (d === diaBusqueda) return true;
-                    }
-                    return false;
-                }) || datosPreviewCache.registros[diasMapeo[k] - 1];
+            // 2. Si es día de la semana, agrupa todas las actividades coincidentes
+            const diasMapeo = { 
+                'montag': 'Monday', 
+                'dienstag': 'Tuesday', 
+                'mittwoch': 'Wednesday', 
+                'donnerstag': 'Thursday', 
+                'freitag': 'Friday' 
+            };
 
-                if (regEncontrado) {
-                    return regEncontrado.actividad || regEncontrado.descripcion || regEncontrado.texto || JSON.stringify(regEncontrado);
+            const diaTargetIngles = diasMapeo[k] || diasMapeo[tipoActual];
+
+            if (diaTargetIngles) {
+                const registrosDelDia = datosPreviewCache.registros.filter(r => {
+                    if (!r.dia_semana) return false;
+                    return r.dia_semana.trim().toLowerCase() === diaTargetIngles.toLowerCase();
+                });
+
+                if (registrosDelDia.length > 0) {
+                    return registrosDelDia.map(r => r.nombre_actividad).join(' • ');
                 }
                 return `(Sin actividad)`;
             }
