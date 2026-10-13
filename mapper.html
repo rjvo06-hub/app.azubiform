@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Orden Fijo</title>
+    <title>Mapeador Compacto FOS - Orden Estricto Secuencial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Orden Fijo & Estable</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Orden Estricto Secuencial</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
@@ -123,6 +123,48 @@
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
+        // Función clave para ordenar estrictamente: primero los campo_N y luego los días en orden lógico de semana
+        function obtenerKeysOrdenadas(mapa) {
+            const ordenDias = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
+            const keys = Object.keys(mapa);
+            
+            return keys.sort((a, b) => {
+                const aEsCampo = a.startsWith('campo_');
+                const bEsCampo = b.startsWith('campo_');
+                const aEsDia = ordenDias.includes(a);
+                const bEsDia = ordenDias.includes(b);
+
+                // Si ambos son campo_N, se ordenan numéricamente por su número
+                if (aEsCampo && bEsCampo) {
+                    const numA = parseInt(a.replace('campo_', '')) || 0;
+                    const numB = parseInt(b.replace('campo_', '')) || 0;
+                    return numA - numB;
+                }
+                // Los campo_ siempre van primero que los días u otros nombres
+                if (aEsCampo) return -1;
+                if (bEsCampo) return 1;
+
+                // Si ambos son días de la semana, se ordenan según el orden cronológico alemán
+                if (aEsDia && bEsDia) {
+                    return ordenDias.indexOf(a) - ordenDias.indexOf(b);
+                }
+                if (aEsDia) return 1; // Los días van después de los campo_N
+                if (bEsDia) return -1;
+
+                return a.localeCompare(b);
+            });
+        }
+
+        // Reorganiza físicamente el objeto coordenadasMap respetando el orden estricto
+        function normalizarOrdenMapa() {
+            const keysOrdenadas = obtenerKeysOrdenadas(coordenadasMap);
+            const nuevoMapa = {};
+            keysOrdenadas.forEach(k => {
+                nuevoMapa[k] = coordenadasMap[k];
+            });
+            coordenadasMap = nuevoMapa;
+        }
+
         async function obtenerColumnasUsuariosEnVivo() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?limit=1`, { headers: { ...headers, 'Range': '0-0' } });
@@ -165,6 +207,7 @@
                 if (data.length && data[0].coordinates_json) {
                     const parsed = data[0].coordinates_json;
                     coordenadasMap = parsed.coordenadas || parsed;
+                    normalizarOrdenMapa();
                     escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
                     actualizarSelects();
                     if (pdfDoc) redibujar();
@@ -212,6 +255,7 @@
                         tipo: previo.tipo || 'libre',
                         usuario_col: previo.usuario_col || (columnasUsuariosCache[0] || 'nombre')
                     };
+                    normalizarOrdenMapa();
                     campoActivo = sigCampo();
                     actualizarSelects();
                     redibujar();
@@ -274,7 +318,6 @@
             actualizarUI(); redibujar();
         };
 
-        // Cambiar el tipo de campo sin alterar el orden de los elementos
         window.cambiarTipoCampo = async (k, selectEl) => {
             const valor = selectEl.value;
             if (!coordenadasMap[k] || !valor) return;
@@ -293,17 +336,12 @@
                     nombreDestino = `${valor}_${Date.now().toString().slice(-3)}`;
                 }
                 
-                // Reasignamos conservando exactamente la posición en el objeto
-                const nuevoMapa = {};
-                for (let key in coordenadasMap) {
-                    if (key === k) {
-                        nuevoMapa[nombreDestino] = coordenadasMap[k];
-                        nuevoMapa[nombreDestino].tipo = 'dinamico';
-                    } else {
-                        nuevoMapa[key] = coordenadasMap[key];
-                    }
-                }
-                coordenadasMap = nuevoMapa;
+                const datos = coordenadasMap[k];
+                datos.tipo = 'dinamico';
+                delete coordenadasMap[k];
+                coordenadasMap[nombreDestino] = datos;
+
+                normalizarOrdenMapa();
                 if (campoActivo === k) campoActivo = nombreDestino;
 
                 actualizarSelects();
@@ -343,14 +381,15 @@
                 usuario_col: bOrig.usuario_col || (columnasUsuariosCache[0] || 'nombre')
             };
 
+            normalizarOrdenMapa();
             campoActivo = nuevoNombre;
-            cerrarModalDuplicar();
             actualizarSelects();
             redibujar();
         };
 
         function actualizarSelects() {
-            const keys = Object.keys(coordenadasMap);
+            normalizarOrdenMapa();
+            const keys = obtenerKeysOrdenadas(coordenadasMap);
             if (!keys.includes(campoActivo) && keys.length) campoActivo = keys[keys.length - 1];
             if (!keys.length) campoActivo = 'campo_1';
             
@@ -366,9 +405,12 @@
         };
 
         function actualizarUI() {
+            normalizarOrdenMapa();
             $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);
-            // El mapeo respeta estrictamente el orden original de inserción (sin orden alfabético)
-            $('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
+            
+            const keysOrdenadas = obtenerKeysOrdenadas(coordenadasMap);
+            $('listaCoordenadas').innerHTML = keysOrdenadas.map(k => {
+                const b = coordenadasMap[k];
                 const esActivo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
                 const colSeleccionada = b.usuario_col || (columnasUsuariosCache[0] || 'nombre');
@@ -385,7 +427,6 @@
                             </div>
                         </div>
 
-                        <!-- Selector Rápido: Mantiene la posición fija y estable al interactuar -->
                         <div class="flex space-x-1" onclick="event.stopPropagation()">
                             <select class="w-full p-1 border rounded bg-gray-50 text-[10px] font-semibold text-gray-700" onchange="window.cambiarTipoCampo('${k}', this)">
                                 <option value="" ${tipoActual === 'libre' ? 'selected' : ''}>-- Asignar rol / día opcional --</option>
@@ -437,6 +478,9 @@
             const name = escuelaCargada ? escuelaCargada.school_name : prompt("Nombre de la escuela:");
             if (!name) return;
             const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
+            
+            normalizarOrdenMapa(); // Asegura que se guarde con el orden estricto aplicado
+
             const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?on_conflict=file_identifier`, {
                 method: 'POST',
                 headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
