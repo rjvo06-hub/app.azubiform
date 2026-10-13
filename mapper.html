@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Vista Previa Automática Inteligente</title>
+    <title>Mapeador Compacto FOS - Vista Previa Inteligente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -117,11 +117,11 @@
         </div>
     </div>
 
-    <!-- Modal Inteligente de Vista Previa -->
+    <!-- Modal de Vista Previa Inteligente -->
     <div id="previewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-sm space-y-3 text-xs">
             <h3 class="text-xs font-bold text-indigo-900 uppercase">👁️ Vista Previa Inteligente</h3>
-            <p class="text-gray-600">Selecciona el usuario y la fecha del <strong>Lunes</strong> de la semana. El sistema calculará automáticamente hasta el viernes:</p>
+            <p class="text-gray-600">Selecciona el usuario y la fecha del <strong>Lunes</strong>. El sistema calculará automáticamente hasta el viernes:</p>
             
             <div class="space-y-2.5">
                 <div>
@@ -153,7 +153,7 @@
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
         let columnasUsuariosCache = [];
-        let datosPreviewCache = { usuario: null, registros: [], rangoTexto: '' };
+        let datosPreviewCache = { usuario: null, registros: [], activo: false };
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
@@ -253,6 +253,7 @@
                     normalizarOrdenMapa();
                     escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
                     actualizarSelects();
+                    datosPreviewCache.activo = false; // MODO EDICIÓN / MAPEO NORMAL
                     if (pdfDoc) redibujar();
                     $('btnAbrirPreview').classList.remove('hidden');
                     alert(`✅ Plantilla cargada.`);
@@ -264,6 +265,7 @@
             const file = e.target.files[0];
             if (!file) return;
             pdfDoc = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+            datosPreviewCache.activo = false;
             renderPage(1);
             $('btnAbrirPreview').classList.remove('hidden');
         };
@@ -275,7 +277,7 @@
 
         window.cerrarModalPreview = () => { $('previewModal').classList.add('hidden'); };
 
-        // Al cambiar la fecha del lunes, calcula automáticamente el viernes y muestra la información en pantalla
+        // Cálculo automático del viernes a partir del lunes seleccionado
         $('inputFechaLunes').onchange = (e) => {
             const val = e.target.value;
             if (!val) {
@@ -284,7 +286,7 @@
             }
             const fechaLunes = new Date(val + 'T00:00:00');
             const fechaViernes = new Date(fechaLunes);
-            fechaViernes.setDate(fechaLunes.getDate() + 4); // Lunes + 4 días = Viernes
+            fechaViernes.setDate(fechaLunes.getDate() + 4);
 
             const fInicioStr = fechaLunes.toISOString().split('T')[0];
             const fFinStr = fechaViernes.toISOString().split('T')[0];
@@ -300,7 +302,6 @@
             if (!nombreUsuario) return alert("Por favor selecciona un usuario.");
             if (!fechaLunesVal) return alert("Por favor selecciona la fecha del lunes.");
 
-            // Calcular automáticamente fecha inicio (Lunes) y fecha fin (Viernes)
             const fechaLunes = new Date(fechaLunesVal + 'T00:00:00');
             const fechaViernes = new Date(fechaLunes);
             fechaViernes.setDate(fechaLunes.getDate() + 4);
@@ -309,24 +310,26 @@
             const fechaFin = fechaViernes.toISOString().split('T')[0];
 
             try {
-                // 1. Obtener datos del usuario con búsqueda flexible
+                // 1. Obtener datos del usuario
                 const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(nombre.ilike.%${encodeURIComponent(nombreUsuario)}%,email.ilike.%${encodeURIComponent(nombreUsuario)}%)&limit=1`, { headers });
                 const userData = resUser.ok ? await resUser.json() : [];
                 datosPreviewCache.usuario = userData.length ? userData[0] : { nombre: nombreUsuario };
 
-                // 2. Consultar la tabla registro_diario con flexibilidad en el nombre de usuario y rango semanal
+                // 2. Consultar registros diarios
                 const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=ilike.%${encodeURIComponent(nombreUsuario)}%&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}&select=*`;
                 const resReg = await fetch(queryReg, { headers });
                 datosPreviewCache.registros = resReg.ok ? await resReg.json() : [];
-                datosPreviewCache.rangoTexto = `👤 ${nombreUsuario} | 📅 Rango: ${fechaInicio} al ${fechaFin}`;
+                
+                datosPreviewCache.activo = seit => true; // ACTIVAR MODO VISTA PREVIA
+                datosPreviewCache.activo = true;
+                datosPreviewCache.rangoTexto = `👤 ${nombreUsuario} | 📅 ${fechaInicio} al ${fechaFin}`;
 
-                // Mostrar barra superior de estado
                 $('infoBarraEstado').textContent = datosPreviewCache.rangoTexto;
                 $('infoBarraEstado').classList.remove('hidden');
 
                 cerrarModalPreview();
                 redibujar();
-                alert(`✅ Vista previa aplicada con éxito. Registros encontrados: ${datosPreviewCache.registros.length}`);
+                alert(`✅ Vista previa aplicada. Registros encontrados: ${datosPreviewCache.registros.length}`);
             } catch (e) {
                 console.error("Error al consultar datos para vista previa:", e);
                 alert("❌ Error al consultar la base de datos.");
@@ -564,39 +567,6 @@
         window.selCampo = (k) => { campoActivo = k; $('campoSelect').value = k; primerPunto = null; actualizarUI(); redibujar(); };
         window.delCampo = (k) => { delete coordenadasMap[k]; actualizarSelects(); redibujar(); };
 
-        function obtenerTextoPreview(k, b) {
-            const tipoActual = b.tipo || 'libre';
-            
-            // 1. Si es campo fijo, devuelve el valor del usuario
-            if (tipoActual === 'fijo' && b.usuario_col) {
-                return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
-            }
-            
-            // 2. Si es día de la semana, agrupa todas las actividades coincidentes por día
-            const diasMapeo = { 
-                'montag': 'Monday', 
-                'dienstag': 'Tuesday', 
-                'mittwoch': 'Wednesday', 
-                'donnerstag': 'Thursday', 
-                'freitag': 'Friday' 
-            };
-
-            const diaTargetIngles = diasMapeo[k] || diasMapeo[tipoActual];
-
-            if (diaTargetIngles) {
-                const registrosDelDia = datosPreviewCache.registros.filter(r => {
-                    if (!r.dia_semana) return false;
-                    return r.dia_semana.trim().toLowerCase() === diaTargetIngles.toLowerCase();
-                });
-
-                if (registrosDelDia.length > 0) {
-                    return registrosDelDia.map(r => r.nombre_actividad).join(' • ');
-                }
-                return '';
-            }
-            return '';
-        }
-
         function redibujar() {
             if (!pageViewport) return;
             $('drawingOverlay').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
@@ -604,16 +574,39 @@
                 const w = (b.x2 - b.x1) * scale, h = (b.y2 - b.y1) * scale;
                 const activo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
-                
-                const textoPreview = obtenerTextoPreview(k, b);
+
+                let textoMostrado = k; // MODO EDICIÓN: Muestra el nombre del campo (ej. campo_1, montag)
+                let etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
+
+                // MODO VISTA PREVIA ACTIVO: Oculta nombres de campos y muestra los datos reales de Supabase
+                if (datosPreviewCache.activo) {
+                    if (tipoActual === 'fijo' && b.usuario_col) {
+                        textoMostrado = datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
+                        etiquetaFija = '';
+                    } else {
+                        const diasMapeo = { 'montag': 'Monday', 'dienstag': 'Tuesday', 'mittwoch': 'Wednesday', 'donnerstag': 'Thursday', 'freitag': 'Friday' };
+                        const diaTargetIngles = diasMapeo[k] || diasMapeo[tipoActual];
+
+                        if (diaTargetIngles) {
+                            const registrosDelDia = datosPreviewCache.registros.filter(r => {
+                                if (!r.dia_semana) return false;
+                                return r.dia_semana.trim().toLowerCase() === diaTargetIngles.toLowerCase();
+                            });
+                            textoMostrado = registrosDelDia.length > 0 ? registrosDelDia.map(r => r.nombre_actividad).join(' • ') : '';
+                        } else {
+                            textoMostrado = ''; // Campos libres sin datos se ocultan
+                        }
+                        etiquetaFija = '';
+                    }
+                }
 
                 let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
                 if (tipoActual === 'fijo') estiloColor = 'border-amber-600 bg-amber-500/20 text-amber-900';
                 if (['montag','dienstag','mittwoch','donnerstag','freitag'].includes(k)) estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
 
                 return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto overflow-hidden ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
-                    <span class="truncate">${textoPreview}</span>
-                    ${tipoActual === 'fijo' ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
+                    <span class="truncate">${textoMostrado}${etiquetaFija}</span>
+                    ${!datosPreviewCache.activo && tipoActual === 'fijo' ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
                 </div>`;
             }).join('');
         }
