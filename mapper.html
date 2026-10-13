@@ -347,7 +347,6 @@
                     datosPreviewCache.registros = [];
                 }
                 
-                // Formatos solicitados: Día/Mes (ej. 7/9) y Año de 2 dígitos (ej. 26)
                 datosPreviewCache.fechaInicioStr = `${fechaLunes.getDate()}/${fechaLunes.getMonth() + 1}`;
                 datosPreviewCache.fechaFinStr = `${fechaViernes.getDate()}/${fechaViernes.getMonth() + 1}`;
                 datosPreviewCache.anioStr = String(fechaLunes.getFullYear()).slice(-2);
@@ -617,21 +616,21 @@
                 const activo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
 
-                let textoMostrado = k;
+                let textoHTML = k;
                 let etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
 
                 if (datosPreviewCache.activo) {
                     if (tipoActual === 'fijo' && b.usuario_col) {
-                        textoMostrado = datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
+                        textoHTML = datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
                         etiquetaFija = '';
                     } else if (tipoActual === 'woche_von') {
-                        textoMostrado = datosPreviewCache.fechaInicioStr;
+                        textoHTML = datosPreviewCache.fechaInicioStr;
                         etiquetaFija = '';
                     } else if (tipoActual === 'woche_bis') {
-                        textoMostrado = datosPreviewCache.fechaFinStr;
+                        textoHTML = datosPreviewCache.fechaFinStr;
                         etiquetaFija = '';
                     } else if (tipoActual === 'anno') {
-                        textoMostrado = datosPreviewCache.anioStr;
+                        textoHTML = datosPreviewCache.anioStr;
                         etiquetaFija = '';
                     } else {
                         const diasSecuencia = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
@@ -646,10 +645,11 @@
                                     const fechaReg = r.fecha.split('T')[0];
                                     return fechaReg === infoDia.fecha;
                                 });
-                                textoMostrado = registrosDelDia.length > 0 ? registrosDelDia.map(r => r.nombre_actividad || r.actividad || '').filter(Boolean).join(' • ') : '';
+                                // Cambiamos el join con ' • ' por saltos de línea reales (<br>) para que queden una debajo de otra
+                                textoHTML = registrosDelDia.length > 0 ? registrosDelDia.map(r => r.nombre_actividad || r.actividad || '').filter(Boolean).join('<br>') : '';
                             }
                         } else {
-                            textoMostrado = '';
+                            textoHTML = '';
                         }
                         etiquetaFija = '';
                     }
@@ -662,9 +662,8 @@
                     estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
                 }
 
-                return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto overflow-hidden ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
-                    <span class="truncate">${textoMostrado}${etiquetaFija}</span>
-                    ${!datosPreviewCache.activo && tipoActual === 'fijo' ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
+                return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex flex-col justify-start pointer-events-auto overflow-hidden leading-tight ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
+                    <div class="w-full">${textoHTML}${etiquetaFija}</div>
                 </div>`;
             }).join('');
         }
