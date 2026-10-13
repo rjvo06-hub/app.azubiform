@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS con Campos Fijos de Usuarios</title>
+    <title>Mapeador Compacto FOS con Consulta Dinámica DB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Asignación a Tabla Usuarios</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Consulta en Vivo de Usuarios</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
@@ -119,20 +119,30 @@
         const $ = id => document.getElementById(id);
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
-
-        // Columnas exactas de la tabla 'usuarios'
-        const columnasUsuarios = [
-            "nombre",
-            "email",
-            "class",
-            "teacher",
-            "workplace",
-            "ausbildung",
-            "adresse",
-            "acceso"
-        ];
+        let columnasUsuariosCache = []; // Caché temporal para optimizar
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
+
+        // Función que consulta en tiempo real las columnas de la tabla 'usuarios' en Supabase
+        async function obtenerColumnasUsuariosEnVivo() {
+            try {
+                // Consultamos 1 registro para extraer las llaves/columnas vigentes en tiempo real
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?limit=1`, { headers: { ...headers, 'Range': '0-0' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.length > 0) {
+                        columnasUsuariosCache = Object.keys(data[0]);
+                    } else {
+                        // Fallback si la tabla está vacía temporalmente
+                        columnasUsuariosCache = ["nombre", "email", "class", "teacher", "workplace", "ausbildung", "adresse"];
+                    }
+                }
+            } catch (e) {
+                console.error("Error al consultar columnas en vivo:", e);
+                columnasUsuariosCache = ["nombre", "email", "class", "teacher", "workplace", "ausbildung"];
+            }
+            return columnasUsuariosCache;
+        }
 
         async function cargarPlantillas() {
             try {
@@ -143,7 +153,12 @@
                 }
             } catch (e) { console.error(e); }
         }
-        cargarPlantillas();
+        
+        // Inicialización al cargar la página
+        (async () => {
+            await obtenerColumnasUsuariosEnVivo();
+            cargarPlantillas();
+        })();
 
         $('btnCargar').onclick = async () => {
             const id = $('selectPlantillas').value;
@@ -199,7 +214,7 @@
                         x2: +x2.toFixed(1), 
                         y2: +y2.toFixed(1),
                         is_fijo: previo.is_fijo || false,
-                        usuario_col: previo.usuario_col || columnasUsuarios[0]
+                        usuario_col: previo.usuario_col || (columnasUsuariosCache[0] || 'nombre')
                     };
                     campoActivo = sigCampo();
                     actualizarSelects();
@@ -263,12 +278,16 @@
             actualizarUI(); redibujar();
         };
 
-        // Alternar marca de Campo Fijo DB y asignar valor por defecto si se activa
-        window.toggleFijo = (k) => {
+        // Al hacer clic en el Pin 📌, consulta en vivo la tabla usuarios antes de mostrar/actualizar
+        window.toggleFijo = async (k) => {
             if (coordenadasMap[k]) {
                 coordenadasMap[k].is_fijo = !coordenadasMap[k].is_fijo;
-                if (coordenadasMap[k].is_fijo && !coordenadasMap[k].usuario_col) {
-                    coordenadasMap[k].usuario_col = columnasUsuarios[0];
+                if (coordenadasMap[k].is_fijo) {
+                    // Consulta en tiempo real por si hay datos nuevos
+                    await obtenerColumnasUsuariosEnVivo();
+                    if (!coordenadasMap[k].usuario_col) {
+                        coordenadasMap[k].usuario_col = columnasUsuariosCache[0] || 'nombre';
+                    }
                 }
                 actualizarUI();
                 redibujar();
@@ -304,7 +323,7 @@
                 x2: +(bOrig.x2 + offset).toFixed(1),
                 y2: bOrig.y2,
                 is_fijo: bOrig.is_fijo || false,
-                usuario_col: bOrig.usuario_col || columnasUsuarios[0]
+                usuario_col: bOrig.usuario_col || (columnasUsuariosCache[0] || 'nombre')
             };
 
             campoActivo = nuevoNombre;
@@ -333,15 +352,15 @@
             $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);$('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
                 const esActivo = k === campoActivo;
                 const esFijo = b.is_fijo || false;
-                const colSeleccionada = b.usuario_col || columnasUsuarios[0];
+                const colSeleccionada = b.usuario_col || (columnasUsuariosCache[0] || 'nombre');
 
-                const optionsHTML = columnasUsuarios.map(col => `<option value="${col}" ${col === colSeleccionada ? 'selected' : ''}>usuarios.${col}</option>`).join('');
+                const optionsHTML = columnasUsuariosCache.map(col => `<option value="${col}" ${col === colSeleccionada ? 'selected' : ''}>usuarios.${col}</option>`).join('');
 
                 return `
                     <div class="p-2 rounded border space-y-1.5 ${esActivo ? 'bg-indigo-50 border-indigo-500 font-bold' : 'bg-white'}" onclick="window.selCampo('${k}')">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center space-x-1.5 overflow-hidden">
-                                <button onclick="event.stopPropagation(); window.toggleFijo('${k}')" class="px-1 py-0.5 rounded text-[10px] ${esFijo ? 'bg-amber-100 text-amber-800 border border-amber-300 font-bold' : 'bg-gray-100 text-gray-400'}" title="${esFijo ? 'Campo Fijo DB (Activo)' : 'Marcar como Campo Fijo DB'}">📌</button>
+                                <button onclick="event.stopPropagation(); window.toggleFijo('${k}')" class="px-1.5 py-0.5 rounded text-[10px] ${esFijo ? 'bg-amber-100 text-amber-800 border border-amber-300 font-bold' : 'bg-gray-100 text-gray-400'}" title="${esFijo ? 'Campo Fijo DB (Activo)' : 'Marcar como Campo Fijo DB'}">📌</button>
                                 <span class="truncate" title="${k}">${k}</span>
                             </div>
                             <div class="flex items-center space-x-1 shrink-0">
