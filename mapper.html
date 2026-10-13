@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS con Selector Rápido</title>
+    <title>Mapeador Compacto FOS - Días en Alemán</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Selector Rápido de Días y Fijos</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Días en Alemán (Montag, Dienstag...)</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
@@ -209,7 +209,7 @@
                         y1: +y1.toFixed(1), 
                         x2: +x2.toFixed(1), 
                         y2: +y2.toFixed(1),
-                        tipo: previo.tipo || 'dinamico', // dinamico (ej. dias), fijo (tabla usuarios), o campo libre
+                        tipo: previo.tipo || 'dinamico',
                         usuario_col: previo.usuario_col || (columnasUsuariosCache[0] || 'nombre')
                     };
                     campoActivo = sigCampo();
@@ -274,26 +274,7 @@
             actualizarUI(); redibujar();
         };
 
-        // Cambiar nombre del campo (ej. de campo_5 a lunes, o campo_1 a nombre)
-        window.cambiarNombreCampo = (viejoNombre, nuevoNombre) => {
-            nuevoNombre = nuevoNombre.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
-            if (!nuevoNombre || nuevoNombre === viejoNombre) return;
-            if (coordenadasMap[nuevoNombre]) {
-                alert("Este nombre ya existe.");
-                actualizarUI();
-                return;
-            }
-
-            coordenadasMap[nuevoNombre] = coordenadasMap[viejoNombre];
-            delete coordenadasMap[viejoNombre];
-
-            if (campoActivo === viejoNombre) campoActivo = nuevoNombre;
-
-            actualizarSelects();
-            redibujar();
-        };
-
-        // Cambiar entre tipo de campo: Dinámico (Días), Fijo (Tabla Usuarios) u Otro
+        // Cambiar entre tipo de campo: Días en alemán (Montag, Dienstag...) o Fijo DB
         window.cambiarTipoCampo = async (k, selectEl) => {
             const valor = selectEl.value;
             if (!coordenadasMap[k]) return;
@@ -304,8 +285,7 @@
                 if (!coordenadasMap[k].usuario_col) {
                     coordenadasMap[k].usuario_col = columnasUsuariosCache[0] || 'nombre';
                 }
-            } else if (['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].includes(valor)) {
-                // Renombrar automáticamente al día seleccionado si está disponible
+            } else if (['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'].includes(valor)) {
                 let nombreDestino = valor;
                 if (coordenadasMap[nombreDestino] && nombreDestino !== k) {
                     nombreDestino = `${valor}_${Date.now().toString().slice(-3)}`;
@@ -397,14 +377,14 @@
                             </div>
                         </div>
 
-                        <!-- Selector Rápido: Día de la semana o Campo Fijo DB -->
+                        <!-- Selector Rápido: Días de la semana en alemán o Campo Fijo DB -->
                         <div class="flex space-x-1" onclick="event.stopPropagation()">
                             <select class="w-full p-1 border rounded bg-gray-50 text-[10px] font-semibold text-gray-700" onchange="window.cambiarTipoCampo('${k}', this)">
-                                <option value="lunes" ${k === 'lunes' ? 'selected' : ''}>📅 Lunes</option>
-                                <option value="martes" ${k === 'martes' ? 'selected' : ''}>📅 Martes</option>
-                                <option value="miercoles" ${k === 'miercoles' ? 'selected' : ''}>📅 Miércoles</option>
-                                <option value="jueves" ${k === 'jueves' ? 'selected' : ''}>📅 Jueves</option>
-                                <option value="viernes" ${k === 'viernes' ? 'selected' : ''}>📅 Viernes</option>
+                                <option value="montag" ${k === 'montag' ? 'selected' : ''}>📅 Montag</option>
+                                <option value="dienstag" ${k === 'dienstag' ? 'selected' : ''}>📅 Dienstag</option>
+                                <option value="mittwoch" ${k === 'mittwoch' ? 'selected' : ''}>📅 Mittwoch</option>
+                                <option value="donnerstag" ${k === 'donnerstag' ? 'selected' : ''}>📅 Donnerstag</option>
+                                <option value="freitag" ${k === 'freitag' ? 'selected' : ''}>📅 Freitag</option>
                                 <option value="fijo" ${tipoActual === 'fijo' ? 'selected' : ''}>📌 Campo Fijo (Usuarios)</option>
                                 <option value="libre" ${tipoActual === 'libre' ? 'selected' : ''}>✏️ Otro / Genérico</option>
                             </select>
@@ -437,7 +417,7 @@
 
                 let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
                 if (tipoActual === 'fijo') estiloColor = 'border-amber-600 bg-amber-500/20 text-amber-900';
-                if (['lunes','martes','miercoles','jueves','viernes'].includes(k)) estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
+                if (['montag','dienstag','mittwoch','donnerstag','freitag'].includes(k)) estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
 
                 return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
                     <span class="truncate">${k}${etiquetaFija}</span>
