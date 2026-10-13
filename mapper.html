@@ -1,4 +1,153 @@
-<script type="module">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mapeador Compacto FOS - Vista Previa Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <style>
+        .caja-mapeada { 
+            touch-action: none; 
+            cursor: move;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen p-3">
+    <div class="max-w-7xl mx-auto space-y-3">
+        <!-- Cabecera -->
+        <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+                <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS</h1>
+                <span id="infoBarraEstado" class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium border border-indigo-200 hidden"></span>
+            </div>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-between flex-wrap gap-1">
+                <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
+                <button id="btnAbrirPreview" class="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow hidden">👁️ Previsualizar Datos</button>
+                <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <!-- Lienzo PDF -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[75vh] relative border">
+                <div class="relative inline-block cursor-crosshair" id="canvasContainer">
+                    <canvas id="pdfCanvas" class="block shadow-lg max-w-full"></canvas>
+                    <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+
+            <!-- Panel de Control -->
+            <div class="bg-white p-3 rounded-xl shadow-sm space-y-2.5 flex flex-col text-xs">
+                <h2 class="font-bold text-gray-800 uppercase border-b pb-1">Control de Campos</h2>
+                
+                <!-- Cargar Plantilla -->
+                <div class="bg-indigo-50 p-2 rounded border border-indigo-200 flex space-x-1">
+                    <select id="selectPlantillas" class="w-full p-1 border rounded bg-white text-[11px]">
+                        <option value="">-- Cargar guardada --</option>
+                    </select>
+                    <button id="btnCargar" class="bg-indigo-600 text-white px-2 rounded">📥</button>
+                </div>
+
+                <!-- Campo Activo -->
+                <div>
+                    <label class="font-semibold text-gray-700">Campo Activo:</label>
+                    <select id="campoSelect" class="w-full p-1.5 border rounded bg-white font-bold text-indigo-900 mt-0.5">
+                        <option value="campo_1">campo_1</option>
+                    </select>
+                </div>
+
+                <div id="estadoModo" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-1.5 rounded border text-center">
+                    📌 Toca 2 puntos o arrastra las cajas en el visor.
+                </div>
+
+                <!-- Ajuste Fino (Posición & Tamaño) -->
+                <div class="bg-slate-50 p-2 rounded border space-y-2">
+                    <label class="font-bold text-slate-700 uppercase text-[9px] block text-center">🕹️ Ajuste Fino (Posición y Tamaño)</label>
+                    
+                    <!-- Movimiento -->
+                    <div class="grid grid-cols-3 gap-1 max-w-[130px] mx-auto">
+                        <div></div><button onclick="mover(0,1)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Arriba">⬆️</button><div></div>
+                        <button onclick="mover(-1,0)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Izquierda">⬅️</button>
+                        <button onclick="mover(0,-1)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Abajo">⬇️</button>
+                        <button onclick="mover(1,0)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Derecha">➡️</button>
+                    </div>
+
+                    <!-- Controles de Extender / Reducir Largo y Ancho -->
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 text-[10px]">
+                        <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
+                            <span class="text-[9px] text-slate-600 font-bold block text-center">↕️ Largo (Alto)</span>
+                            <div class="flex justify-between space-x-1">
+                                <button onclick="redimensionar(0, 1)" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-0.5 rounded font-bold text-[10px]">➕ Extender</button>
+                                <button onclick="redimensionar(0, -1)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
+                            </div>
+                        </div>
+                        <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
+                            <span class="text-[9px] text-slate-600 font-bold block text-center">↔️ Ancho</span>
+                            <div class="flex justify-between space-x-1">
+                                <button onclick="redimensionar(1, 0)" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-0.5 rounded font-bold text-[10px]">➕ Extender</button>
+                                <button onclick="redimensionar(-1, 0)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Coordenadas -->
+                <div class="h-48 overflow-y-auto border rounded p-1.5 space-y-2 bg-gray-50 text-[11px]" id="listaCoordenadas">
+                    <p class="text-gray-400 text-center mt-10">Sin coordenadas aún.</p>
+                </div>
+
+                <!-- JSON -->
+                <textarea id="jsonOutput" readonly class="w-full h-10 p-1 text-[8px] font-mono bg-gray-900 text-green-400 rounded border"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para duplicar campo -->
+    <div id="duplicateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-xs space-y-3">
+            <h3 class="text-xs font-bold text-indigo-900 uppercase">📋 Duplicar Campo</h3>
+            <p class="text-[11px] text-gray-600">Crear una copia exacta del campo <strong id="lblCampoOrigen"></strong> con el siguiente nombre secuencial:</p>
+            <input type="text" id="inputNuevoNombreDuplicado" class="w-full p-1.5 border rounded text-xs bg-white font-bold text-indigo-900">
+            <div class="flex justify-end space-x-2 pt-1">
+                <button onclick="cerrarModalDuplicar()" class="px-2.5 py-1 bg-gray-200 text-gray-700 text-xs font-bold rounded">Cancelar</button>
+                <button onclick="confirmarDuplicar()" class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded">Duplicar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Vista Previa Inteligente -->
+    <div id="previewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-sm space-y-3 text-xs">
+            <h3 class="text-xs font-bold text-indigo-900 uppercase">👁️ Vista Previa Inteligente</h3>
+            <p class="text-gray-600">Selecciona el usuario y la fecha del <strong>Lunes</strong>. El sistema calculará automáticamente hasta el viernes:</p>
+            
+            <div class="space-y-2.5">
+                <div>
+                    <label class="font-semibold text-gray-700 block">Usuario:</label>
+                    <select id="selectPreviewUsuario" class="w-full p-1.5 border rounded bg-white font-bold text-indigo-900">
+                        <option value="">-- Seleccionar Usuario --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="font-semibold text-gray-700 block">Fecha del Lunes (Semana):</label>
+                    <input type="date" id="inputFechaLunes" class="w-full p-1.5 border rounded bg-white text-xs font-bold text-indigo-700">
+                    <span class="text-[10px] text-gray-400 block mt-1">⚠️ Debe ser obligatoriamente un día Lunes.</span>
+                </div>
+                <div id="rangoCalculadoInfo" class="text-[11px] bg-slate-50 p-2 rounded border text-slate-700 hidden">
+                    📅 <strong>Rango calculado:</strong> <span id="lblRangoMostrado"></span>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="cerrarModalPreview()" class="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded">Cancelar</button>
+                <button onclick="ejecutarVistaPreviaInteligente()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded">Generar Vista Previa</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
         import { SUPABASE_URL, headers } from './js/config.js';
 
         const $ = id => document.getElementById(id);
@@ -466,7 +615,6 @@
                         etiquetaFija = '';
                     } else {
                         const diasMapeo = { 'montag': 'Monday', 'dienstag': 'Tuesday', 'mittwoch': 'Wednesday', 'donnerstag': 'Thursday', 'freitag': 'Friday' };
-                        // Validar si la clave o el tipo corresponde a un día de la semana
                         const diaTargetIngles = diasMapeo[k] || diasMapeo[tipoActual];
 
                         if (diaTargetIngles) {
@@ -511,3 +659,5 @@
             else { alert("❌ Error al guardar."); }
         };
     </script>
+</body>
+</html>
