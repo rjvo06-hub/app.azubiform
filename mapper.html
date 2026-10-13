@@ -253,7 +253,7 @@
                     normalizarOrdenMapa();
                     escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
                     actualizarSelects();
-                    datosPreviewCache.activo = false; // MODO EDICIÓN / MAPEO NORMAL
+                    datosPreviewCache.activo = false;
                     if (pdfDoc) redibujar();
                     $('btnAbrirPreview').classList.remove('hidden');
                     alert(`✅ Plantilla cargada.`);
@@ -277,7 +277,6 @@
 
         window.cerrarModalPreview = () => { $('previewModal').classList.add('hidden'); };
 
-        // Cálculo automático del viernes a partir del lunes seleccionado
         $('inputFechaLunes').onchange = (e) => {
             const val = e.target.value;
             if (!val) {
@@ -310,17 +309,29 @@
             const fechaFin = fechaViernes.toISOString().split('T')[0];
 
             try {
-                // 1. Obtener datos del usuario
-                const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(nombre.ilike.%${encodeURIComponent(nombreUsuario)}%,email.ilike.%${encodeURIComponent(nombreUsuario)}%)&limit=1`, { headers });
+                // 1. Obtener datos del usuario de forma directa y limpia
+                const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?nombre=eq.${encodeURIComponent(nombreUsuario)}&limit=1`, { headers });
                 const userData = resUser.ok ? await resUser.json() : [];
-                datosPreviewCache.usuario = userData.length ? userData[0] : { nombre: nombreUsuario };
+                
+                if (!userData.length) {
+                    const resUserFallback = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?limit=1`, { headers });
+                    const userFallbackData = resUserFallback.ok ? await resUserFallback.json() : [];
+                    datosPreviewCache.usuario = userFallbackData.length ? userFallbackData[0] : { nombre: nombreUsuario };
+                } else {
+                    datosPreviewCache.usuario = userData[0];
+                }
 
                 // 2. Consultar registros diarios
-                const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=ilike.%${encodeURIComponent(nombreUsuario)}%&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}&select=*`;
+                const queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?usuario=eq.${encodeURIComponent(nombreUsuario)}&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}&select=*`;
                 const resReg = await fetch(queryReg, { headers });
-                datosPreviewCache.registros = resReg.ok ? await resReg.json() : [];
                 
-                datosPreviewCache.activo = seit => true; // ACTIVAR MODO VISTA PREVIA
+                if (resReg.ok) {
+                    datosPreviewCache.registros = await resReg.json();
+                } else {
+                    console.error("Error en registro_diario:", await resReg.text());
+                    datosPreviewCache.registros = [];
+                }
+                
                 datosPreviewCache.activo = true;
                 datosPreviewCache.rangoTexto = `👤 ${nombreUsuario} | 📅 ${fechaInicio} al ${fechaFin}`;
 
@@ -331,7 +342,7 @@
                 redibujar();
                 alert(`✅ Vista previa aplicada. Registros encontrados: ${datosPreviewCache.registros.length}`);
             } catch (e) {
-                console.error("Error al consultar datos para vista previa:", e);
+                console.error("Excepción crítica al consultar la base de datos:", e);
                 alert("❌ Error al consultar la base de datos.");
             }
         };
@@ -575,10 +586,9 @@
                 const activo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
 
-                let textoMostrado = k; // MODO EDICIÓN: Muestra el nombre del campo (ej. campo_1, montag)
+                let textoMostrado = k;
                 let etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
 
-                // MODO VISTA PREVIA ACTIVO: Oculta nombres de campos y muestra los datos reales de Supabase
                 if (datosPreviewCache.activo) {
                     if (tipoActual === 'fijo' && b.usuario_col) {
                         textoMostrado = datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : '';
@@ -594,7 +604,7 @@
                             });
                             textoMostrado = registrosDelDia.length > 0 ? registrosDelDia.map(r => r.nombre_actividad).join(' • ') : '';
                         } else {
-                            textoMostrado = ''; // Campos libres sin datos se ocultan
+                            textoMostrado = '';
                         }
                         etiquetaFija = '';
                     }
