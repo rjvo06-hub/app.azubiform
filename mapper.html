@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Orden Estricto Secuencial con Vista Previa</title>
+    <title>Mapeador Compacto FOS - Vista Previa Automática</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -114,11 +114,11 @@
         </div>
     </div>
 
-    <!-- Modal para Configurar Vista Previa (Usuario y Rango de Semana) -->
+    <!-- Modal de Configuración de Vista Previa (Usuario y Rango de Semana) -->
     <div id="previewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-sm space-y-3 text-xs">
             <h3 class="text-xs font-bold text-indigo-900 uppercase">👁️ Vista Previa de Datos</h3>
-            <p class="text-gray-600">Selecciona el usuario y el rango de la semana para comprobar cómo se rellenarán los campos:</p>
+            <p class="text-gray-600">Selecciona el usuario y el rango de la semana para comprobar cómo se rellenarán los campos desde <strong>registro_diario</strong>:</p>
             
             <div class="space-y-2">
                 <div>
@@ -157,7 +157,6 @@
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
-        // Función clave para ordenar estrictamente: primero los campo_N y luego los días en orden lógico de semana
         function obtenerKeysOrdenadas(mapa) {
             const ordenDias = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
             const keys = Object.keys(mapa);
@@ -168,28 +167,24 @@
                 const aEsDia = ordenDias.includes(a);
                 const bEsDia = ordenDias.includes(b);
 
-                // Si ambos son campo_N, se ordenan numéricamente por su número
                 if (aEsCampo && bEsCampo) {
                     const numA = parseInt(a.replace('campo_', '')) || 0;
                     const numB = parseInt(b.replace('campo_', '')) || 0;
                     return numA - numB;
                 }
-                // Los campo_ siempre van primero que los días u otros nombres
                 if (aEsCampo) return -1;
                 if (bEsCampo) return 1;
 
-                // Si ambos son días de la semana, se ordenan según el orden cronológico alemán
                 if (aEsDia && bEsDia) {
                     return ordenDias.indexOf(a) - ordenDias.indexOf(b);
                 }
-                if (aEsDia) return 1; // Los días van después de los campo_N
+                if (aEsDia) return 1;
                 if (bEsDia) return -1;
 
                 return a.localeCompare(b);
             });
         }
 
-        // Reorganiza físicamente el objeto coordenadasMap respetando el orden estricto
         function normalizarOrdenMapa() {
             const keysOrdenadas = obtenerKeysOrdenadas(coordenadasMap);
             const nuevoMapa = {};
@@ -270,7 +265,6 @@
             $('btnAbrirPreview').classList.remove('hidden');
         };
 
-        // Eventos para abrir el modal de previsualización después de tener el archivo y coordenadas listas
         $('btnAbrirPreview').onclick = async () => {
             await poblarUsuariosSelect();
             $('previewModal').classList.remove('hidden');
@@ -291,7 +285,7 @@
                 const userData = resUser.ok ? await resUser.json() : [];
                 datosPreviewCache.usuario = userData.length ? userData[0] : {};
 
-                // 2. Obtener registros de la tabla registro_diario dentro del rango semanal
+                // 2. Consultar la tabla registro_diario filtrando por usuario y rango de fechas
                 let queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?user_id=eq.${userId}`;
                 if (fechaInicio && fechaFin) {
                     queryReg += `&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}`;
@@ -301,7 +295,7 @@
 
                 cerrarModalPreview();
                 redibujar();
-                alert("✅ Vista previa aplicada con éxito en las cajas.");
+                alert("✅ Vista previa aplicada con éxito desde registro_diario.");
             } catch (e) {
                 console.error("Error al consultar datos para vista previa:", e);
                 alert("❌ Error al consultar la base de datos.");
@@ -542,19 +536,19 @@
         function obtenerTextoPreview(k, b) {
             const tipoActual = b.tipo || 'libre';
             
-            // Si es un campo fijo, busca en el usuario cargado
+            // Si es campo fijo, muestra la columna del usuario
             if (tipoActual === 'fijo' && b.usuario_col) {
                 return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : `[${b.usuario_col}]`;
             }
             
-            // Si es un día de la semana, busca en registro_diario
+            // Si es día de la semana, busca la actividad correspondiente en registro_diario
             const diasMapeo = { 'montag': 1, 'dienstag': 2, 'mittwoch': 3, 'donnerstag': 4, 'freitag': 5 };
             if (diasMapeo[k] || ['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
                 const diaBusqueda = diasMapeo[k] || diasMapeo[tipoActual];
                 const regEncontrado = datosPreviewCache.registros.find(r => {
                     if (r.dia_semana === diaBusqueda || r.dia === diaBusqueda) return true;
                     if (r.fecha) {
-                        const d = new Date(r.fecha).getDay();
+                        const d = new Date(r.fecha).getDay(); // 1=Lunes, etc.
                         if (d === diaBusqueda) return true;
                     }
                     return false;
