@@ -284,7 +284,9 @@
                 $('rangoCalculadoInfo').classList.add('hidden');
                 return;
             }
-            const fechaLunes = new Date(val + 'T00:00:00');
+            
+            const [year, month, day] = val.split('-').map(Number);
+            const fechaLunes = new Date(year, month - 1, day);
             
             // Validar que el día seleccionado sea estrictamente Lunes (getDay() === 1)
             if (fechaLunes.getDay() !== 1) {
@@ -297,8 +299,8 @@
             const fechaViernes = new Date(fechaLunes);
             fechaViernes.setDate(fechaLunes.getDate() + 4);
 
-            const fInicioStr = fechaLunes.toISOString().split('T')[0];
-            const fFinStr = fechaViernes.toISOString().split('T')[0];
+            const fInicioStr = `${fechaLunes.getFullYear()}-${String(fechaLunes.getMonth() + 1).padStart(2, '0')}-${String(fechaLunes.getDate()).padStart(2, '0')}`;
+            const fFinStr = `${fechaViernes.getFullYear()}-${String(fechaViernes.getMonth() + 1).padStart(2, '0')}-${String(fechaViernes.getDate()).padStart(2, '0')}`;
 
             $('lblRangoMostrado').textContent = `${fInicioStr} al ${fFinStr} (Lun - Vie)`;
             $('rangoCalculadoInfo').classList.remove('hidden');
@@ -311,7 +313,8 @@
             if (!nombreUsuario) return alert("Por favor selecciona un usuario.");
             if (!fechaLunesVal) return alert("Por favor selecciona la fecha del lunes.");
 
-            const fechaLunes = new Date(fechaLunesVal + 'T00:00:00');
+            const [year, month, day] = fechaLunesVal.split('-').map(Number);
+            const fechaLunes = new Date(year, month - 1, day);
             
             if (fechaLunes.getDay() !== 1) {
                 return alert("⚠️ La fecha seleccionada debe ser un día Lunes.");
@@ -320,8 +323,8 @@
             const fechaViernes = new Date(fechaLunes);
             fechaViernes.setDate(fechaLunes.getDate() + 4);
 
-            const fechaInicio = fechaLunes.toISOString().split('T')[0];
-            const fechaFin = fechaViernes.toISOString().split('T')[0];
+            const fechaInicio = `${fechaLunes.getFullYear()}-${String(fechaLunes.getMonth() + 1).padStart(2, '0')}-${String(fechaLunes.getDate()).padStart(2, '0')}`;
+            const fechaFin = `${fechaViernes.getFullYear()}-${String(fechaViernes.getMonth() + 1).padStart(2, '0')}-${String(fechaViernes.getDate()).padStart(2, '0')}`;
 
             try {
                 // 1. Obtener datos del usuario de forma directa y limpia
