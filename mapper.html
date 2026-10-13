@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS - Orden Estricto Secuencial</title>
+    <title>Mapeador Compacto FOS - Vista Previa Automática</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Orden Estricto Secuencial</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador FOS - Vista Previa Automática</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
@@ -43,7 +43,7 @@
                     <select id="selectPlantillas" class="w-full p-1 border rounded bg-white text-[11px]">
                         <option value="">-- Cargar guardada --</option>
                     </select>
-                    <button id="btnCargar" class="bg-indigo-600 text-white px-2 rounded">📥</button>
+                    <button id="btnCargar" class="bg-indigo-600 text-white px-2 rounded" title="Cargar y Previsualizar">📥</button>
                 </div>
 
                 <!-- Campo Activo -->
@@ -113,6 +113,38 @@
         </div>
     </div>
 
+    <!-- Modal de Selección de Usuario y Rango de Fechas -->
+    <div id="previewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-4 rounded-xl shadow-xl w-full max-w-sm space-y-3 text-xs">
+            <h3 class="text-xs font-bold text-indigo-900 uppercase">🔍 Vista Previa Automática</h3>
+            <p class="text-gray-600">Selecciona el usuario y el rango de fechas para rellenar los campos de la plantilla:</p>
+            
+            <div class="space-y-2">
+                <div>
+                    <label class="font-semibold text-gray-700 block">Usuario:</label>
+                    <select id="selectPreviewUsuario" class="w-full p-1.5 border rounded bg-white font-bold text-indigo-900">
+                        <option value="">-- Seleccionar Usuario --</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="font-semibold text-gray-700 block">Fecha Inicio:</label>
+                        <input type="date" id="inputFechaInicio" class="w-full p-1.5 border rounded bg-white text-xs">
+                    </div>
+                    <div>
+                        <label class="font-semibold text-gray-700 block">Fecha Fin:</label>
+                        <input type="date" id="inputFechaFin" class="w-full p-1.5 border rounded bg-white text-xs">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="cerrarModalPreview()" class="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded">Cancelar</button>
+                <button onclick="ejecutarVistaPreviaDatos()" class="px-3 py-1.5 bg-indigo-600 text-white font-bold rounded">Visualizar Datos</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { SUPABASE_URL, headers } from './js/config.js';
 
@@ -120,10 +152,10 @@
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
         let columnasUsuariosCache = [];
+        let datosPreviewCache = { usuario: null, registros: [] };
 
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
-        // Función clave para ordenar estrictamente: primero los campo_N y luego los días en orden lógico de semana
         function obtenerKeysOrdenadas(mapa) {
             const ordenDias = ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag'];
             const keys = Object.keys(mapa);
@@ -134,28 +166,24 @@
                 const aEsDia = ordenDias.includes(a);
                 const bEsDia = ordenDias.includes(b);
 
-                // Si ambos son campo_N, se ordenan numéricamente por su número
                 if (aEsCampo && bEsCampo) {
                     const numA = parseInt(a.replace('campo_', '')) || 0;
                     const numB = parseInt(b.replace('campo_', '')) || 0;
                     return numA - numB;
                 }
-                // Los campo_ siempre van primero que los días u otros nombres
                 if (aEsCampo) return -1;
                 if (bEsCampo) return 1;
 
-                // Si ambos son días de la semana, se ordenan según el orden cronológico alemán
                 if (aEsDia && bEsDia) {
                     return ordenDias.indexOf(a) - ordenDias.indexOf(b);
                 }
-                if (aEsDia) return 1; // Los días van después de los campo_N
+                if (aEsDia) return 1;
                 if (bEsDia) return -1;
 
                 return a.localeCompare(b);
             });
         }
 
-        // Reorganiza físicamente el objeto coordenadasMap respetando el orden estricto
         function normalizarOrdenMapa() {
             const keysOrdenadas = obtenerKeysOrdenadas(coordenadasMap);
             const nuevoMapa = {};
@@ -173,12 +201,12 @@
                     if (data.length > 0) {
                         columnasUsuariosCache = Object.keys(data[0]);
                     } else {
-                        columnasUsuariosCache = ["nombre", "email", "class", "teacher", "workplace", "ausbildung", "adresse"];
+                        columnasUsuariosCache = ["id", "nombre", "email", "class", "teacher", "workplace", "ausbildung", "adresse"];
                     }
                 }
             } catch (e) {
                 console.error("Error al consultar columnas en vivo:", e);
-                columnasUsuariosCache = ["nombre", "email", "class", "teacher", "workplace", "ausbildung"];
+                columnasUsuariosCache = ["id", "nombre", "email", "class", "teacher", "workplace", "ausbildung"];
             }
             return columnasUsuariosCache;
         }
@@ -193,6 +221,19 @@
             } catch (e) { console.error(e); }
         }
 
+        async function poblarSelectUsuariosModal() {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers: { ...headers, 'Range': '0-999' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    const campoNombreKey = columnasUsuariosCache.includes('nombre') ? 'nombre' : (columnasUsuariosCache[1] || columnasUsuariosCache[0]);
+                    $('selectPreviewUsuario').innerHTML = '<option value="">-- Seleccionar Usuario --</option>' + data.map(u => `<option value="${u.id || u[columnasUsuariosCache[0]]}">${u[campoNombreKey] || u.email || 'Usuario ' + u.id}</option>`).join('');
+                }
+            } catch (e) {
+                console.error("Error cargando usuarios para preview:", e);
+            }
+        }
+
         (async () => {
             await obtenerColumnasUsuariosEnVivo();
             cargarPlantillas();
@@ -201,6 +242,7 @@
         $('btnCargar').onclick = async () => {
             const id = $('selectPlantillas').value;
             if (!id) return alert("Selecciona una plantilla.");
+            
             const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(id)}&select=*`, { headers: { ...headers, 'Range': '0-999' } });
             if (res.ok) {
                 const data = await res.json();
@@ -211,8 +253,43 @@
                     escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
                     actualizarSelects();
                     if (pdfDoc) redibujar();
-                    alert(`✅ Plantilla cargada.`);
+                    
+                    // Abrir modal para elegir usuario y rango de semana
+                    await poblarSelectUsuariosModal();
+                    $('previewModal').classList.remove('hidden');
                 }
+            }
+        };
+
+        window.cerrarModalPreview = () => { $('previewModal').classList.add('hidden'); };
+
+        window.ejecutarVistaPreviaDatos = async () => {
+            const userId = $('selectPreviewUsuario').value;
+            const fechaInicio = $('inputFechaInicio').value;
+            const fechaFin = $('inputFechaFin').value;
+
+            if (!userId) return alert("Por favor selecciona un usuario.");
+
+            try {
+                // 1. Obtener datos del usuario
+                const resUser = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?or=(id.eq.${userId},nombre.eq.${encodeURIComponent(userId)})&limit=1`, { headers });
+                const userData = resUser.ok ? await resUser.json() : [];
+                datosPreviewCache.usuario = userData.length ? userData[0] : {};
+
+                // 2. Obtener registros diarios en el rango si se especificaron fechas
+                let queryReg = `${SUPABASE_URL}/rest/v1/registro_diario?user_id=eq.${userId}`;
+                if (fechaInicio && fechaFin) {
+                    queryReg += `&fecha=gte.${fechaInicio}&fecha=lte.${fechaFin}`;
+                }
+                const resReg = await fetch(queryReg, { headers });
+                datosPreviewCache.registros = resReg.ok ? await resReg.json() : [];
+
+                cerrarModalPreview();
+                redibujar();
+                alert("✅ Vista previa cargada con éxito en el PDF.");
+            } catch (e) {
+                console.error("Error al obtener datos para vista previa:", e);
+                alert("❌ Error al consultar la base de datos.");
             }
         };
 
@@ -454,6 +531,37 @@
         window.selCampo = (k) => { campoActivo = k; $('campoSelect').value = k; primerPunto = null; actualizarUI(); redibujar(); };
         window.delCampo = (k) => { delete coordenadasMap[k]; actualizarSelects(); redibujar(); };
 
+        function obtenerTextoPreviewParaCampo(k, b) {
+            const tipoActual = b.tipo || 'libre';
+            
+            // Si es un campo fijo, busca en el objeto del usuario cargado
+            if (tipoActual === 'fijo' && b.usuario_col) {
+                return datosPreviewCache.usuario[b.usuario_col] !== undefined ? String(datosPreviewCache.usuario[b.usuario_col]) : `[${b.usuario_col}]`;
+            }
+            
+            // Si es un día de la semana, busca en los registros diarios la actividad correspondiente
+            const diasMapeo = { 'montag': 1, 'dienstag': 2, 'mittwoch': 3, 'donnerstag': 4, 'freitag': 5 };
+            if (diasMapeo[k] || ['montag','dienstag','mittwoch','donnerstag','freitag'].includes(tipoActual)) {
+                const diaBusqueda = diasMapeo[k] || diasMapeo[tipoActual];
+                // Intentamos matchear por día de la semana de la fecha o por orden de registro
+                const regEncontrado = datosPreviewCache.registros.find(r => {
+                    if (r.dia_semana === diaBusqueda || r.dia === diaBusqueda) return true;
+                    if (r.fecha) {
+                        const d = new Date(r.fecha).getDay(); // 1=Lunes, etc.
+                        if (d === diaBusqueda) return true;
+                    }
+                    return false;
+                }) || datosPreviewCache.registros[diasMapeo[k] - 1]; // fallback posicional
+
+                if (regEncontrado) {
+                    return regEncontrado.actividad || regEncontrado.descripcion || regEncontrado.texto || JSON.stringify(regEncontrado);
+                }
+                return `(Sin actividad)`;
+            }
+
+            return '';
+        }
+
         function redibujar() {
             if (!pageViewport) return;
             $('drawingOverlay').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
@@ -461,14 +569,18 @@
                 const w = (b.x2 - b.x1) * scale, h = (b.y2 - b.y1) * scale;
                 const activo = k === campoActivo;
                 const tipoActual = b.tipo || 'libre';
+                
+                // Obtenemos el texto de vista previa si hay datos cargados
+                const textoPreview = obtenerTextoPreviewParaCampo(k, b);
+                const etiquetaTexto = textoPreview ? `: ${textoPreview}` : '';
                 const etiquetaFija = tipoActual === 'fijo' && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
 
                 let estiloColor = 'border-indigo-600 bg-indigo-500/20 text-indigo-900';
                 if (tipoActual === 'fijo') estiloColor = 'border-amber-600 bg-amber-500/20 text-amber-900';
                 if (['montag','dienstag','mittwoch','donnerstag','freitag'].includes(k)) estiloColor = 'border-emerald-600 bg-emerald-500/20 text-emerald-900';
 
-                return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
-                    <span class="truncate">${k}${etiquetaFija}</span>
+                return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto overflow-hidden ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border ' + estiloColor + ' z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
+                    <span class="truncate">${k}${etiquetaFija}${etiquetaTexto}</span>
                     ${tipoActual === 'fijo' ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
                 </div>`;
             }).join('');
@@ -479,7 +591,7 @@
             if (!name) return;
             const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
             
-            normalizarOrdenMapa(); // Asegura que se guarde con el orden estricto aplicado
+            normalizarOrdenMapa();
 
             const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?on_conflict=file_identifier`, {
                 method: 'POST',
