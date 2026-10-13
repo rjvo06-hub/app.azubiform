@@ -133,6 +133,7 @@
                 <div>
                     <label class="font-semibold text-gray-700 block">Fecha del Lunes (Semana):</label>
                     <input type="date" id="inputFechaLunes" class="w-full p-1.5 border rounded bg-white text-xs font-bold text-indigo-700">
+                    <span class="text-[10px] text-gray-400 block mt-1">⚠️ Debe ser obligatoriamente un día Lunes.</span>
                 </div>
                 <div id="rangoCalculadoInfo" class="text-[11px] bg-slate-50 p-2 rounded border text-slate-700 hidden">
                     📅 <strong>Rango calculado:</strong> <span id="lblRangoMostrado"></span>
@@ -284,6 +285,15 @@
                 return;
             }
             const fechaLunes = new Date(val + 'T00:00:00');
+            
+            // Validar que el día seleccionado sea estrictamente Lunes (getDay() === 1)
+            if (fechaLunes.getDay() !== 1) {
+                alert("⚠️ Por favor, selecciona obligatoriamente un día Lunes.");
+                e.target.value = '';
+                $('rangoCalculadoInfo').classList.add('hidden');
+                return;
+            }
+
             const fechaViernes = new Date(fechaLunes);
             fechaViernes.setDate(fechaLunes.getDate() + 4);
 
@@ -302,6 +312,11 @@
             if (!fechaLunesVal) return alert("Por favor selecciona la fecha del lunes.");
 
             const fechaLunes = new Date(fechaLunesVal + 'T00:00:00');
+            
+            if (fechaLunes.getDay() !== 1) {
+                return alert("⚠️ La fecha seleccionada debe ser un día Lunes.");
+            }
+
             const fechaViernes = new Date(fechaLunes);
             fechaViernes.setDate(fechaLunes.getDate() + 4);
 
