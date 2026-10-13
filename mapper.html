@@ -1,1 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mapeador Compacto FOS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen p-3">
+    <div class="max-w-7xl mx-auto space-y-3">
+        <!-- Cabecera -->
+        <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador Secuencial Compacto</h1>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
+                <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
+                <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
+            </div>
+        </div>
 
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <!-- Lienzo PDF -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl p-2 flex justify-center overflow-auto max-h-[75vh] relative border">
+                <div class="relative inline-block cursor-crosshair" id="canvasContainer">
+                    <canvas id="pdfCanvas" class="block shadow-lg max-w-full"></canvas>
+                    <div id="drawingOverlay" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+
+            <!-- Panel de Control -->
+            <div class="bg-white p-3 rounded-xl shadow-sm space-y-2.5 flex flex-col text-xs">
+                <h2 class="font-bold text-gray-800 uppercase border-b pb-1">Control de Campos</h2>
+                
+                <!-- Cargar Plantilla -->
+                <div class="bg-indigo-50 p-2 rounded border border-indigo-200 flex space-x-1">
+                    <select id="selectPlantillas" class="w-full p-1 border rounded bg-white text-[11px]">
+                        <option value="">-- Cargar guardada --</option>
+                    </select>
+                    <button id="btnCargar" class="bg-indigo-600 text-white px-2 rounded">📥</button>
+                </div>
+
+                <!-- Campo Activo -->
+                <div>
+                    <label class="font-semibold text-gray-700">Campo Activo:</label>
+                    <select id="campoSelect" class="w-full p-1.5 border rounded bg-white font-bold text-indigo-900 mt-0.5">
+                        <option value="campo_1">campo_1</option>
+                    </select>
+                </div>
+
+                <div id="estadoModo" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 p-1.5 rounded border text-center">
+                    📌 Toca 2 puntos en el PDF para el campo activo.
+                </div>
+
+                <!-- Ajuste Fino (Posición & Tamaño) -->
+                <div class="bg-slate-50 p-2 rounded border space-y-2">
+                    <label class="font-bold text-slate-700 uppercase text-[9px] block text-center">🕹️ Ajuste Fino (Posición y Tamaño)</label>
+                    
+                    <!-- Movimiento -->
+                    <div class="grid grid-cols-3 gap-1 max-w-[130px] mx-auto">
+                        <div></div><button onclick="mover(0,1)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Arriba">⬆️</button><div></div>
+                        <button onclick="mover(-1,0)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Izquierda">⬅️</button>
+                        <button onclick="mover(0,-1)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Abajo">⬇️</button>
+                        <button onclick="mover(1,0)" class="bg-slate-200 hover:bg-slate-300 py-1 rounded font-bold text-[11px]" title="Mover Derecha">➡️</button>
+                    </div>
+
+                    <!-- Controles de Extender / Reducir Largo y Ancho -->
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 text-[10px]">
+                        <!-- Largo -->
+                        <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
+                            <span class="text-[9px] text-slate-600 font-bold block text-center">↕️ Largo (Alto)</span>
+                            <div class="flex justify-between space-x-1">
+                                <button onclick="redimensionar(0, 1)" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-0.5 rounded font-bold text-[10px]">➕ Extender</button>
+                                <button onclick="redimensionar(0, -1)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
+                            </div>
+                        </div>
+                        <!-- Ancho -->
+                        <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
+                            <span class="text-[9px] text-slate-600 font-bold block text-center">↔️ Ancho</span>
+                            <div class="flex justify-between space-x-1">
+                                <button onclick="redimensionar(1, 0)" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-0.5 rounded font-bold text-[10px]">➕ Extender</button>
+                                <button onclick="redimensionar(-1, 0)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Coordenadas -->
+                <div class="h-28 overflow-y-auto border rounded p-1.5 space-y-1 bg-gray-50 text-[11px]" id="listaCoordenadas">
+                    <p class="text-gray-400 text-center mt-6">Sin coordenadas aún.</p>
+                </div>
+
+                <!-- JSON -->
+                <textarea id="jsonOutput" readonly class="w-full h-10 p-1 text-[8px] font-mono bg-gray-900 text-green-400 rounded border"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { SUPABASE_URL, headers } from './js/config.js';
+
+        const $ = id => document.getElementById(id);
+        let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null;
+
+        const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
+
+        async function cargarPlantillas() {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?select=school_name,file_identifier`, { headers: { ...headers, 'Range': '0-999' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    $('selectPlantillas').innerHTML = '<option value="">-- Cargar guardada --</option>' + data.map(i => `<option value="${i.file_identifier}">${i.school_name}</option>`).join('');
+                }
+            } catch (e) { console.error(e); }
+        }
+        cargarPlantillas();
+
+        $('btnCargar').onclick = async () => {
+            const id = $('selectPlantillas').value;
+            if (!id) return alert("Selecciona una plantilla.");
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?file_identifier=eq.${encodeURIComponent(id)}&select=*`, { headers: { ...headers, 'Range': '0-999' } });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.length && data[0].coordinates_json) {
+                    coordenadasMap = data[0].coordinates_json;
+                    escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
+                    actualizarSelects();
+                    if (pdfDoc) redibujar();
+                    alert(`✅ Plantilla cargada.`);
+                }
+            }
+        };
+
+        $('pdfFile').onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            pdfDoc = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+            renderPage(1);
+        };
+
+        async function renderPage(num) {
+            const page = await pdfDoc.getPage(num);
+            pageViewport = page.getViewport({ scale });
+            const canvas = $('pdfCanvas');
+            canvas.height = pageViewport.height; canvas.width = pageViewport.width;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: pageViewport }).promise;
+            redibujar();
+        }
+
+        $('canvasContainer').onclick = (e) => {
+            if (!pdfDoc || e.target.classList.contains('caja')) return;
+            const r = $('pdfCanvas').getBoundingClientRect();
+            const x = e.clientX - r.left, y = e.clientY - r.top;
+
+            if (!primerPunto) {
+                primerPunto = { x, y };
+                $('estadoModo').textContent = `📍 Primer punto fijado para "${campoActivo}". Toca el segundo.`;
+            } else {
+                const x1 = Math.min(primerPunto.x, x) / scale, x2 = Math.max(primerPunto.x, x) / scale;
+                const y1 = (pageViewport.height - Math.max(primerPunto.y, y)) / scale;
+                const y2 = (pageViewport.height - Math.min(primerPunto.y, y)) / scale;
+
+                if ((x2 - x1) > 3 && (y2 - y1) > 3) {
+                    coordenadasMap[campoActivo] = { x1: +x1.toFixed(1), y1: +y1.toFixed(1), x2: +x2.toFixed(1), y2: +y2.toFixed(1) };
+                    campoActivo = sigCampo();
+                    actualizarSelects();
+                    redibujar();
+                }
+                primerPunto = null;
+                $('estadoModo').textContent = `📌 Listo. Mapeando: "${campoActivo}". Toca 2 puntos.`;
+            }
+        };
+
+        window.mover = (dx, dy) => {
+            if (!coordenadasMap[campoActivo]) return;
+            const b = coordenadasMap[campoActivo];
+            b.x1 += dx; b.x2 += dx; b.y1 += dy; b.y2 += dy;
+            actualizarUI(); redibujar();
+        };
+
+        window.redimensionar = (dw, dh) => {
+            if (!coordenadasMap[campoActivo]) return;
+            const b = coordenadasMap[campoActivo];
+            b.x2 = +(b.x2 + dw).toFixed(1);
+            b.y2 = +(b.y2 + dh).toFixed(1);
+            actualizarUI(); redibujar();
+        };
+
+        function actualizarSelects() {
+            const keys = Object.keys(coordenadasMap);
+            if (!keys.includes(campoActivo) && keys.length) campoActivo = keys[keys.length - 1];
+            if (!keys.length) campoActivo = 'campo_1';
+            
+            const allOpts = [...new Set([...keys, campoActivo, sigCampo()])];
+            $('campoSelect').innerHTML = allOpts.map(k => `<option value="${k}" ${k === campoActivo ? 'selected' : ''}>${k}</option>`).join('');
+            actualizarUI();
+        }
+
+        $('campoSelect').onchange = (e) => {
+            campoActivo = e.target.value;
+            primerPunto = null;
+            actualizarUI(); redibujar();
+        };
+
+        function actualizarUI() {
+            $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);$('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => `
+                <div class="p-1.5 rounded border flex justify-between items-center cursor-pointer ${k === campoActivo ? 'bg-indigo-50 border-indigo-500 font-bold' : 'bg-white'}" onclick="window.selCampo('${k}')">
+                    <span>${k}</span>
+                    <button onclick="event.stopPropagation(); window.delCampo('${k}')" class="text-red-600 font-bold px-1">🗑️</button>
+                </div>
+            `).join('') || '<p class="text-gray-400 text-center mt-6">Sin coordenadas aún.</p>';
+        }
+
+        window.selCampo = (k) => { campoActivo = k; $('campoSelect').value = k; primerPunto = null; actualizarUI(); redibujar(); };
+        window.delCampo = (k) => { delete coordenadasMap[k]; actualizarSelects(); redibujar(); };
+
+        function redibujar() {
+            if (!pageViewport) return;
+            $('drawingOverlay').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
+                const l = b.x1 * scale, t = pageViewport.height - (b.y2 * scale);
+                const w = (b.x2 - b.x1) * scale, h = (b.y2 - b.y1) * scale;
+                const activo = k === campoActivo;
+                return `<div class="caja absolute rounded text-[9px] font-bold px-1 flex items-center ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 z-10'}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.selCampo('${k}')">${k}</div>`;
+            }).join('');
+        }
+
+        $('btnGuardar').onclick = async () => {
+            const name = escuelaCargada ? escuelaCargada.school_name : prompt("Nombre de la escuela:");
+            if (!name) return;
+            const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_v1';
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/school_templates?on_conflict=file_identifier`, {
+                method: 'POST',
+                headers: { ...headers, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({ school_name: name, file_identifier: id, pdf_filename: 'template.pdf', coordinates_json: coordenadasMap })
+            });
+            if (res.ok) { alert("✅ Guardado con éxito."); cargarPlantillas(); }
+            else { alert("❌ Error al guardar."); }
+        };
+    </script>
+</body>
+</html>
