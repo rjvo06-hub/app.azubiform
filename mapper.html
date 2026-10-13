@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mapeador Compacto FOS con Campos Fijos</title>
+    <title>Mapeador Compacto FOS con Campos Fijos de Usuarios</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto space-y-3">
         <!-- Cabecera -->
         <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador Secuencial Compacto (Con Campos Fijos)</h1>
+            <h1 class="text-xs font-bold text-indigo-900 uppercase">⚡ Mapeador con Asignación a Tabla Usuarios</h1>
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between">
                 <input type="file" id="pdfFile" accept="application/pdf" class="text-[10px] text-gray-500 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-50 file:text-indigo-700">
                 <button id="btnGuardar" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow">💾 Guardar</button>
@@ -72,7 +72,6 @@
 
                     <!-- Controles de Extender / Reducir Largo y Ancho -->
                     <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 text-[10px]">
-                        <!-- Largo -->
                         <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
                             <span class="text-[9px] text-slate-600 font-bold block text-center">↕️ Largo (Alto)</span>
                             <div class="flex justify-between space-x-1">
@@ -80,7 +79,6 @@
                                 <button onclick="redimensionar(0, -1)" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-800 py-0.5 rounded font-bold text-[10px]">➖ Reducir</button>
                             </div>
                         </div>
-                        <!-- Ancho -->
                         <div class="bg-white p-1.5 rounded border border-slate-200 space-y-1">
                             <span class="text-[9px] text-slate-600 font-bold block text-center">↔️ Ancho</span>
                             <div class="flex justify-between space-x-1">
@@ -92,8 +90,8 @@
                 </div>
 
                 <!-- Lista de Coordenadas -->
-                <div class="h-32 overflow-y-auto border rounded p-1.5 space-y-1 bg-gray-50 text-[11px]" id="listaCoordenadas">
-                    <p class="text-gray-400 text-center mt-6">Sin coordenadas aún.</p>
+                <div class="h-40 overflow-y-auto border rounded p-1.5 space-y-2 bg-gray-50 text-[11px]" id="listaCoordenadas">
+                    <p class="text-gray-400 text-center mt-8">Sin coordenadas aún.</p>
                 </div>
 
                 <!-- JSON -->
@@ -122,6 +120,18 @@
         let pdfDoc = null, pageViewport = null, scale = 1.2, coordenadasMap = {}, campoActivo = 'campo_1', primerPunto = null, escuelaCargada = null, campoPendienteDuplicar = null;
         let isDragging = false, dragCampo = null, startX = 0, startY = 0;
 
+        // Columnas exactas de la tabla 'usuarios'
+        const columnasUsuarios = [
+            "nombre",
+            "email",
+            "class",
+            "teacher",
+            "workplace",
+            "ausbildung",
+            "adresse",
+            "acceso"
+        ];
+
         const sigCampo = () => `campo_${Object.keys(coordenadasMap).length + 1}`;
 
         async function cargarPlantillas() {
@@ -143,7 +153,6 @@
                 const data = await res.json();
                 if (data.length && data[0].coordinates_json) {
                     const parsed = data[0].coordinates_json;
-                    // Soporte retroactivo si guardaba objeto plano o estructura extendida
                     coordenadasMap = parsed.coordenadas || parsed;
                     escuelaCargada = { school_name: data[0].school_name, file_identifier: data[0].file_identifier };
                     actualizarSelects();
@@ -183,14 +192,14 @@
                 const y2 = (pageViewport.height - Math.min(primerPunto.y, y)) / scale;
 
                 if ((x2 - x1) > 3 && (y2 - y1) > 3) {
-                    // Si ya existía, conservamos su propiedad is_fijo si la tenía
-                    const fijoPrevio = coordenadasMap[campoActivo]?.is_fijo || false;
+                    const previo = coordenadasMap[campoActivo] || {};
                     coordenadasMap[campoActivo] = { 
                         x1: +x1.toFixed(1), 
                         y1: +y1.toFixed(1), 
                         x2: +x2.toFixed(1), 
                         y2: +y2.toFixed(1),
-                        is_fijo: fijoPrevio 
+                        is_fijo: previo.is_fijo || false,
+                        usuario_col: previo.usuario_col || columnasUsuarios[0]
                     };
                     campoActivo = sigCampo();
                     actualizarSelects();
@@ -201,7 +210,6 @@
             }
         };
 
-        // Arrastrar campo directamente sobre el visor
         window.iniciarArrastre = (e, k) => {
             e.stopPropagation();
             isDragging = true;
@@ -255,10 +263,21 @@
             actualizarUI(); redibujar();
         };
 
-        // Alternar marca de Campo Fijo DB
+        // Alternar marca de Campo Fijo DB y asignar valor por defecto si se activa
         window.toggleFijo = (k) => {
             if (coordenadasMap[k]) {
                 coordenadasMap[k].is_fijo = !coordenadasMap[k].is_fijo;
+                if (coordenadasMap[k].is_fijo && !coordenadasMap[k].usuario_col) {
+                    coordenadasMap[k].usuario_col = columnasUsuarios[0];
+                }
+                actualizarUI();
+                redibujar();
+            }
+        };
+
+        window.actualizarColumnaUsuario = (k, selectEl) => {
+            if (coordenadasMap[k]) {
+                coordenadasMap[k].usuario_col = selectEl.value;
                 actualizarUI();
             }
         };
@@ -284,7 +303,8 @@
                 y1: bOrig.y1,
                 x2: +(bOrig.x2 + offset).toFixed(1),
                 y2: bOrig.y2,
-                is_fijo: bOrig.is_fijo || false
+                is_fijo: bOrig.is_fijo || false,
+                usuario_col: bOrig.usuario_col || columnasUsuarios[0]
             };
 
             campoActivo = nuevoNombre;
@@ -313,19 +333,32 @@
             $('jsonOutput').value = JSON.stringify(coordenadasMap, null, 2);$('listaCoordenadas').innerHTML = Object.entries(coordenadasMap).map(([k, b]) => {
                 const esActivo = k === campoActivo;
                 const esFijo = b.is_fijo || false;
+                const colSeleccionada = b.usuario_col || columnasUsuarios[0];
+
+                const optionsHTML = columnasUsuarios.map(col => `<option value="${col}" ${col === colSeleccionada ? 'selected' : ''}>usuarios.${col}</option>`).join('');
+
                 return `
-                    <div class="p-1.5 rounded border flex justify-between items-center cursor-pointer ${esActivo ? 'bg-indigo-50 border-indigo-500 font-bold' : 'bg-white'}" onclick="window.selCampo('${k}')">
-                        <div class="flex items-center space-x-1.5 overflow-hidden">
-                            <button onclick="event.stopPropagation(); window.toggleFijo('${k}')" class="px-1 py-0.5 rounded text-[10px] ${esFijo ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-gray-100 text-gray-400'}" title="${esFijo ? 'Campo Fijo DB (Activo)' : 'Marcar como Campo Fijo DB'}">📌</button>
-                            <span class="truncate" title="${k}">${k}</span>
+                    <div class="p-2 rounded border space-y-1.5 ${esActivo ? 'bg-indigo-50 border-indigo-500 font-bold' : 'bg-white'}" onclick="window.selCampo('${k}')">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-1.5 overflow-hidden">
+                                <button onclick="event.stopPropagation(); window.toggleFijo('${k}')" class="px-1 py-0.5 rounded text-[10px] ${esFijo ? 'bg-amber-100 text-amber-800 border border-amber-300 font-bold' : 'bg-gray-100 text-gray-400'}" title="${esFijo ? 'Campo Fijo DB (Activo)' : 'Marcar como Campo Fijo DB'}">📌</button>
+                                <span class="truncate" title="${k}">${k}</span>
+                            </div>
+                            <div class="flex items-center space-x-1 shrink-0">
+                                <button onclick="event.stopPropagation(); window.abrirModalDuplicar('${k}')" class="text-blue-600 font-bold px-1" title="Duplicar">📋</button>
+                                <button onclick="event.stopPropagation(); window.delCampo('${k}')" class="text-red-600 font-bold px-1" title="Eliminar">🗑️</button>
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-1 shrink-0">
-                            <button onclick="event.stopPropagation(); window.abrirModalDuplicar('${k}')" class="text-blue-600 font-bold px-1" title="Duplicar">📋</button>
-                            <button onclick="event.stopPropagation(); window.delCampo('${k}')" class="text-red-600 font-bold px-1" title="Eliminar">🗑️</button>
-                        </div>
+                        ${esFijo ? `
+                            <div class="pt-1" onclick="event.stopPropagation()">
+                                <select class="w-full p-1 border border-amber-300 rounded bg-amber-50 text-[10px] font-semibold text-amber-900 focus:outline-none" onchange="window.actualizarColumnaUsuario('${k}', this)">
+                                    ${optionsHTML}
+                                </select>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
-            }).join('') || '<p class="text-gray-400 text-center mt-6">Sin coordenadas aún.</p>';
+            }).join('') || '<p class="text-gray-400 text-center mt-8">Sin coordenadas aún.</p>';
         }
 
         window.selCampo = (k) => { campoActivo = k; $('campoSelect').value = k; primerPunto = null; actualizarUI(); redibujar(); };
@@ -338,9 +371,11 @@
                 const w = (b.x2 - b.x1) * scale, h = (b.y2 - b.y1) * scale;
                 const activo = k === campoActivo;
                 const esFijo = b.is_fijo || false;
+                const etiquetaFija = esFijo && b.usuario_col ? ` [usuarios.${b.usuario_col}]` : '';
+
                 return `<div class="caja-mapeada absolute rounded text-[9px] font-bold px-1 flex items-center justify-between pointer-events-auto ${activo ? 'border-2 border-red-500 bg-red-500/30 text-red-900 z-20' : (esFijo ? 'border border-amber-600 bg-amber-500/20 text-amber-900 z-10' : 'border border-indigo-600 bg-indigo-500/20 text-indigo-900 z-10')}" style="left:${l}px;top:${t}px;width:${w}px;height:${h}px;" onpointerdown="window.iniciarArrastre(event, '${k}')">
-                    <span>${k}</span>
-                    ${esFijo ? '<span class="text-[8px]" title="Campo Fijo DB">📌</span>' : ''}
+                    <span class="truncate">${k}${etiquetaFija}</span>
+                    ${esFijo ? '<span class="text-[8px] shrink-0 ml-1" title="Campo Fijo DB">📌</span>' : ''}
                 </div>`;
             }).join('');
         }
