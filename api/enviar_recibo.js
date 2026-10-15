@@ -1,6 +1,5 @@
 import { Resend } from 'resend';
 
-// Inicializa Resend utilizando la variable de entorno configurada en Vercel
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req, res) {
@@ -9,9 +8,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Recibe el correo específico seleccionado desde el HTML
+    const { destinatario } = req.body;
+
+    if (!destinatario) {
+      return res.status(400).json({ error: 'Destinatario no especificado' });
+    }
+
     const { data, error } = await resend.emails.send({
       from: 'Residencias Perú <info@azubiform.de>',
-      to: ['rjvo06@gmail.com', 'indriagoja@gmail.com'], // Se envía a ambos correos
+      to: [destinatario],
       subject: 'Recibo de Condominio - Edificio Perú (30-06-2023)',
       html: `
         <!DOCTYPE html>
