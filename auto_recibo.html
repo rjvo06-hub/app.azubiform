@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enviar Recibo de Condominio</title>
+    <style>
+        body {
+            font-family: 'Tahoma', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .panel-control {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 450px;
+        }
+        h2 {
+            color: #0056b3;
+            margin-top: 0;
+            font-family: Tahoma;
+        }
+        p {
+            color: #555;
+            font-family: Tahoma;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #mensaje {
+            margin-top: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            font-family: Tahoma;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="panel-control">
+        <h2>Panel de Envío Automático</h2>
+        <p>Inmueble 02 - Karin Rodríguez (Edificio Perú)</p>
+        
+        <button onclick="enviarReciboAutomatico()">Tomar y Enviar Recibo de la Carpeta</button>
+        
+        <div id="mensaje"></div>
+    </div>
+
+    <script>
+        async function enviarReciboAutomatico() {
+            const mensaje = document.getElementById('mensaje');
+            mensaje.innerText = 'Leyendo archivo de la carpeta y enviando...';
+            mensaje.style.color = '#333';
+
+            try {
+                // Ahora apunta correctamente a tu nueva función /api/auto_recibo
+                const response = await fetch('/api/auto_recibo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    mensaje.innerText = '¡Éxito! ' + (resultado.message || 'Correo enviado correctamente.');
+                    mensaje.style.color = 'green';
+                } else {
+                    mensaje.innerText = 'Error: ' + (resultado.error || 'No se pudo enviar');
+                    mensaje.style.color = 'red';
+                }
+            } catch (error) {
+                mensaje.innerText = 'Error de conexión con el servidor.';
+                mensaje.style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>
