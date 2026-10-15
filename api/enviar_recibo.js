@@ -8,7 +8,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Recibe el correo específico seleccionado desde el HTML
     const { destinatario } = req.body;
 
     if (!destinatario) {
