@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   try {
     const { data, error } = await resend.emails.send({
       from: 'Residencias Perú <info@azubiform.de>',
-      to: ['rjvo06@gmail.com'],
+      to: ['rjvo06@gmail.com', 'indriagoja@gmail.com'], // Se envía a ambos correos
       subject: 'Recibo de Condominio - Edificio Perú (30-06-2023)',
       html: `
         <!DOCTYPE html>
