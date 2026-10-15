@@ -118,7 +118,7 @@
             mensaje.style.color = '#333';
 
             try {
-                // Ahora apunta correctamente a la función /api/enviar_recibo
+                // Apunta a la Serverless Function en /api/enviar_recibo
                 const response = await fetch('/api/enviar_recibo', {
                     method: 'POST',
                     headers: {
